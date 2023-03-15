@@ -1,14 +1,21 @@
 ---
 import MainLayout from "../layouts/main-layout.astro";
+import { Icon } from "astro-icon";
 ---
 
 <MainLayout>
-	<div class="container">Art goes here</div>
+	<div class="container">
+		<Icon name="ph:paint-brush-fill" />
+	</div>
 </MainLayout>
 
 <style>
 	.container {
 		background-color: var(--secondary-color);
 		padding: 1rem;
+	}
+
+	[astro-icon] {
+		width: 2.5rem;
 	}
 </style>
