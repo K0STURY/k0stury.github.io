@@ -36,6 +36,7 @@ import Icon from "astro-icon";
 
 <style>
     aside {
+        flex-shrink: 0;
         background-color: var(--secondary-color);
         padding: 1rem;
         display: flex;
@@ -47,22 +48,6 @@ import Icon from "astro-icon";
 
     [astro-icon] {
         width: 32px;
-    }
-
-    @keyframes gelatine {
-        from,
-        to {
-            transform: scale(1, 1);
-        }
-        25% {
-            transform: scale(0.9, 1.1);
-        }
-        50% {
-            transform: scale(1.1, 0.9);
-        }
-        75% {
-            transform: scale(0.95, 1.05);
-        }
     }
 
     .logo {
