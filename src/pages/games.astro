@@ -1,17 +1,29 @@
 ---
+import getAllGames from "../api/games";
 import MainLayout from "../layouts/main-layout.astro";
 
-const url = Astro.site === undefined ? "http://localhost:3000" : Astro.site;
-const response = await fetch(`${url}/api/games.json`).then((data) =>
-	data.json()
-);
-const games = response["games"];
+const response = await getAllGames();
 ---
 
 <MainLayout>
 	<div class="container">
-		<ul>
-			{games.map((game) => <li>{game.title}</li>)}
+		<ul class="grid grid-cols-3 place-items-center gap-2">
+			{
+				response.map((game: any) => (
+					<li>
+						{game.cover_url ? (
+							<img
+								src={game.cover_url}
+								class="w-full h-full object-cover"
+							/>
+						) : (
+							<div class="w-72 h-full bg-slate-500">
+								{game.title}
+							</div>
+						)}
+					</li>
+				))
+			}
 		</ul>
 	</div>
 </MainLayout>

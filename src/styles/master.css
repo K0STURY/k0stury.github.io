@@ -1,3 +1,5 @@
+@tailwind base;
+
 :root {
     --primary-color: #27232A;
     --secondary-color: #844446;
@@ -59,4 +61,12 @@ a {
     75% {
         transform: scale(0.95, 1.05);
     }
+}
+
+.gelatine-in-out {
+    animation: gelatine 0.375s ease-in-out;
+}
+
+.gelatine-infinite {
+    animation: gelatine 0.375s infinite;
 }
