@@ -6,7 +6,7 @@ export const contact = [
     },
     {
         "name": "Email",
-        "value": "xyz@gmail.com",
+        "value": "k0sturmakesart@gmail.com",
         "icon": "ic:baseline-mail"
     },
     {
