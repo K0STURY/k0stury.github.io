@@ -1,40 +1,27 @@
 ---
 import getAllGames from "../api/games";
+import SectionWithHeading from "../components/section-with-heading.astro";
 import MainLayout from "../layouts/main-layout.astro";
 
 const response = await getAllGames();
 ---
 
-<MainLayout>
-	<div class="container">
-		<ul class="grid grid-cols-3 place-items-center gap-2">
-			{
-				response.map((game: any) => (
-					<li>
-						{game.cover_url ? (
-							<img
-								src={game.cover_url}
-								class="w-full h-full object-cover"
-							/>
-						) : (
-							<div class="w-72 h-full bg-slate-500">
-								{game.title}
-							</div>
-						)}
-					</li>
-				))
-			}
-		</ul>
-	</div>
+<MainLayout title="Games">
+	<SectionWithHeading title="" columnsSize="sm">
+		{
+			response.map((game: any) => (
+				<a href={game.url} class="flex flex-col h-full w-full group">
+					{game.cover_url ? (
+						<img
+							src={game.cover_url}
+							class="w-full h-full object-cover group-hover:animate-gelatine-in-out"
+						/>
+					) : (
+						<div class="h-full bg-gradient-to-r from-violet-600 to-indigo-600 group-hover:animate-gelatine-in-out" />
+					)}
+					<span class="font-bold text-lg">{game.title}</span>
+				</a>
+			))
+		}
+	</SectionWithHeading>
 </MainLayout>
-
-<style>
-	.container {
-		background-color: var(--secondary-color);
-		padding: 1rem;
-		gap: 0.2rem;
-	}
-
-	ul {
-	}
-</style>
