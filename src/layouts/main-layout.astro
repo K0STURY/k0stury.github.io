@@ -23,6 +23,11 @@ const { title = "Title" } = Astro.props;
         <meta name="robots" content="index, follow" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="language" content="English" />
+
+        <meta property="og:title" content="kostur" />
+        <meta property="og:type" content="graphic designing" />
+        <meta property="og:url" content="https://k0stury.github.io" />
+        <meta property="og:image" content="/images/kostur.png" />
         <title>{title}</title>
     </head>
     <body class="flex p-4 gap-4">
@@ -34,7 +39,11 @@ const { title = "Title" } = Astro.props;
                 class="flex justify-between items-center bg-secondary py-2 px-4"
             >
                 <span id="swup" class="font-bold"
-                    >{getActivePage() === "/" ? "HOME" : getActivePage()}</span
+                    >{
+                        getActivePage() === "/"
+                            ? "HOME"
+                            : getActivePage().replace("/", "")
+                    }</span
                 >
                 <ul class="flex gap-4">
                     <li id="swup">
@@ -55,7 +64,9 @@ const { title = "Title" } = Astro.props;
                         <a
                             href="/games"
                             class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                                getActivePage() === "GAMES" ? "active-link" : ""
+                                getActivePage().includes("GAMES")
+                                    ? "active-link"
+                                    : ""
                             }`}
                         >
                             <Icon
@@ -69,7 +80,9 @@ const { title = "Title" } = Astro.props;
                         <a
                             href="/art"
                             class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                                getActivePage() === "ART" ? "active-link" : ""
+                                getActivePage().includes("ART")
+                                    ? "active-link"
+                                    : ""
                             }`}
                         >
                             <Icon
