@@ -1,0 +1,26 @@
+---
+import getAllGames from "../api/games";
+import SectionWithHeading from "../components/section-with-heading.astro";
+import MainLayout from "../layouts/main-layout.astro";
+import { Image } from "astro:assets";
+const images = await Astro.glob("../assets/showcase/*.png");
+---
+
+<MainLayout title="Art">
+    <SectionWithHeading title="" columnsSize="md">
+        {
+            images.map((image) => (
+                <div class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer">
+                    <Image
+                        src={image.default.src}
+                        width={256}
+                        height={256}
+                        class="w-full h-full object-cover object-center"
+                        alt="image"
+                        format="webp"
+                    />
+                </div>
+            ))
+        }
+    </SectionWithHeading>
+</MainLayout>
