@@ -32,7 +32,7 @@ const { title = "Title" } = Astro.props;
             property="og:image"
             content="https://k0stury.github.io/images/kostur.png"
         />
-        <title>{title}</title>
+        <title>{title.toUpperCase()}</title>
     </head>
     <body class="flex p-4 gap-4">
         <Cursor />
