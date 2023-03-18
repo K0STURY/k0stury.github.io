@@ -4,27 +4,68 @@ import { Image } from "astro:assets";
 import SectionWithHeading from "../components/section-with-heading.astro";
 import getAllGames from "../api/games";
 
-const images = await Astro.glob("../assets/showcase/*.png");
+const Images: any = [];
+
+const images = await Astro.glob("../assets/showcase/*.png").then(
+	async (data) => {
+		const clone = [...data];
+
+		await clone.map((img) => {
+			const str = img.default.src;
+			const regex = /\/(\d+)-(.+)\.png\?/;
+			const match = str.match(regex);
+			const number = Number(match[1]);
+			const text = match[2];
+
+			Images.push({
+				...img,
+				title: text,
+				id: number,
+			});
+		});
+
+		return data;
+	}
+);
 
 const games = await getAllGames();
+
+function sortByDesc(a, b) {
+	const nameA = a.id; // ignore upper and lowercase
+	const nameB = b.id; // ignore upper and lowercase
+	if (nameA > nameB) {
+		return -1;
+	}
+	if (nameA < nameB) {
+		return 1;
+	}
+
+	// names must be equal
+	return 0;
+}
 ---
 
 <MainLayout title="Home">
 	<SectionWithHeading title="My Art" icon="fa-solid:paint-brush" url="/art">
 		{
-			images.slice(-8).map((image) => (
-				<div class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer">
-					<Image
-						src={image.default.src}
-						width={512}
-						height={512}
-						class="w-full h-full object-cover object-center"
-						alt="image"
-						format="webp"
-						loading="lazy"
-					/>
-				</div>
-			))
+			Images.sort(sortByDesc)
+				.slice(0, 8)
+				.map((image) => (
+					<a
+						href={`/${image.title}`}
+						class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
+					>
+						<Image
+							src={image.default.src}
+							width={512}
+							height={512}
+							class="w-full h-full object-cover object-center"
+							alt={image.title}
+							format="webp"
+							loading="lazy"
+						/>
+					</a>
+				))
 		}
 	</SectionWithHeading>
 
