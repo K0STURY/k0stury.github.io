@@ -6,9 +6,7 @@ module.exports = {
 			colors: {
 				'primary': 'var(--primary-color)',
 				'secondary': 'var(--secondary-color)',
-			},
-			textColor: {
-				'main': 'var(--text-color)'
+				'color': 'var(--text-color)'
 			},
 			animation: {
 				'gelatine-infite': 'gelatine 0.375s infinite',

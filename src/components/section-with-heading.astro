@@ -12,11 +12,11 @@ const { title, icon, url, columnsSize = "md" } = Astro.props as Props;
 function gridColumns(): string {
     switch (columnsSize) {
         case "sm":
-            return "grid-cols-2";
+            return "md:grid-cols-2";
         case "md":
-            return "grid-cols-4";
+            return "md:grid-cols-4";
         case "lg":
-            return "grid-cols-6";
+            return "md:grid-cols-6";
     }
 }
 ---
@@ -40,7 +40,7 @@ function gridColumns(): string {
             )
         }
     </h3>
-    <div class={`grid ${gridColumns()} gap-2`}>
+    <div class={`grid grid-cols-2 ${gridColumns()} gap-2`}>
         <slot />
     </div>
 </section>

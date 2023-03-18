@@ -1,3 +1,4 @@
+@import url('themes.css');
 @tailwind base;
 
 :root {
@@ -5,6 +6,7 @@
     --secondary-color: #844446;
     --text-color: #fff;
 }
+
 
 * {
     box-sizing: border-box;
@@ -30,6 +32,7 @@ body {
     -ms-overflow-style: none;
     /* IE and Edge */
     scrollbar-width: none;
+    position: relative;
 }
 
 ul {
@@ -78,6 +81,8 @@ a {
 .gelatine-infinite {
     animation: gelatine 0.375s infinite;
 }
+
+
 
 .swup-transition-fade {
     transition: 0.2s;

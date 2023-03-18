@@ -1,0 +1,44 @@
+<div class="cursor"></div>
+
+<style>
+    @media (min-width: 768px) {
+        .cursor {
+            width: 40px;
+            height: 40px;
+            border: 2px solid white;
+            background-color: hsla(0, 0%, 95%, 0.644);
+            border-radius: 50%;
+            position: fixed;
+            z-index: 999999;
+            pointer-events: none;
+            transition: transform 150ms ease-out;
+            mix-blend-mode: difference;
+            will-change: transform;
+        }
+    }
+
+    .expand {
+        width: 100px;
+        height: 100px;
+    }
+</style>
+
+<script>
+    const cursor: HTMLDivElement = document.querySelector(
+        ".cursor"
+    ) as HTMLDivElement;
+    const navElements = document.querySelectorAll("li#swup");
+
+    document.addEventListener("mousemove", (e) => {
+        let scale = 1;
+        let x = e.clientX;
+        let y = e.clientY;
+        let translate = `translate(${x - 40}px, ${y - 40}px) scale(${scale})`;
+
+        navElements.forEach((element) => {
+            element.addEventListener("mouseenter", (e) => {});
+        });
+
+        cursor.style.transform = translate;
+    });
+</script>

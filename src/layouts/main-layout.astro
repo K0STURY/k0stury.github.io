@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon";
-import Navbar from "../components/navbar.astro";
+import Navbar from "../components/contact.astro";
+import Cursor from "../components/cursor.astro";
 import "../styles/master.css";
 
 const getActivePage = (): string => {
@@ -34,6 +35,7 @@ const { title = "Title" } = Astro.props;
         <title>{title}</title>
     </head>
     <body class="flex p-4 gap-4">
+        <Cursor />
         <Navbar />
         <main
             class="flex flex-col gap-4 flex-grow rounded-md overflow-x-hidden"
@@ -117,4 +119,14 @@ const { title = "Title" } = Astro.props;
 
 <script>
     import "../scripts/router";
+
+    const html = document.documentElement;
+    const cursor = document.querySelector(".cursor");
+
+    if (
+        localStorage.getItem("theme") !== null ||
+        localStorage.getItem("theme") !== undefined
+    ) {
+        html.dataset.theme = localStorage.getItem("theme") ?? "default";
+    }
 </script>

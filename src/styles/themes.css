@@ -1,0 +1,11 @@
+[data-theme="default"] {
+    --primary-color: #27232A;
+    --secondary-color: #844446;
+    --text-color: #fff;
+}
+
+[data-theme="sword"] {
+    --primary-color: #150413;
+    --secondary-color: #635C6D;
+    --text-color: #F8F8CB;
+}
