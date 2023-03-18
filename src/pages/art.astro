@@ -1,16 +1,40 @@
 ---
-import getAllGames from "../api/games";
 import SectionWithHeading from "../components/section-with-heading.astro";
 import MainLayout from "../layouts/main-layout.astro";
 import { Image } from "astro:assets";
-const images = await Astro.glob("../assets/showcase/*.png");
+const Images: any = [];
+
+const images = await Astro.glob("../assets/showcase/*.png").then(
+    async (data) => {
+        const clone = [...data];
+
+        await clone.map((img) => {
+            const str = img.default.src;
+            const regex = /\/(\d+)-(.+)\.png\?/;
+            const match = str.match(regex);
+            const number = Number(match[1]);
+            const text = match[2];
+
+            Images.push({
+                ...img,
+                title: text,
+                id: number,
+            });
+        });
+
+        return data;
+    }
+);
 ---
 
 <MainLayout title="Art">
     <SectionWithHeading title="" columnsSize="md">
         {
-            images.map((image) => (
-                <div class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer">
+            Images.map((image) => (
+                <a
+                    href={image.title}
+                    class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
+                >
                     <Image
                         src={image.default.src}
                         width={256}
@@ -20,7 +44,7 @@ const images = await Astro.glob("../assets/showcase/*.png");
                         format="webp"
                         loading="lazy"
                     />
-                </div>
+                </a>
             ))
         }
     </SectionWithHeading>
