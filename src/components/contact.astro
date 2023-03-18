@@ -26,14 +26,23 @@ import ThemeToggler from "./theme-toggler.astro";
         <ul class="flex flex-col gap-4">
             {
                 contact.map((c) => (
-                    <li class="flex items-center gap-4 bg-primary p-4 cursor-pointer transition-all duration-200 ease-in-out outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group">
+                    <li
+                        data-action="overlay"
+                        class="relative flex items-center gap-4 bg-primary p-4 cursor-pointer transition-all duration-200 ease-in-out outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group"
+                    >
                         <Icon
                             name={c.icon}
                             class="w-8 group-hover:animate-gelatine-infite"
                         />
-                        <div>
-                            <h5>{c.name}</h5>
-                            <span>{c.value}</span>
+                        <div class="pointer-events-none">
+                            <h5 class="font-bold">{c.name}</h5>
+                            <span class="value">{c.value}</span>
+                        </div>
+                        <div
+                            data-action="copy"
+                            class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center opacity-0"
+                        >
+                            Copied to Clipboard
                         </div>
                     </li>
                 ))
@@ -46,3 +55,39 @@ import ThemeToggler from "./theme-toggler.astro";
         &#169; KOSTUR 2023-2030
     </section>
 </aside>
+
+<style>
+    .copy-overlay {
+        position: absolute;
+        inset: 0;
+        opacity: 1;
+        background-color: var(--primary-color);
+        transition: all 150ms ease-in-out;
+    }
+</style>
+
+<script>
+    const contacts = document.querySelectorAll('[data-action*="overlay"]');
+
+    contacts.forEach((contact) => {
+        contact.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const overlay: HTMLDivElement | null = contact.querySelector(
+                '[data-action*="copy"]'
+            );
+
+            const value: HTMLSpanElement | null =
+                contact.querySelector(".value");
+
+            overlay?.classList.add("copy-overlay");
+
+            navigator.clipboard.writeText(value?.innerText ?? "");
+
+            setTimeout(() => {
+                overlay?.classList.remove("copy-overlay");
+            }, 1000);
+        });
+    });
+</script>
