@@ -1,0 +1,52 @@
+---
+import MainLayout from "../layouts/main-layout.astro";
+import { Image } from "astro:assets";
+
+export async function getStaticPaths() {
+    const Images: any = [];
+
+    const images = await Astro.glob("../assets/showcase/*.png").then(
+        async (data) => {
+            const clone = [...data];
+
+            await clone.map((img) => {
+                const str = img.default.src;
+                const regex = /\/(\d+)-(.+)\.png\?/;
+                const match = str.match(regex);
+                const number = Number(match[1]);
+                const text = match[2];
+
+                Images.push({
+                    ...img,
+                    title: text,
+                    id: number,
+                });
+            });
+
+            return data;
+        }
+    );
+
+    return Images.map((img) => {
+        console.log(img.title);
+        return {
+            params: { slug: img.title },
+            props: { image: img },
+        };
+    });
+}
+
+const { image } = Astro.props;
+
+console.log(image);
+---
+
+<MainLayout title={image.title}>
+    <Image
+        src={image.default.src}
+        alt={image.title}
+        width={1920}
+        height={1080}
+        loading="eager"
+    />
+</MainLayout>
