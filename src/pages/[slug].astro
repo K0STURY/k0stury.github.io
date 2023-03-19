@@ -1,6 +1,7 @@
 ---
 import MainLayout from "../layouts/main-layout.astro";
 import { Image } from "astro:assets";
+import artwork from "../../artwork.json";
 
 export async function getStaticPaths() {
     const Images: any = [];
@@ -30,7 +31,6 @@ export async function getStaticPaths() {
     );
 
     return Images.map((img) => {
-        console.log(img.title);
         return {
             params: { slug: img.title },
             props: { image: img },
@@ -39,14 +39,38 @@ export async function getStaticPaths() {
 }
 
 const { image } = Astro.props;
+
+const artWork = artwork.find((art) => art.name === image.title);
 ---
 
 <MainLayout title={image.title}>
-    <Image
-        src={image.default.src}
-        alt={image.title}
-        width={1920}
-        height={1080}
-        loading="eager"
-    />
+    <div class="flex flex-col lg:flex-row gap-2 justify-between">
+        <div class="overflow-hidden rounded-lg">
+            <Image
+                id="image"
+                src={image.default.src}
+                alt={image.title}
+                width={1920}
+                height={1080}
+                loading="eager"
+            />
+        </div>
+
+        <div
+            class="bg-secondary p-4 flex flex-col gap-2 flex-shrink-0 mb-auto rounded-md"
+        >
+            <div class="bg-primary p-4">
+                <h3 class="font-extrabold text-2xl">Name</h3>
+                <span>{artWork?.name.replaceAll("-", " ").toUpperCase()}</span>
+            </div>
+            <div class="bg-primary p-4">
+                <h3 class="font-extrabold text-2xl">Creation Date</h3>
+                <span>{artWork?.date}</span>
+            </div>
+            <div class="bg-primary p-4">
+                <h3 class="font-extrabold text-2xl">Description</h3>
+                <span>{artWork?.description}</span>
+            </div>
+        </div>
+    </div>
 </MainLayout>
