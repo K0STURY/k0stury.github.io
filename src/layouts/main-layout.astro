@@ -46,7 +46,9 @@ const { title = "Title" } = Astro.props;
                     >{
                         getActivePage() === "/"
                             ? "HOME"
-                            : getActivePage().replace("/", "")
+                            : getActivePage()
+                                  .replace("/", "")
+                                  .replaceAll(".HTML", "")
                     }</span
                 >
                 <ul class="flex gap-4">
