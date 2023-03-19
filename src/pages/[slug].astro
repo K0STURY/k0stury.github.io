@@ -21,7 +21,9 @@ export async function getStaticPaths() {
 
                 Images.push({
                     ...img,
-                    title: text,
+                    title: import.meta.env.PROD
+                        ? text.replace(/\..*/, "")
+                        : text,
                     id: number,
                 });
             });
@@ -43,7 +45,7 @@ const { image } = Astro.props;
 const artWork = artwork.find((art) => art.name === image.title);
 ---
 
-<MainLayout title={image.title}>
+<MainLayout title={image.title.replaceAll("-", " ")}>
     <div class="flex flex-col lg:flex-row gap-2 justify-between">
         <div class="overflow-hidden rounded-lg">
             <Image

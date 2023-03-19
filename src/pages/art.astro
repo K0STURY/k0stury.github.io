@@ -19,7 +19,7 @@ const images = await Astro.glob("../assets/showcase/*.png").then(
 
             Images.push({
                 ...img,
-                title: text,
+                title: import.meta.env.PROD ? text.replace(/\..*/, "") : text,
                 id: number,
             });
         });
