@@ -10,7 +10,9 @@ const images = await Astro.glob("../assets/showcase/*.png").then(
 
         await clone.map((img) => {
             const str = img.default.src;
-            const regex = /\/(\d+)-(.+)\.png\?/;
+            const regex = import.meta.env.PROD
+                ? /\/(\d+)-([^\/]+)\.\w+$/
+                : /\/(\d+)-(.+)\.png\?/;
             const match = str.match(regex);
             const number = Number(match[1]);
             const text = match[2];

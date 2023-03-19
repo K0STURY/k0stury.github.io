@@ -3,34 +3,34 @@ import MainLayout from "../layouts/main-layout.astro";
 import { Image } from "astro:assets";
 import SectionWithHeading from "../components/section-with-heading.astro";
 import getAllGames from "../api/games";
+import getAllImageDetails from "../scripts/getAllImageDetails";
 
 const Images: any = [];
 
-const images = await Astro.glob("../assets/showcase/*.png").then(
-	async (data) => {
-		const clone = [...data];
+const images = await Astro.glob("../assets/showcase/*.png").then((data) => {
+	data.map((img) => {
+		const str = img.default.src;
+		console.log(str);
+		const regex = import.meta.env.PROD
+			? /\/(\d+)-([^\/]+)\.\w+$/
+			: /\/(\d+)-(.+)\.png\?/;
+		const match = str.match(regex);
+		const number = Number(match[1]);
+		const text = match[2];
 
-		await clone.map((img) => {
-			const str = img.default.src;
-			const regex = /\/(\d+)-(.+)\.png\?/;
-			const match = str.match(regex);
-			const number = Number(match[1]);
-			const text = match[2];
-
-			Images.push({
-				...img,
-				title: text,
-				id: number,
-			});
+		Images.push({
+			...img,
+			title: text,
+			id: number,
 		});
+	});
 
-		return data;
-	}
-);
+	return data;
+});
 
 const games = await getAllGames();
 
-function sortByDesc(a, b) {
+function sortByDesc(a: any, b: any) {
 	const nameA = a.id; // ignore upper and lowercase
 	const nameB = b.id; // ignore upper and lowercase
 	if (nameA > nameB) {
