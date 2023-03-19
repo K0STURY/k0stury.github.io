@@ -10,7 +10,6 @@ const Images: any = [];
 const images = await Astro.glob("../assets/showcase/*.png").then((data) => {
 	data.map((img) => {
 		const str = img.default.src;
-		console.log(str);
 		const regex = import.meta.env.PROD
 			? /\/(\d+)-([^\/]+)\.\w+$/
 			: /\/(\d+)-(.+)\.png\?/;

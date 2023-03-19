@@ -35,7 +35,7 @@ const { title = "Title" } = Astro.props;
         />
         <title>{title.toUpperCase()}</title>
     </head>
-    <body class="flex p-4 gap-4">
+    <body class="flex flex-col lg:flex-row p-4 gap-4">
         <Navbar />
         <main
             class="flex flex-col gap-4 flex-grow rounded-md overflow-x-hidden"
@@ -125,7 +125,6 @@ const { title = "Title" } = Astro.props;
     import "../scripts/router";
 
     const html = document.documentElement;
-    const cursor = document.querySelector(".cursor");
 
     if (
         localStorage.getItem("theme") !== null ||
