@@ -1,10 +1,10 @@
 ---
-import SectionWithHeading from "../components/section-with-heading.astro";
-import MainLayout from "../layouts/main-layout.astro";
+import SectionWithHeading from "../../components/section-with-heading.astro";
+import MainLayout from "../../layouts/main-layout.astro";
 import { Image } from "astro:assets";
 const Images: any = [];
 
-const images = await Astro.glob("../assets/showcase/*.png").then(
+const images = await Astro.glob("../../assets/showcase/*.png").then(
     async (data) => {
         const clone = [...data];
 
@@ -34,7 +34,7 @@ const images = await Astro.glob("../assets/showcase/*.png").then(
         {
             Images.map((image) => (
                 <a
-                    href={image.title}
+                    href={`/art/${image.title}`}
                     class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
                 >
                     <Image

@@ -1,12 +1,12 @@
 ---
-import MainLayout from "../layouts/main-layout.astro";
+import MainLayout from "../../layouts/main-layout.astro";
 import { Image } from "astro:assets";
-import artwork from "../../artwork.json";
+import artwork from "../../../artwork.json";
 
 export async function getStaticPaths() {
     const Images: any = [];
 
-    const images = await Astro.glob("../assets/showcase/*.png").then(
+    const images = await Astro.glob("../../assets/showcase/*.png").then(
         async (data) => {
             const clone = [...data];
 
