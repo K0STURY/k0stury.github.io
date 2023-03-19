@@ -8,5 +8,8 @@ export default defineConfig({
     assets: true
   },
   site: 'https://astronaut.github.io',
-  integrations: [tailwind()]
+  integrations: [tailwind()],
+  build: {
+    format: 'file'
+  }
 });
