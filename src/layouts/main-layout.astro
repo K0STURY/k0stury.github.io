@@ -22,6 +22,7 @@ const { title = "Title" } = Astro.props;
             content="art, graphics, designing, games, gameart, gamedev, designer, logos"
         />
         <meta name="robots" content="index, follow" />
+        <meta name="theme-color" content="#844446" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="language" content="English" />
 
@@ -49,6 +50,7 @@ const { title = "Title" } = Astro.props;
                             : getActivePage()
                                   .replaceAll("/ART/", "")
                                   .replace("/", "")
+                                  .replace("ART", "")
                                   .replaceAll(".HTML", "")
                     }</span
                 >
