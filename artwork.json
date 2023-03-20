@@ -10,8 +10,13 @@
         "description": "Moo? No, that's wrong."
     },
     {
-        "name": "vibe",
-        "date": "20 Jan 2023",
-        "description": "Vibing"
+      "name": "vibe",
+      "date": "20 Jan 2023",
+      "description": "Vibing"
+    },
+    {
+      "name": "shadowfigureclean",
+      "date": "18 Feb 2023",
+      "description": "Study of Scott Flander's Art Style'"
     }
 ]
