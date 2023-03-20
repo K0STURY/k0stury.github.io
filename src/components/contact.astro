@@ -1,7 +1,7 @@
 ---
 import { contact } from "../../site.config";
-import Icon from "astro-icon";
 import ThemeToggler from "./theme-toggler.astro";
+import ContactDetailCard from "./contact-detail-card.astro";
 ---
 
 <aside
@@ -24,36 +24,22 @@ import ThemeToggler from "./theme-toggler.astro";
     </section>
     <!-- Contact Details -->
     <section>
-        <ul class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4">
             {
                 contact.map((c) => (
-                    <li
-                        data-action="overlay"
-                        class="relative flex items-center gap-4 bg-primary p-4 cursor-pointer transition-all duration-200 ease-in-out outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group"
-                    >
-                        <Icon
-                            name={c.icon}
-                            class="w-8 group-hover:animate-gelatine-infite"
-                        />
-                        <div class="pointer-events-none">
-                            <h5 class="font-bold">{c.name}</h5>
-                            <span class="value">{c.value}</span>
-                        </div>
-                        <div
-                            data-action="copy"
-                            class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center opacity-0"
-                        >
-                            Copied to Clipboard
-                        </div>
-                    </li>
+                    <ContactDetailCard
+                        name={c.name}
+                        value={c.value}
+                        icon={c.icon}
+                    />
                 ))
             }
-        </ul>
+        </div>
     </section>
     <!-- Copyright Details? -->
     <section class="mt-auto font-bold text-center">
         <ThemeToggler />
-        &#169; KOSTUR 2023-2030
+        &#169; KOSTUR {new Date().getFullYear()}
     </section>
 </aside>
 

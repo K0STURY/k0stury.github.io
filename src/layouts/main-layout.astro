@@ -1,7 +1,7 @@
 ---
 import { Icon } from "astro-icon";
-import Navbar from "../components/contact.astro";
-import Cursor from "../components/cursor.astro";
+import ContactAside from "../components/contact.astro";
+import MobileMenu from "../components/mobile-menu.astro";
 import "../styles/master.css";
 
 const getActivePage = (): string => {
@@ -36,7 +36,8 @@ const { title = "Title" } = Astro.props;
         <title>{title.toUpperCase()}</title>
     </head>
     <body class="flex flex-col lg:flex-row p-4 gap-4">
-        <Navbar />
+        <ContactAside />
+        <MobileMenu />
         <main
             class="flex flex-col gap-4 flex-grow rounded-md overflow-x-hidden"
         >
