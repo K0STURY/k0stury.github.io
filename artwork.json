@@ -1,22 +1,28 @@
 [
-    {
-        "name": "abandoned-soldier",
-        "date": "19 Jan 2023",
-        "description": "Abandoned Soldier, I guess?"
-    },
-    {
-        "name": "bull",
-        "date": "19 Jan 2023",
-        "description": "Moo? No, that's wrong."
-    },
-    {
-      "name": "vibe",
-      "date": "20 Jan 2023",
-      "description": "Vibing"
-    },
-    {
-      "name": "shadowfigureclean",
-      "date": "18 Feb 2023",
-      "description": "Study of Scott Flander's Art Style"
-    }
+  {
+    "name": "abandoned-soldier",
+    "date": "19 Jan 2023",
+    "description": "Abandoned Soldier, I guess?"
+  },
+  {
+    "name": "bull",
+    "date": "19 Jan 2023",
+    "description": "Moo? No, that's wrong."
+  },
+  {
+    "name": "vibe",
+    "date": "20 Jan 2023",
+    "description": "Vibing"
+  },
+  {
+    "name": "shadowfigureclean",
+    "date": "18 Feb 2023",
+    "description": "Study of Scott Flander's Art Style"
+  },
+  {
+    "name": "trace-edit",
+    "date": "12 Feb 2023",
+    "description": "1st time attempting to trace over traditional drawing and editing it digitaly"
+  }
+
 ]
