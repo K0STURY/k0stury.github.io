@@ -42,12 +42,14 @@ export async function getStaticPaths() {
 
 const { image } = Astro.props;
 
-const artWork = artwork.find((art) => art.name.toLowerCase() === image.title.toLowerCase());
+const artWork = artwork.find(
+    (art) => art.name.toLowerCase() === image.title.toLowerCase()
+);
 ---
 
 <MainLayout title={image.title.replaceAll("-", " ")}>
     <div class="flex flex-col lg:flex-row gap-2 justify-between">
-        <div class="overflow-hidden rounded-lg">
+        <div class="overflow-hidden rounded-lg flex-grow">
             <Image
                 id="image"
                 src={image.default.src}
@@ -59,7 +61,7 @@ const artWork = artwork.find((art) => art.name.toLowerCase() === image.title.toL
         </div>
 
         <div
-            class="bg-secondary p-4 flex flex-col gap-2 flex-shrink-0 mb-auto rounded-md"
+            class="bg-secondary p-4 flex flex-col gap-2 flex-shrink-0 mb-auto rounded-md lg:w-[40%]"
         >
             <div class="bg-primary p-4">
                 <h3 class="font-extrabold text-2xl">Name</h3>
