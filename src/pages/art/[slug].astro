@@ -42,7 +42,7 @@ export async function getStaticPaths() {
 
 const { image } = Astro.props;
 
-const artWork = artwork.find((art) => art.name === image.title);
+const artWork = artwork.find((art) => art.name.toLowerCase() === image.title.toLowerCase());
 ---
 
 <MainLayout title={image.title.replaceAll("-", " ")}>
