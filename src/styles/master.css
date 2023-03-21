@@ -1,49 +1,5 @@
+@import "themes.css";
 @tailwind base;
-
-:root {
-    --primary-color: #27232A;
-    --secondary-color: #844446;
-    --text-color: #fff;
-}
-
-/* Themes */
-
-[data-theme="default"] {
-    --primary-color: #27232A;
-    --secondary-color: #844446;
-    --text-color: #fff;
-}
-
-[data-theme="default-alternate"] {
-    --primary-color: #844446;
-    --secondary-color: #27232A;
-    --text-color: #fff;
-}
-
-[data-theme="bull"] {
-    --primary-color: #1C1626;
-    --secondary-color: #FF2961;
-    --text-color: #FEFFFB;
-}
-
-[data-theme="bull-alternate"] {
-    --secondary-color: #1C1626;
-    --primary-color: #FF2961;
-    --text-color: #FEFFFB;
-}
-
-[data-theme="sword"] {
-    --primary-color: #635C6D;
-    --secondary-color: #150413;
-    --text-color: #F8F8CB;
-}
-
-[data-theme="sword-alternate"] {
-    --primary-color: #150413;
-    --secondary-color: #635C6D;
-    --text-color: #F8F8CB;
-}
-
 
 
 /* Themes End */
@@ -66,7 +22,7 @@ html {
     background-color: var(--primary-color);
     color: var(--text-color);
     height: 100%;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: "Lato", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     font-size: 16px;
     -ms-overflow-style: none;
     /* IE and Edge */
@@ -89,7 +45,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: monospace;
+    font-family: "League Mono", monospace;
 }
 
 a {

@@ -1,0 +1,43 @@
+:root {
+    --primary-color: #27232A;
+    --secondary-color: #844446;
+    --text-color: #fff;
+}
+
+/* Themes */
+
+[data-theme="default"] {
+    --primary-color: #27232A;
+    --secondary-color: #844446;
+    --text-color: #fff;
+}
+
+[data-theme="default-alternate"] {
+    --primary-color: #844446;
+    --secondary-color: #27232A;
+    --text-color: #fff;
+}
+
+[data-theme="bull"] {
+    --primary-color: #1C1626;
+    --secondary-color: #FF2961;
+    --text-color: #FEFFFB;
+}
+
+[data-theme="bull-alternate"] {
+    --secondary-color: #1C1626;
+    --primary-color: #FF2961;
+    --text-color: #FEFFFB;
+}
+
+[data-theme="sword"] {
+    --primary-color: #635C6D;
+    --secondary-color: #150413;
+    --text-color: #F8F8CB;
+}
+
+[data-theme="sword-alternate"] {
+    --primary-color: #150413;
+    --secondary-color: #635C6D;
+    --text-color: #F8F8CB;
+}
