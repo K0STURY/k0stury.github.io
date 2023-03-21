@@ -30,7 +30,7 @@ export default function getAllArt(artworks: Artworks): Artworks {
         let title = "";
         if (match) {
             id = Number(match[1])
-            title = match[2]
+            title = import.meta.env.PROD ? match[2].replace(/\..*$/, '') : match[2]
         }
 
         return {
