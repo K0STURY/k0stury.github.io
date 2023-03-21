@@ -1,136 +1,62 @@
 ---
 import { Icon } from "astro-icon";
-import ContactAside from "../components/contact.astro";
-import MobileMenu from "../components/mobile-menu.astro";
-import "../styles/master.css";
-
-const getActivePage = (): string => {
-    const { pathname } = Astro.url;
-
-    return pathname === "/" ? "/" : pathname.replace("/", "").toUpperCase();
-};
+import { contact } from "../../site.config";
+import ContactDetailCard from "@components/contact-detail-card.astro";
+import ContactAside from "@components/contact.astro";
+import MobileMenu from "@components/mobile-menu.svelte";
+import ThemeToggler from "@components/theme-toggler.astro";
+import NavbarWrapper from "@components/navbar/navbar-wrapper.astro";
+import "@fontsource/league-mono";
+import "@fontsource/lato";
+import "@styles/master.css";
+import MetaTags from "./meta-tags.astro";
 
 const { title = "Title" } = Astro.props;
 ---
 
 <html lang="en">
     <head>
-        <meta name="title" content="Kostur" />
-        <meta name="description" content="Portfolio for Kostur" />
-        <meta
-            name="keywords"
-            content="art, graphics, designing, games, gameart, gamedev, designer, logos"
-        />
-        <meta name="robots" content="index, follow" />
-        <meta name="theme-color" content="#844446" />
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <meta name="language" content="English" />
-
-        <meta property="og:title" content="kostur" />
-        <meta property="og:type" content="graphic designing" />
-        <meta property="og:url" content="https://k0stury.github.io" />
-        <meta
-            property="og:image"
-            content="https://k0stury.github.io/images/kostur.png"
-        />
+        <MetaTags />
         <title>{title.toUpperCase()}</title>
     </head>
     <body class="flex flex-col lg:flex-row p-4 gap-4">
         <ContactAside />
-        <MobileMenu />
+        <MobileMenu client:load>
+            <Icon name="bi:list" class="w-10 h-10" slot="menu-icon" />
+            <div class="flex flex-col gap-4" slot="details">
+                {
+                    contact.map((c) => (
+                        <ContactDetailCard
+                            name={c.name}
+                            value={c.value}
+                            icon={c.icon}
+                        />
+                    ))
+                }
+            </div>
+            <div slot="actions">
+                <ThemeToggler />
+            </div>
+        </MobileMenu>
         <main
             class="flex flex-col gap-4 flex-grow rounded-md overflow-x-hidden"
         >
-            <nav
-                class="flex justify-between items-center bg-secondary py-2 px-4"
-            >
-                <span id="swup" class="font-bold"
-                    >{
-                        getActivePage() === "/"
-                            ? "HOME"
-                            : getActivePage()
-                                  .replaceAll("/ART/", "")
-                                  .replace("/", "")
-                                  .replace("ART", "")
-                                  .replaceAll(".HTML", "")
-                    }</span
-                >
-                <ul class="flex gap-4">
-                    <li id="swup">
-                        <a
-                            href="/"
-                            class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                                getActivePage() === "/" ? "active-link" : ""
-                            }`}
-                        >
-                            <Icon
-                                class="w-6 group-hover:animate-gelatine-infite"
-                                name="mdi:home"
-                            />
-                            Home
-                        </a>
-                    </li>
-                    <li id="swup">
-                        <a
-                            href="/games"
-                            class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                                getActivePage().includes("GAMES")
-                                    ? "active-link"
-                                    : ""
-                            }`}
-                        >
-                            <Icon
-                                class="w-6 group-hover:animate-gelatine-infite"
-                                name="ion:game-controller"
-                            />
-                            Games
-                        </a>
-                    </li>
-                    <li id="swup">
-                        <a
-                            href="/art"
-                            class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                                getActivePage().includes("ART")
-                                    ? "active-link"
-                                    : ""
-                            }`}
-                        >
-                            <Icon
-                                class="w-6 group-hover:animate-gelatine-infite"
-                                name="fa-solid:paint-brush"
-                            />
-                            Art
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <NavbarWrapper />
             <div id="swup" class="swup-transition-fade space-y-4">
                 <slot />
             </div>
         </main>
+        <script>
+            import "../scripts/router";
+
+            const html = document.documentElement;
+
+            if (
+                localStorage.getItem("theme") !== null ||
+                localStorage.getItem("theme") !== undefined
+            ) {
+                html.dataset.theme = localStorage.getItem("theme") ?? "default";
+            }
+        </script>
     </body>
 </html>
-
-<style>
-    .active-link {
-        background-color: var(--primary-color);
-        font-weight: bold;
-    }
-
-    .active-link [astro-icon] {
-        animation: gelatine 0.5s infinite;
-    }
-</style>
-
-<script>
-    import "../scripts/router";
-
-    const html = document.documentElement;
-
-    if (
-        localStorage.getItem("theme") !== null ||
-        localStorage.getItem("theme") !== undefined
-    ) {
-        html.dataset.theme = localStorage.getItem("theme") ?? "default";
-    }
-</script>
