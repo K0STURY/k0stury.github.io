@@ -1,4 +1,4 @@
-import css from '../styles/master.css?raw'
+import css from '../styles/themes.css?raw'
 
 export default function extractThemes() {
     const pattern = /\[data-theme="(.*?)"\]/g;
