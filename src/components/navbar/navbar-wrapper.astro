@@ -1,0 +1,83 @@
+---
+import { Icon } from "astro-icon";
+
+const getActivePage = (): string => {
+    const { pathname } = Astro.url;
+
+    return pathname === "/" ? "/" : pathname.replace("/", "").toUpperCase();
+};
+
+const links = ["/", "/games", "/art"];
+
+const cleanPathname = (url: string): string => {
+    return url === "/"
+        ? "HOME"
+        : url
+              .replaceAll("/ART/", "")
+              .replace("/", "")
+              .replaceAll(".HTML", "")
+              .replaceAll("-", " ")
+              .replace(/^ART(?=\S)/, "");
+};
+
+const title = cleanPathname(getActivePage());
+---
+
+<nav class="flex justify-between items-center bg-secondary py-2 px-4">
+    <span id="swup" class="font-bold">{title}</span>
+    <ul class="flex gap-4">
+        <li id="swup">
+            <a
+                href="/"
+                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
+                    getActivePage() === "/" ? "active-link" : ""
+                }`}
+            >
+                <Icon
+                    class="w-6 group-hover:animate-gelatine-infite"
+                    name="mdi:home"
+                />
+                Home
+            </a>
+        </li>
+        <li id="swup">
+            <a
+                href="/games"
+                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
+                    getActivePage().includes("GAMES") ? "active-link" : ""
+                }`}
+            >
+                <Icon
+                    class="w-6 group-hover:animate-gelatine-infite"
+                    name="ion:game-controller"
+                />
+                Games
+            </a>
+        </li>
+        <li id="swup">
+            <a
+                href="/art"
+                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
+                    getActivePage().includes("ART") ? "active-link" : ""
+                }`}
+            >
+                <Icon
+                    class="w-6 group-hover:animate-gelatine-infite"
+                    name="fa-solid:paint-brush"
+                />
+                Art
+            </a>
+        </li>
+    </ul>
+</nav>
+
+<style>
+    .active-link {
+        background-color: var(--primary-color);
+        font-weight: bold;
+    }
+
+    .active-link [astro-icon] {
+        animation: gelatine 0.5s infinite;
+    }
+</style>
