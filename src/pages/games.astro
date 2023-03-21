@@ -1,19 +1,20 @@
 ---
-import getAllGames from "../api/games";
-import SectionWithHeading from "../components/section-with-heading.astro";
-import MainLayout from "../layouts/main-layout.astro";
+import getAllGames, { Games } from "@api/games";
+import SectionWithHeading from "@components/section-with-heading.astro";
+import MainLayout from "@layouts/main-layout.astro";
 
-const response = await getAllGames();
+const response: Games = await getAllGames();
 ---
 
 <MainLayout title="Games">
 	<SectionWithHeading title="" columnsSize="sm">
 		{
-			response.map((game: any) => (
+			response.map((game) => (
 				<a href={game.url} class="flex flex-col h-full w-full group">
 					{game.cover_url ? (
 						<img
 							src={game.cover_url}
+							alt={game.title}
 							class="w-full h-full object-cover group-hover:animate-gelatine-in-out"
 						/>
 					) : (
