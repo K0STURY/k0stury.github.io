@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon";
+import MobileMenu from "./mobile-menu.svelte";
 
 const getActivePage = (): string => {
     const { pathname } = Astro.url;
@@ -7,7 +8,20 @@ const getActivePage = (): string => {
     return pathname === "/" ? "/" : pathname.replace("/", "").toUpperCase();
 };
 
-const links = ["/", "/games", "/art"];
+const links = [
+    {
+        name: "HOME",
+        url: "/",
+    },
+    {
+        name: "GAMES",
+        url: "/games",
+    },
+    {
+        name: "ART",
+        url: "/art",
+    },
+];
 
 const cleanPathname = (url: string): string => {
     return url === "/"
@@ -23,9 +37,11 @@ const cleanPathname = (url: string): string => {
 const title = cleanPathname(getActivePage());
 ---
 
-<nav class="flex justify-between items-center bg-secondary py-2 px-4">
-    <span id="swup" class="font-bold">{title}</span>
-    <ul class="flex gap-4">
+<nav
+    class="sticky top-0 z-50 flex items-center justify-between px-4 py-2 text-2xl shadow-2xl lg:text-base bg-secondary"
+>
+    <span id="swup" class="hidden font-bold lg:block">{title}</span>
+    <ul class="flex justify-between w-full gap-4 lg:justify-end">
         <li id="swup">
             <a
                 href="/"
@@ -34,7 +50,7 @@ const title = cleanPathname(getActivePage());
                 }`}
             >
                 <Icon
-                    class="w-6 group-hover:animate-gelatine-infite"
+                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
                     name="mdi:home"
                 />
                 Home
@@ -48,7 +64,7 @@ const title = cleanPathname(getActivePage());
                 }`}
             >
                 <Icon
-                    class="w-6 group-hover:animate-gelatine-infite"
+                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
                     name="ion:game-controller"
                 />
                 Games
@@ -62,11 +78,20 @@ const title = cleanPathname(getActivePage());
                 }`}
             >
                 <Icon
-                    class="w-6 group-hover:animate-gelatine-infite"
+                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
                     name="fa-solid:paint-brush"
                 />
                 Art
             </a>
+        </li>
+        <li>
+            <MobileMenu client:load>
+                <Icon
+                    name="bi:list"
+                    class="block lg:hidden relative w-12 h-12 z-[999999]"
+                    slot="title"
+                />
+            </MobileMenu>
         </li>
     </ul>
 </nav>
