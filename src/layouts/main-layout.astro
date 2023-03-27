@@ -19,9 +19,9 @@ const { title = "Title" } = Astro.props;
         <MetaTags />
         <title>{title.toUpperCase()}</title>
     </head>
-    <body class="flex flex-col lg:flex-row p-4 gap-4">
+    <body class="flex flex-col gap-4 p-4 lg:flex-row">
         <ContactAside />
-        <MobileMenu client:load>
+        <!-- <MobileMenu client:load>
             <Icon name="bi:list" class="w-10 h-10" slot="menu-icon" />
             <div class="flex flex-col gap-4" slot="details">
                 {
@@ -37,12 +37,12 @@ const { title = "Title" } = Astro.props;
             <div slot="actions">
                 <ThemeToggler />
             </div>
-        </MobileMenu>
+        </MobileMenu> -->
         <main
-            class="flex flex-col gap-4 flex-grow rounded-md overflow-x-hidden"
+            class="flex flex-col flex-grow gap-4 overflow-x-hidden rounded-md"
         >
             <NavbarWrapper />
-            <div id="swup" class="swup-transition-fade space-y-4">
+            <div id="swup" class="space-y-4 swup-transition-fade">
                 <slot />
             </div>
         </main>
