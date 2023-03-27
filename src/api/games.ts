@@ -15,12 +15,13 @@ export default async function getAllGames() {
     const response = await fetch('https://itch.io/api/1/iCQzGljw8jsSCmjYNewsqHDS7ew1ukuXiCOmaXqg/my-games')
     const result = await response.json();
 
-    if (GamesSchema.safeParse(result["games"]).success) {
+    const parseScheme = GamesSchema.safeParse(result["games"]);
+    if (parseScheme.success) {
         console.log("Itch.io games are successfully retrieved and schema is matched")
-        return result["games"];
+        return parseScheme.data;
     }
     else {
         console.log("Itch.io API failed to get all the games and it doesn't match the schema.")
-        return [];
+        return parseScheme.error;
     }
 }
