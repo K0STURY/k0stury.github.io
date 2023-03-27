@@ -1,26 +1,27 @@
 ---
 import { contact } from "../../site.config";
-import ThemeToggler from "./theme-toggler.astro";
-import ContactDetailCard from "./contact-detail-card.astro";
+import ThemeToggler from "./theme-toggler.svelte";
+import ContactDetailCard from "./contact-detail-card.svelte";
+import Icon from "astro-icon";
 ---
 
 <aside
     id="menu"
-    class="hidden lg:flex shrink-0 bg-secondary p-3 flex-col gap-6 rounded-md w-80 lg:h-full overflow-y-scroll"
+    class="flex-col hidden gap-6 p-3 overflow-y-scroll rounded-md lg:flex shrink-0 bg-secondary w-80 lg:h-full"
 >
     <!-- Logo -->
-    <div class="w-full h-72 rounded-full overflow-hidden flex-shrink-0">
+    <div class="flex-shrink-0 w-full overflow-hidden rounded-full h-72">
         <img
             src="/images/kostur.png"
             alt="logo"
-            class="w-full h-full aspect-video object-cover"
+            class="object-cover w-full h-full aspect-video"
         />
     </div>
 
     <!-- Logo details -->
     <section class="flex flex-col items-center gap-2">
         <h1 class="text-2xl font-bold">Kostur</h1>
-        <span class="bg-primary p-2 rounded-md font-mono">Artist</span>
+        <span class="p-2 font-mono rounded-md bg-primary">Artist</span>
     </section>
     <!-- Contact Details -->
     <section>
@@ -30,51 +31,21 @@ import ContactDetailCard from "./contact-detail-card.astro";
                     <ContactDetailCard
                         name={c.name}
                         value={c.value}
-                        icon={c.icon}
-                    />
+                        client:load
+                    >
+                        <Icon
+                            name={c.icon}
+                            class="w-8 group-hover:animate-gelatine-infite"
+                            slot="icon"
+                        />
+                    </ContactDetailCard>
                 ))
             }
         </div>
     </section>
     <!-- Copyright Details? -->
     <section class="mt-auto font-bold text-center">
-        <ThemeToggler />
+        <ThemeToggler client:load />
         &#169; KOSTUR {new Date().getFullYear()}
     </section>
 </aside>
-
-<style>
-    .copy-overlay {
-        position: absolute;
-        inset: 0;
-        opacity: 1;
-        background-color: var(--primary-color);
-        transition: all 150ms ease-in-out;
-    }
-</style>
-
-<script>
-    const contacts = document.querySelectorAll('[data-action*="overlay"]');
-
-    contacts.forEach((contact) => {
-        contact.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const overlay: HTMLDivElement | null = contact.querySelector(
-                '[data-action*="copy"]'
-            );
-
-            const value: HTMLSpanElement | null =
-                contact.querySelector(".value");
-
-            overlay?.classList.add("copy-overlay");
-
-            navigator.clipboard.writeText(value?.innerText ?? "");
-
-            setTimeout(() => {
-                overlay?.classList.remove("copy-overlay");
-            }, 1000);
-        });
-    });
-</script>
