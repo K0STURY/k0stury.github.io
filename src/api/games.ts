@@ -12,7 +12,7 @@ export type Games = z.infer<typeof GamesSchema>
 
 
 export default async function getAllGames() {
-    const response = await fetch('https://itch.io/api/1/iCQzGljw8jsSCmjYNewsqHDS7ew1ukuXiCOmaXqg/my-games')
+    const response = await fetch(`https://itch.io/api/1/${import.meta.env.ITCH_KEY}/my-games`)
     const result = await response.json();
 
     const parseScheme = GamesSchema.safeParse(result["games"]);
