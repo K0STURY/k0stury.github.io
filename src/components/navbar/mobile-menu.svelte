@@ -23,9 +23,11 @@
     <div
         in:fade|local={{ duration: 250 }}
         out:fade|local={{ delay: 600 }}
-        class="fixed inset-0 flex flex-col justify-between w-full h-full gap-4 overflow-y-scroll text-2xl bg-black/90 backdrop-blur-lg"
+        class="fixed inset-0 flex flex-col justify-between w-full h-full gap-4 overflow-y-scroll text-2xl bg-black/90 backdrop-blur-lg p-2"
     >
-        <div class="flex flex-shrink-0 gap-6 p-4 overflow-hidden rounded-lg">
+        <div
+            class="flex flex-shrink-0 flex-col md:flex-row gap-6 p-4 overflow-hidden rounded-lg"
+        >
             <img
                 src="/images/kostur.png"
                 class="object-cover h-96 w-96"
@@ -34,12 +36,9 @@
             <div class="flex flex-col items-center justify-between gap-6 pt-12">
                 <div>
                     <h2 class="text-3xl ">Contact Details</h2>
-                    <span
+                    <span class="font-content"
                         >Below are my contact details. You can click to copy.</span
                     >
-                </div>
-                <div>
-                    <ThemeToggler />
                 </div>
             </div>
         </div>
@@ -59,8 +58,10 @@
                 </div>
             {/each}
 
-            <div class="mt-auto font-mono">
-                Kostur {new Date().getFullYear()}
+            <div class="mt-auto font-content">
+                <div>
+                    <ThemeToggler />
+                </div>
             </div>
         </div>
     </div>
