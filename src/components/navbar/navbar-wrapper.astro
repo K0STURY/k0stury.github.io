@@ -5,21 +5,24 @@ import MobileMenu from "./mobile-menu.svelte";
 const getActivePage = (): string => {
     const { pathname } = Astro.url;
 
-    return pathname === "/" ? "/" : pathname.replace("/", "").toUpperCase();
+    return pathname === "/" ? "HOME" : pathname.replace("/", "").toUpperCase();
 };
 
 const links = [
     {
-        name: "HOME",
+        id: "HOME",
         url: "/",
+        icon: "mdi:home",
     },
     {
-        name: "GAMES",
+        id: "GAMES",
         url: "/games",
+        icon: "ion:game-controller",
     },
     {
-        name: "ART",
+        id: "ART",
         url: "/art",
+        icon: "fa-solid:paint-brush",
     },
 ];
 
@@ -35,55 +38,40 @@ const cleanPathname = (url: string): string => {
 };
 
 const title = cleanPathname(getActivePage());
+
+const capitalizeFirstCharacter = (name: string): string => {
+    const str = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    return str;
+};
 ---
 
 <nav
-    class="sticky top-0 z-50 flex items-center justify-between px-4 py-2 text-2xl shadow-2xl lg:text-base bg-secondary"
+    class="sticky top-0 z-50 flex items-center justify-between px-4 py-2 text-xl shadow-2xl lg:text-base bg-secondary"
 >
-    <span id="swup" class="hidden font-bold lg:block">{title}</span>
-    <ul class="flex justify-between w-full gap-4 lg:justify-end">
-        <li id="swup">
-            <a
-                href="/"
-                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                    getActivePage() === "/" ? "active-link" : ""
-                }`}
-            >
-                <Icon
-                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
-                    name="mdi:home"
-                />
-                Home
-            </a>
-        </li>
-        <li id="swup">
-            <a
-                href="/games"
-                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                    getActivePage().includes("GAMES") ? "active-link" : ""
-                }`}
-            >
-                <Icon
-                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
-                    name="ion:game-controller"
-                />
-                Games
-            </a>
-        </li>
-        <li id="swup">
-            <a
-                href="/art"
-                class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
-                    getActivePage().includes("ART") ? "active-link" : ""
-                }`}
-            >
-                <Icon
-                    class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
-                    name="fa-solid:paint-brush"
-                />
-                Art
-            </a>
-        </li>
+    <span id="swup" class="hidden font-stylized font-bold text-xl lg:block"
+        >{title}</span
+    >
+    <ul class="flex w-full gap-4 justify-end font-stylized text-xl">
+        {
+            links.map((link) => (
+                <li id="swup">
+                    <a
+                        href={link.url}
+                        class={`flex items-center gap-3 p-2 transition-all duration-200 ease-in-out rounded-md hover:bg-primary group ${
+                            getActivePage().includes(link.id)
+                                ? "active-link"
+                                : ""
+                        }`}
+                    >
+                        <Icon
+                            class="w-12 lg:w-6 group-hover:animate-gelatine-infite"
+                            name={link.icon}
+                        />
+                        <span>{capitalizeFirstCharacter(link.id)}</span>
+                    </a>
+                </li>
+            ))
+        }
         <li>
             <MobileMenu client:load>
                 <Icon
