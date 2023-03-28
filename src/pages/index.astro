@@ -2,52 +2,24 @@
 import MainLayout from "../layouts/main-layout.astro";
 import { Image } from "astro:assets";
 import SectionWithHeading from "../components/section-with-heading.astro";
-import getAllGames from "../api/games";
-import getAllImageDetails from "../scripts/getAllImageDetails";
+import getAllGames, { Games } from "../api/games";
+import getAllArt, { Artwork } from "@api/art";
+import sortByDesc from "src/helpers/utils";
 
-const Images: any = [];
-
-const images = await Astro.glob("../assets/showcase/*.png").then((data) => {
-	data.map((img) => {
-		const str = img.default.src;
-		const regex = import.meta.env.PROD
-			? /\/(\d+)-([^\/]+)\.\w+$/
-			: /\/(\d+)-(.+)\.png\?/;
-		const match = str.match(regex);
-		const number = Number(match[1]);
-		const text = match[2];
-
-		Images.push({
-			...img,
-			title: import.meta.env.PROD ? text.replace(/\..*/, "") : text,
-			id: number,
-		});
-	});
-
-	return data;
-});
-
-const games = await getAllGames();
-
-function sortByDesc(a: any, b: any) {
-	const nameA = a.id; // ignore upper and lowercase
-	const nameB = b.id; // ignore upper and lowercase
-	if (nameA > nameB) {
-		return -1;
+const images = await Astro.glob<Artwork>("../assets/showcase/*.png").then(
+	(data) => {
+		return getAllArt(data);
 	}
-	if (nameA < nameB) {
-		return 1;
-	}
+);
 
-	// names must be equal
-	return 0;
-}
+const games: Games = await getAllGames();
 ---
 
 <MainLayout title="Home">
-	<SectionWithHeading title="My Art" icon="fa-solid:paint-brush" url="/art">
+	<SectionWithHeading title="My ART" icon="fa-solid:paint-brush" url="/art">
 		{
-			Images.sort(sortByDesc)
+			images
+				.sort(sortByDesc)
 				.slice(0, 8)
 				.map((image) => (
 					<a
@@ -69,7 +41,7 @@ function sortByDesc(a: any, b: any) {
 	</SectionWithHeading>
 
 	<SectionWithHeading
-		title="My Games"
+		title="My GAMES"
 		icon="ion:game-controller"
 		url="/games"
 	>
