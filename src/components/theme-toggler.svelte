@@ -6,15 +6,15 @@
 
     let themes = extractThemes();
 
-    let selectedTheme: string =
+    let selectedTheme: string | null =
         localStorage.getItem("theme") !== null
             ? localStorage.getItem("theme")
             : "default";
 
     $: {
         if (html) {
-            localStorage.setItem("theme", selectedTheme);
-            html.dataset.theme = selectedTheme;
+            localStorage.setItem("theme", selectedTheme ?? "default");
+            html.dataset.theme = selectedTheme ?? "default";
         }
     }
 
@@ -35,7 +35,7 @@
                 bind:group={selectedTheme}
             />
             <label
-                class="flex overflow-hidden border-2 rounded-lg cursor-pointer border-primary hover:animate-gelatine-in-out"
+                class="flex overflow-hidden border-2 rounded-full cursor-pointer border-primary hover:animate-gelatine-in-out"
                 for={theme}
             >
                 <div class="w-6 h-16 lg:w-2 lg:h-6 bg-primary" />
