@@ -2,29 +2,11 @@
 import SectionWithHeading from "../../components/section-with-heading.astro";
 import MainLayout from "../../layouts/main-layout.astro";
 import { Image } from "astro:assets";
-const Images: any = [];
+import getAllArt, { Artwork } from "@api/art";
 
-const images = await Astro.glob("../../assets/showcase/*.png").then(
+const images = await Astro.glob<Artwork>("../../assets/showcase/*.png").then(
     async (data) => {
-        const clone = [...data];
-
-        await clone.map((img) => {
-            const str = img.default.src;
-            const regex = import.meta.env.PROD
-                ? /\/(\d+)-([^\/]+)\.\w+$/
-                : /\/(\d+)-(.+)\.png\?/;
-            const match = str.match(regex);
-            const number = Number(match[1]);
-            const text = match[2];
-
-            Images.push({
-                ...img,
-                title: import.meta.env.PROD ? text.replace(/\..*/, "") : text,
-                id: number,
-            });
-        });
-
-        return data;
+        return getAllArt(data);
     }
 );
 ---
@@ -32,7 +14,7 @@ const images = await Astro.glob("../../assets/showcase/*.png").then(
 <MainLayout title="Art">
     <SectionWithHeading title="" columnsSize="md">
         {
-            Images.map((image) => (
+            images.map((image) => (
                 <a
                     href={`/art/${image.title}`}
                     class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
