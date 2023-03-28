@@ -11,6 +11,10 @@ module.exports = {
 			animation: {
 				'gelatine-infite': 'gelatine 0.375s infinite',
 				'gelatine-in-out': 'gelatine 0.375s ease-in-out'
+			},
+			fontFamily: {
+				'content': ['inter'],
+				'stylized': ['Rancho', 'cursive'],
 			}
 		},
 	},

@@ -24,7 +24,7 @@
     <slot name="icon" />
     <div class="pointer-events-none">
         <h5 class="font-bold">{name}</h5>
-        <span class="value">{value}</span>
+        <span class="font-content">{value}</span>
     </div>
     {#if copied}
         <div
