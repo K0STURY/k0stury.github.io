@@ -22,6 +22,6 @@ export default async function getAllGames() {
     }
     else {
         console.log("Itch.io API failed to get all the games and it doesn't match the schema.")
-        return parseScheme.error;
+        return [];
     }
 }
