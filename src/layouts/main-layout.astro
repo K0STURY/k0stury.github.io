@@ -1,13 +1,8 @@
 ---
-import { Icon } from "astro-icon";
-import { contact } from "../../site.config";
-import ContactDetailCard from "@components/contact-detail-card.astro";
 import ContactAside from "@components/contact.astro";
-import MobileMenu from "@components/mobile-menu.svelte";
-import ThemeToggler from "@components/theme-toggler.astro";
 import NavbarWrapper from "@components/navbar/navbar-wrapper.astro";
-import "@fontsource/league-mono";
-import "@fontsource/lato";
+import "@fontsource/inter";
+import "@fontsource/rancho";
 import "@styles/master.css";
 import MetaTags from "./meta-tags.astro";
 
@@ -17,27 +12,10 @@ const { title = "Title" } = Astro.props;
 <html lang="en">
     <head>
         <MetaTags />
-        <title>{title.toUpperCase()}</title>
+        <title>{title}</title>
     </head>
-    <body class="flex flex-col gap-4 p-4 lg:flex-row">
+    <body class="flex flex-col gap-4 p-2 lg:p-4 lg:flex-row">
         <ContactAside />
-        <!-- <MobileMenu client:load>
-            <Icon name="bi:list" class="w-10 h-10" slot="menu-icon" />
-            <div class="flex flex-col gap-4" slot="details">
-                {
-                    contact.map((c) => (
-                        <ContactDetailCard
-                            name={c.name}
-                            value={c.value}
-                            icon={c.icon}
-                        />
-                    ))
-                }
-            </div>
-            <div slot="actions">
-                <ThemeToggler />
-            </div>
-        </MobileMenu> -->
         <main
             class="flex flex-col flex-grow gap-4 overflow-x-hidden rounded-md"
         >
