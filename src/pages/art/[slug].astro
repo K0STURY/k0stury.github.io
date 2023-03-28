@@ -5,8 +5,6 @@ import artwork from "../../../artwork.json";
 import getAllArt, { Artwork } from "@api/art";
 
 export async function getStaticPaths() {
-    const Images: any = [];
-
     const fetchImages = await Astro.glob<Artwork>(
         "../../assets/showcase/*.png"
     );
