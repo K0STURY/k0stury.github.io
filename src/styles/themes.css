@@ -41,3 +41,8 @@
     --secondary-color: #635C6D;
     --text-color: #F8F8CB;
 }
+[data-theme="k0stur-original"] {
+    --primary-color: #8B5760;
+    --secondary-color: #3B313C;
+    --text-color: #FEDD8BD;
+}
