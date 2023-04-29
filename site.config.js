@@ -13,7 +13,7 @@ export const contact = [
     },
     {
         "name": "Bio",
-        "value": "I create things.",
+        "value": "I am a hobbiest artist from Sweden, programming is my passion",
         "icon": "ic:baseline-outlet"
     },
     {
