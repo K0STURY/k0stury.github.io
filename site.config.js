@@ -1,14 +1,8 @@
 export const contact = [
     {
         "name": "Discord",
-        "value": "K0СТУР#2004",
+        "value": "K0STUR",
         "icon": "ic:baseline-discord",
-        "action": "copy"
-    },
-    {
-        "name": "Email",
-        "value": "k0sturmakesart@gmail.com",
-        "icon": "ic:baseline-mail",
         "action": "copy"
     },
     {
