@@ -46,3 +46,8 @@
     --secondary-color: #8B5760;
     --text-color: #fff;
 }
+[data-theme="new-pic-original"] {
+    --primary-color: #3E4219;
+    --secondary-color: #1D1D1D;
+    --text-color: #fff;
+}
