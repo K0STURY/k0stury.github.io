@@ -6,40 +6,16 @@
 
 /* Themes */
 
-[data-theme="default"] {
+[data-theme="ashfid-original"] {
     --primary-color: #27232A;
     --secondary-color: #844446;
     --text-color: #fff;
 }
 
-[data-theme="default-alternate"] {
+[data-theme="ashfid-flipped"] {
     --primary-color: #844446;
     --secondary-color: #27232A;
     --text-color: #fff;
-}
-
-[data-theme="bull"] {
-    --primary-color: #1C1626;
-    --secondary-color: #FF2961;
-    --text-color: #FEFFFB;
-}
-
-[data-theme="bull-alternate"] {
-    --secondary-color: #1C1626;
-    --primary-color: #FF2961;
-    --text-color: #FEFFFB;
-}
-
-[data-theme="sword"] {
-    --primary-color: #635C6D;
-    --secondary-color: #150413;
-    --text-color: #F8F8CB;
-}
-
-[data-theme="sword-alternate"] {
-    --primary-color: #150413;
-    --secondary-color: #635C6D;
-    --text-color: #F8F8CB;
 }
 [data-theme="k0stur-original"] {
     --primary-color: #3B313C;
@@ -47,7 +23,7 @@
     --text-color: #fff;
 }
 [data-theme="new-pic-original"] {
-    --primary-color: #3E4219;
-    --secondary-color: #1D1D1D;
+    --primary-color: #1D1D1D;
+    --secondary-color: #3E4219;
     --text-color: #fff;
 }
