@@ -11,17 +11,6 @@
     --secondary-color: #844446;
     --text-color: #fff;
 }
-
-[data-theme="ashfid-flipped"] {
-    --primary-color: #844446;
-    --secondary-color: #27232A;
-    --text-color: #fff;
-}
-[data-theme="k0stur-original"] {
-    --primary-color: #3B313C;
-    --secondary-color: #8B5760;
-    --text-color: #fff;
-}
 [data-theme="new-pic-original"] {
     --primary-color: #1D1D1D;
     --secondary-color: #3E4219;
