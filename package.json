@@ -1,7 +1,6 @@
 {
-  "name": "",
+  "name": "k0stury.art",
   "type": "module",
-  "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev --host",
