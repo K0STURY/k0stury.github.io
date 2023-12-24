@@ -2,59 +2,58 @@
 import MainLayout from "@layouts/main-layout.astro";
 import { Image } from "astro:assets";
 import artwork from "../../../artwork.json";
-import getAllArt, { Artwork } from "@api/art";
+import getAllArt, { type Artwork } from "@api/art";
 
 export async function getStaticPaths() {
-    const fetchImages = await Astro.glob<Artwork>(
-        "../../assets/showcase/*.png"
-    );
+  const fetchImages = await Astro.glob<Artwork>("../../assets/showcase/*.png");
 
-    const images = getAllArt(fetchImages);
+  const images = getAllArt(fetchImages);
 
-    return images.map((img) => {
-        return {
-            params: { slug: img.title },
-            props: { image: img },
-        };
-    });
+  return images.map((img) => {
+    return {
+      params: { slug: img.title },
+      props: { image: img },
+    };
+  });
 }
 
 const { image } = Astro.props;
 const { title, id, default: props } = image as Artwork;
 
 const artWork = artwork.find(
-    (art) => art.name.toLowerCase() === title.toLowerCase()
+  (art) => art.name.toLowerCase() === title.toLowerCase()
 );
 ---
 
 <MainLayout title={title.replaceAll("-", " ")}>
-    <div class="flex flex-col lg:flex-row gap-2 justify-between">
-        <div class="overflow-hidden rounded-lg flex-grow">
-            <Image
-                id="image"
-                src={props.src}
-                alt={title}
-                width={1920}
-                height={1080}
-                loading="eager"
-            />
-        </div>
-
-        <div
-            class="bg-secondary p-4 flex flex-col gap-2 flex-shrink-0 mb-auto rounded-md lg:w-[40%]"
-        >
-            <div class="bg-primary p-4">
-                <h3 class="font-extrabold text-2xl">Name</h3>
-                <span>{artWork?.name.replaceAll("-", " ").toUpperCase()}</span>
-            </div>
-            <div class="bg-primary p-4">
-                <h3 class="font-extrabold text-2xl">Creation Date</h3>
-                <span>{artWork?.date}</span>
-            </div>
-            <div class="bg-primary p-4">
-                <h3 class="font-extrabold text-2xl">Description</h3>
-                <span>{artWork?.description}</span>
-            </div>
-        </div>
+  <div class="flex flex-col lg:flex-row gap-2 justify-between">
+    <div class="overflow-hidden rounded-lg flex-grow">
+      <Image
+        id="image"
+        src={props}
+        alt={title}
+        width={1920}
+        height={1080}
+        loading="eager"
+        transition:name={title}
+      />
     </div>
+
+    <div
+      class="bg-secondary p-4 flex flex-col gap-2 flex-shrink-0 mb-auto rounded-md lg:w-[40%]"
+    >
+      <div class="bg-primary p-4">
+        <h3 class="font-extrabold text-2xl">Name</h3>
+        <span>{artWork?.name.replaceAll("-", " ").toUpperCase()}</span>
+      </div>
+      <div class="bg-primary p-4">
+        <h3 class="font-extrabold text-2xl">Creation Date</h3>
+        <span>{artWork?.date}</span>
+      </div>
+      <div class="bg-primary p-4">
+        <h3 class="font-extrabold text-2xl">Description</h3>
+        <span>{artWork?.description}</span>
+      </div>
+    </div>
+  </div>
 </MainLayout>

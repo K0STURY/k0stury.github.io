@@ -2,7 +2,7 @@
 import SectionWithHeading from "../../components/section-with-heading.astro";
 import MainLayout from "../../layouts/main-layout.astro";
 import { Image } from "astro:assets";
-import getAllArt, { Artwork } from "@api/art";
+import getAllArt, { type Artwork } from "@api/art";
 
 const images = await Astro.glob<Artwork>("../../assets/showcase/*.png").then(
   async (data) => {
@@ -24,13 +24,15 @@ const filteredImages = images.sort((a, b) => {
           class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
         >
           <Image
-            src={image.default.src}
+            src={image.default}
             width={256}
             height={256}
             class="w-full h-full object-cover object-center"
             alt={image.id.toString()}
             format="webp"
             loading="lazy"
+            quality="low"
+            transition:name={image.title}
           />
         </a>
       ))
