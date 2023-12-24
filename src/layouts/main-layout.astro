@@ -5,36 +5,34 @@ import "@fontsource/inter";
 import "@fontsource/rancho";
 import "@styles/master.css";
 import MetaTags from "./meta-tags.astro";
+import { ViewTransitions } from "astro:transitions";
 
 const { title = "Title" } = Astro.props;
 ---
 
 <html lang="en">
-    <head>
-        <MetaTags />
-        <title>{title}</title>
-    </head>
-    <body class="flex flex-col gap-4 p-2 lg:p-4 lg:flex-row">
-        <ContactAside />
-        <main
-            class="flex flex-col flex-grow gap-4 overflow-x-hidden rounded-md"
-        >
-            <NavbarWrapper />
-            <div id="swup" class="space-y-4 swup-transition-fade">
-                <slot />
-            </div>
-        </main>
-        <script>
-            import "../scripts/router";
+  <head>
+    <MetaTags />
+    <title>{title}</title>
+    <ViewTransitions />
+  </head>
+  <body class="flex flex-col gap-4 p-2 lg:p-4 lg:flex-row">
+    <ContactAside />
+    <main class="flex flex-col flex-grow gap-4 overflow-x-hidden rounded-md">
+      <NavbarWrapper />
+      <div class="space-y-4">
+        <slot />
+      </div>
+    </main>
+    <script>
+      const html = document.documentElement;
 
-            const html = document.documentElement;
-
-            if (
-                localStorage.getItem("theme") !== null ||
-                localStorage.getItem("theme") !== undefined
-            ) {
-                html.dataset.theme = localStorage.getItem("theme") ?? "default";
-            }
-        </script>
-    </body>
+      if (
+        localStorage.getItem("theme") !== null ||
+        localStorage.getItem("theme") !== undefined
+      ) {
+        html.dataset.theme = localStorage.getItem("theme") ?? "default";
+      }
+    </script>
+  </body>
 </html>
