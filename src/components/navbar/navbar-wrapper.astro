@@ -48,13 +48,11 @@ const capitalizeFirstCharacter = (name: string): string => {
 <nav
   class="sticky top-0 z-50 flex items-center justify-between px-4 py-2 text-xl shadow-2xl lg:text-base bg-secondary"
 >
-  <span id="swup" class="hidden font-stylized font-bold text-xl lg:block"
-    >{title}</span
-  >
+  <span class="hidden font-stylized font-bold text-xl lg:block">{title}</span>
   <ul class="flex w-full gap-4 justify-end font-stylized text-xl">
     {
       links.map((link) => (
-        <li id="swup">
+        <li>
           <a
             href={link.url}
             data-current-page={
