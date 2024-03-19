@@ -16,3 +16,8 @@
     --secondary-color: #3E4219;
     --text-color: #fff;
 }
+[data-theme="clean-light"] {
+    --primary-color: #191716;
+    --secondary-color: #FFFFFF;
+    --text-color: #191716;
+}
