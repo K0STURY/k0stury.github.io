@@ -3,6 +3,7 @@ import SectionWithHeading from "../../components/section-with-heading.astro";
 import MainLayout from "../../layouts/main-layout.astro";
 import { Image } from "astro:assets";
 import getAllArt, { type Artwork } from "@api/art";
+import { globals } from "site.config";
 
 const images = await Astro.glob<Artwork>("../../assets/showcase/*.png").then(
   async (data) => {
@@ -31,7 +32,7 @@ const filteredImages = images.sort((a, b) => {
             alt={image.id.toString()}
             format="webp"
             loading="lazy"
-            quality="low"
+            quality={globals.imageQuality}
             transition:name={image.title}
           />
         </a>

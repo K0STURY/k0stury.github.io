@@ -5,6 +5,7 @@ import SectionWithHeading from "../components/section-with-heading.astro";
 import getAllGames, { Games } from "../api/games";
 import getAllArt, { Artwork } from "@api/art";
 import sortByDesc from "src/helpers/utils";
+import { globals } from "site.config";
 
 const images = await Astro.glob<Artwork>("../assets/showcase/*.png").then(
   (data) => {
@@ -34,7 +35,7 @@ const games: Games = await getAllGames();
               alt={image.title}
               format="webp"
               loading="lazy"
-              quality="low"
+              quality={globals.imageQuality}
               transition:name={image.title}
             />
           </a>
