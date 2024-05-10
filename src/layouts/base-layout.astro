@@ -1,0 +1,28 @@
+---
+import "@styles/master.css";
+import "@fontsource/luckiest-guy";
+import MetaTags from "@layouts/meta-tags.astro";
+import NavigationBar from "@components/navigation-bar.astro";
+---
+
+<html lang="en">
+  <head>
+    <MetaTags />
+    <script>
+      const html = document.documentElement;
+
+      if (
+        localStorage.getItem("theme") !== null ||
+        localStorage.getItem("theme") !== undefined
+      ) {
+        html.dataset.theme = localStorage.getItem("theme") ?? "default";
+      }
+    </script>
+  </head>
+  <body>
+    <NavigationBar />
+    <main class="flex flex-col gap-8">
+      <slot />
+    </main>
+  </body>
+</html>
