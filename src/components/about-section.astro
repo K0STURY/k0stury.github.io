@@ -1,0 +1,41 @@
+---
+import Avatar from "@assets/logo/avatar.png";
+import { Image } from "astro:assets";
+import { details, contact } from "site.config";
+import ContactDetailCard from "./contact-detail-card.svelte";
+import { Icon } from "astro-icon/components";
+---
+
+<section
+  class="flex flex-col md:flex-row gap-4 items-center md:justify-center p-0 md:p-8"
+>
+  <!-- Logo -->
+  <div class="rounded-2xl overflow-hidden md:w-32 w-32">
+    <Image src={Avatar} alt="Logo" format="webp" />
+  </div>
+  <!-- About -->
+  <div class="md:w-1/3 w-1/2">
+    <p class="text-lg [text-wrap:balance] mb-4">
+      <Fragment set:html={details.aboutMe} />
+    </p>
+    <ul class="flex flex-col lg:flex-row gap-4">
+      {
+        contact.map((c) => (
+          <li>
+            <ContactDetailCard name={c.name} value={c.value} client:idle>
+              <Icon name={c.icon} slot="icon" class="text-accent text-xl" />
+            </ContactDetailCard>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  :global(strong) {
+    font-family: var(--font-accent);
+    color: var(--accent-color);
+    letter-spacing: 0.1em;
+  }
+</style>
