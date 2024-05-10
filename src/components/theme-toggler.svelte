@@ -6,64 +6,48 @@
 
   let themes = extractThemes();
 
-  let selectedTheme: string | null = null
+  let selectedTheme: string | null = null;
 
-    $: {
-      if (html) {
-        localStorage.setItem("theme", selectedTheme ?? "default");
-        html.dataset.theme = selectedTheme ?? "default";
-      }
-    }
+  function setTheme(newTheme: string) {
+    selectedTheme = newTheme;
+    localStorage.setItem("theme", selectedTheme);
+    html.setAttribute("data-theme", selectedTheme);
+  }
 
   onMount(() => {
     html = document.documentElement;
 
-    selectedTheme = localStorage.getItem("theme") !== null && typeof window !== "undefined"
+    selectedTheme =
+      localStorage.getItem("theme") !== null && typeof window !== "undefined"
         ? localStorage.getItem("theme")
         : "default";
-    
+      
+    html.setAttribute("data-theme", selectedTheme ?? "default");
   });
 </script>
 
-<form class="flex flex-wrap items-center justify-center gap-2">
+<ul class="flex gap-4 ">
   {#each themes as theme}
-    <div data-theme={theme}>
-      <input
-        type="radio"
+    <li>
+      <button
         data-theme={theme}
-        id={theme}
-        name={theme}
-        value={theme}
-        bind:group={selectedTheme}
-      />
-      <label
-        class="flex overflow-hidden border-2 rounded-full cursor-pointer border-primary hover:animate-gelatine-in-out"
-        for={theme}
-      >
-        <div class="w-6 h-16 lg:w-2 lg:h-6 bg-primary" />
-        <div class="w-6 h-16 lg:w-2 lg:h-6 bg-secondary" />
-        <div class="w-6 h-16 lg:w-2 lg:h-6 bg-color" />
-      </label>
-    </div>
+        class=" rounded-md cursor-pointer  hover:animate-gelatine-in-out w-6 h-6 gradient"
+        class:outline={theme === selectedTheme}
+        class:outline-primary={theme === selectedTheme}
+        class:outline-offset-2={theme === selectedTheme}
+        on:click={(e) => setTheme(theme)}
+      ></button>
+    </li>
   {/each}
-</form>
+</ul>
 
-<!-- <script>
-    const selectors = document.querySelectorAll("input[data-theme]");
-    const html = document.documentElement;
-
-    selectors.forEach((selector) => {
-        selector.addEventListener("click", (e) => {
-            const element = e.target as HTMLInputElement;
-            localStorage.setItem("theme", element.value);
-            html.dataset.theme = element.value;
-        });
-    });
-</script> -->
 <style>
-  input[type="radio"] {
-    position: fixed;
-    opacity: 0;
-    pointer-events: none;
+  .gradient {
+    background: linear-gradient(
+      to right,
+      var(--primary-color) 0 33%,
+      var(--secondary-color) 33% 66%,
+      var(--text-color) 66%
+    );
   }
 </style>
