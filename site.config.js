@@ -23,5 +23,5 @@ export const details = {
 };
 
 export const globals = {
-  imageQuality: "high", // low, mid, high or max
+  imageQuality: "max", // low, mid, high or max
 };
