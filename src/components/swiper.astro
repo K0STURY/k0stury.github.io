@@ -1,0 +1,80 @@
+---
+import { Image } from "astro:assets";
+
+const arts = await Astro.glob("../assets/banners/*.png");
+const showThree = arts.slice(0, 3);
+---
+
+<div class="swiper w-full h-screen">
+  <div class="swiper-wrapper">
+    <!-- Slides -->
+    {
+      showThree.map((art) => (
+        <div class="swiper-slide">
+          <Image
+            class="h-full object-cover"
+            src={art.default}
+            width={art.width}
+            height={art.height}
+            alt="Image"
+          />
+        </div>
+      ))
+    }
+    ...
+  </div>
+  <!-- Pagination -->
+  <div
+    class="swiper-pagination swiper-pagination-clickable swiper-pagination-bullets"
+  >
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="swiper-button-prev"></div>
+  <div class="swiper-button-next"></div>
+</div>
+
+<style>
+  .swiper {
+    --swiper-pagination-color: var(--accent-color);
+    --swiper-pagination-bullet-size: 16px;
+    --swiper-pagination-bullet-width: 32px;
+    --swiper-pagination-bullet-height: 8px;
+    --swiper-pagination-bullet-border-radius: 0;
+    --swiper-pagination-bullet-inactive-color: #000;
+    --swiper-pagination-bullet-inactive-opacity: 0.7;
+    --swiper-pagination-bullet-opacity: 1;
+    --swiper-pagination-bullet-horizontal-gap: 4px;
+    --swiper-pagination-bullet-vertical-gap: 6px;
+
+    --swiper-navigation-color: var(--accent-color);
+  }
+</style>
+
+<script>
+  import Swiper from "swiper";
+  import { Navigation, Pagination, Autoplay } from "swiper/modules";
+
+  const swiper = new Swiper(".swiper", {
+    modules: [Navigation, Pagination, Autoplay],
+    loop: true,
+    spaceBetween: 300,
+    slidesPerView: "auto",
+    cssMode: true,
+
+    autoplay: {
+      delay: 3000,
+    },
+
+    pagination: {
+      el: ".swiper-pagination",
+      clickable: true,
+    },
+
+    // Navigation arrows
+    navigation: {
+      nextEl: ".swiper-button-next",
+      prevEl: ".swiper-button-prev",
+    },
+  });
+</script>
