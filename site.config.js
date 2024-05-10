@@ -2,20 +2,25 @@ export const contact = [
   {
     name: "Discord",
     value: "K0STUR",
-    icon: "ic:baseline-discord",
+    icon: "ri:discord-fill",
     action: "copy",
   },
   {
-    name: "Bio",
-    value: "I am a hobbiest artist, I also code on the side",
-    icon: "ic:baseline-outlet",
+    name: "Itch.io",
+    value: "https://itch.io",
+    icon: "mdi:games-outline",
   },
   {
     name: "Location",
     value: "Sweden",
-    icon: "ic:baseline-location-on",
+    icon: "mdi:location-on-outline",
   },
 ];
+
+export const details = {
+  aboutMe:
+    "<strong>YO!</strong> I'm Kostur, and I make art for fun. I love using bright colors in my works and creating something enjoyable.",
+};
 
 export const globals = {
   imageQuality: "high", // low, mid, high or max
