@@ -1,0 +1,28 @@
+---
+import getAllArt, { type Artwork, type Artworks } from "@api/art";
+import { Image } from "astro:assets";
+import sortByDesc from "src/helpers/utils";
+
+let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
+  getAllArt(data),
+);
+
+arts = arts.sort(sortByDesc);
+---
+
+<section class="grid grid-cols-3 gap-2 p-4" id="gallery">
+  {
+    arts.map((art) => (
+      <div class="rounded-md overflow-hidden">
+        <Image
+          src={art.default as any}
+          alt="title"
+          format="webp"
+          width={640}
+          height={320}
+          loading="lazy"
+        />
+      </div>
+    ))
+  }
+</section>
