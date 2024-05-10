@@ -1,18 +1,39 @@
-<meta name="title" content="Kostur" />
-<meta name="description" content="Portfolio for Kostur" />
-<meta
-    name="keywords"
-    content="art, graphics, designing, games, gameart, gamedev, designer, logos"
-/>
-<meta name="robots" content="index, follow" />
+---
+import Avatar from "@assets/logo/avatar.png";
+import { getImage } from "astro:assets";
+
+const contentImg = await getImage({
+  src: Avatar,
+  width: 1280,
+  height: 720,
+});
+
+const urlImage = new URL(contentImg.src, Astro.url);
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kostur's Art</title>
+<meta name="title" content="Kostur's Art" />
+<meta name="description" content="Portfolio of Kostur 🎨" />
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="manifest" href="/site.webmanifest" />
+
 <meta name="theme-color" content="#844446" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="language" content="English" />
 
-<meta property="og:title" content="kostur" />
+<meta property="og:title" content="Kostur's Art" />
 <meta property="og:type" content="graphic designing" />
-<meta property="og:url" content="https://k0stury.github.io" />
-<meta
-    property="og:image"
-    content="https://k0stury.github.io/images/kostur.png"
-/>
+<meta property="og:url" content="https://k0stur.art" />
+<meta property="og:image" content={urlImage} />
+<meta property="og:description" content="Portfolio of Kostur 🎨" />
+
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={Astro.url.href} />
+<meta property="twitter:title" content="Kostur's Art" />
+<meta property="twitter:description" content="Portfolio of Kostur 🎨" />
+<meta property="twitter:image" content={urlImage} />
