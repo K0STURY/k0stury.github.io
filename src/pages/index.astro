@@ -1,69 +1,15 @@
 ---
-import MainLayout from "../layouts/main-layout.astro";
-import { Image } from "astro:assets";
-import SectionWithHeading from "../components/section-with-heading.astro";
-import getAllGames, { Games } from "../api/games";
-import getAllArt, { Artwork } from "@api/art";
-import sortByDesc from "src/helpers/utils";
-import { globals } from "site.config";
-
-const images = await Astro.glob<Artwork>("../assets/showcase/*.png").then(
-  (data) => {
-    return getAllArt(data);
-  }
-);
-
-const games: Games = await getAllGames();
+import BaseLayout from "@layouts/base-layout.astro";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+import Swiper from "@components/swiper.astro";
+import AboutSection from "@components/about-section.astro";
+import Gallery from "@components/gallery.astro";
 ---
 
-<MainLayout title="Home">
-  <SectionWithHeading title="My ART" icon="fa-solid:paint-brush" url="/art">
-    {
-      images
-        .sort(sortByDesc)
-        .slice(0, 8)
-        .map((image) => (
-          <a
-            href={`/art/${image.title}`}
-            class="hover:animate-gelatine-in-out overflow-hidden rounded-md cursor-pointer"
-          >
-            <Image
-              src={image.default}
-              width={512}
-              height={512}
-              class="w-full h-full object-cover object-center"
-              alt={image.title}
-              format="webp"
-              loading="lazy"
-              quality={globals.imageQuality}
-              transition:name={image.title}
-            />
-          </a>
-        ))
-    }
-  </SectionWithHeading>
-
-  <SectionWithHeading title="My GAMES" icon="ion:game-controller" url="/games">
-    {
-      games
-        .filter((game) => game.hasOwnProperty("cover_url"))
-        .map((game) => (
-          <a
-            href={game.url}
-            class="group overflow-hidden rounded-md cursor-pointer"
-          >
-            <div class="flex flex-col">
-              <img
-                src={game.cover_url}
-                width={256}
-                height={256}
-                class="w-full h-full object-cover object-center group-hover:animate-gelatine-in-out"
-                alt={game.title}
-              />
-              <span class="font-bold">{game.title}</span>
-            </div>
-          </a>
-        ))
-    }
-  </SectionWithHeading>
-</MainLayout>
+<BaseLayout>
+  <Swiper />
+  <AboutSection />
+  <Gallery />
+</BaseLayout>
