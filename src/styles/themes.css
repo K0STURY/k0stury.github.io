@@ -1,23 +1,33 @@
 :root {
-    --primary-color: #27232A;
-    --secondary-color: #844446;
-    --text-color: #fff;
+  --primary-color: #27232a;
+  --secondary-color: #844446;
+  --text-color: #fff;
+  --accent-color: #ff0062;
+  --accent-color-hover: #9c0941;
+
+  --font-accent: "Luckiest Guy", system-ui;
 }
 
 /* Themes */
 
 [data-theme="ashfid-original"] {
-    --primary-color: #27232A;
-    --secondary-color: #844446;
-    --text-color: #fff;
+  --primary-color: #27232a;
+  --secondary-color: #844446;
+  --text-color: #fff;
+  --accent-color: #ff0062;
+  --accent-color-hover: #9c0941;
 }
 [data-theme="new-pic-original"] {
-    --primary-color: #1D1D1D;
-    --secondary-color: #3E4219;
-    --text-color: #fff;
+  --primary-color: #1d1d1d;
+  --secondary-color: #3e4219;
+  --text-color: #fff;
+  --accent-color: #ff0062;
+  --accent-color-hover: #9c0941;
 }
 [data-theme="clean-light"] {
-    --primary-color: #32C5D1;
-    --secondary-color: #FFFFFF;
-    --text-color: #191716;
+  --primary-color: #32c5d1;
+  --secondary-color: #ffffff;
+  --text-color: #191716;
+  --accent-color: #e7ae3a;
+  --accent-color-hover: #ad770a;
 }
