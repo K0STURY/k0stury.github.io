@@ -1,0 +1,45 @@
+---
+import ThemeToggler from "./theme-toggler.svelte";
+---
+
+<nav
+  class="fixed items-center flex justify-between w-full z-50 group p-4"
+  data-inview="false"
+>
+  <h1
+    class="group-data-[inview='false']:text-4xl font-accent tracking-tighter transition-transform duration-200 ease-linear hover:animate-gelatine-in-out"
+  >
+    <a href="/" class="text-white">Kos<span class="text-accent">tur.</span></a>
+  </h1>
+  <ThemeToggler client:load />
+</nav>
+
+<script>
+  // Intersection Observer setup
+  const gallerySection = document.querySelector("#gallery")!;
+  const navbar = document.querySelector("nav")!;
+
+  const options = {
+    threshold: 1.0,
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const intersecting = entry.isIntersecting;
+
+      navbar.setAttribute("data-inview", JSON.stringify(intersecting));
+    }, options);
+  });
+
+  observer.observe(gallerySection);
+</script>
+
+<style>
+  [data-inview="true"] {
+    @apply backdrop-blur-3xl bg-black bg-opacity-60;
+  }
+
+  [data-inview="true"] > h1 {
+    @apply transform scale-110 text-4xl transition-transform duration-300 ease-linear;
+  }
+</style>
