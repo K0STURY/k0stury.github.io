@@ -10,6 +10,7 @@ export const contacts: ContactProps[] = [
     name: "Discord",
     value: "K0STUR",
     icon: "ri:discord-fill",
+    link: "discordapp.com/users/206867415210917888",
   },
   {
     name: "Itch.io",
