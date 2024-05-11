@@ -17,7 +17,7 @@ export const contact = [
     name: "Location",
     value: "Sweden",
     icon: "mdi:location-on-outline",
-    link: "discordapp.com/users/206867415210917888"
+    link: "discordapp.com/users/206867415210917888",
   },
 ];
 

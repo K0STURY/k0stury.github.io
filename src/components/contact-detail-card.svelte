@@ -16,7 +16,6 @@
   }
   function openLink() {
     window.open(link)
-    
   }
 </script>
 
