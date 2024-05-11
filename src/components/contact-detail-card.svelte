@@ -13,6 +13,10 @@
 
     setTimeout(() => (copied = false), overlayTime);
   }
+  function openLink() {
+    window.open("https://k0stur.itch.io/")
+    
+  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -21,6 +25,7 @@
   data-action="overlay"
   class="relative flex items-center gap-4 p-4 transition-all duration-200 ease-in-out rounded-md cursor-pointer bg-primary outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group hover:animate-gelatine-in-out"
   on:click={copy}
+  on:click={openLink}
 >
   <div><slot name="icon" /></div>
   <div class="pointer-events-none">
