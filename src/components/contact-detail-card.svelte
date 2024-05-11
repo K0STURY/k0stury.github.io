@@ -13,9 +13,6 @@
 
     setTimeout(() => (copied = false), overlayTime);
   }
-  function openLink() {
-    window.open("https://k0stur.itch.io/")
-  }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
