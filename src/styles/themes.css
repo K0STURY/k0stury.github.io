@@ -31,3 +31,10 @@
   --accent-color: #e7ae3a;
   --accent-color-hover: #ad770a;
 }
+[data-theme="new-design"] {
+  --primary-color: #27232a;
+  --secondary-color: #ffffff;
+  --text-color: #fff;
+  --accent-color: #e7ae3a;
+  --accent-color-hover: #ad770a;
+}
