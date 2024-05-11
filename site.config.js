@@ -7,7 +7,7 @@ export const contact = [
   },
   {
     name: "Itch.io",
-    value: "https://itch.io",
+    value: "https://k0stur.itch.io/",
     icon: "mdi:games-outline",
   },
   {
