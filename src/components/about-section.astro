@@ -1,7 +1,7 @@
 ---
 import Avatar from "@assets/logo/avatar.png";
 import { Image } from "astro:assets";
-import { details, contact } from "site.config";
+import { details, contacts } from "src/site.config";
 import ContactDetailCard from "./contact-detail-card.svelte";
 import { Icon } from "astro-icon/components";
 ---
@@ -20,10 +20,14 @@ import { Icon } from "astro-icon/components";
     </p>
     <ul class="flex flex-col lg:flex-row gap-4 px-24 md:px-0">
       {
-        contact.map((c) => (
+        contacts.map((contact) => (
           <li>
-            <ContactDetailCard name={c.name} value={c.value} client:idle>
-              <Icon name={c.icon} slot="icon" class="text-accent text-xl" />
+            <ContactDetailCard contact={contact} client:idle>
+              <Icon
+                name={contact.icon}
+                slot="icon"
+                class="text-accent text-xl"
+              />
             </ContactDetailCard>
           </li>
         ))

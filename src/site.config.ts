@@ -1,14 +1,21 @@
-export const contact = [
+export interface ContactProps {
+  name: string;
+  value: string;
+  icon: string;
+  link?: string;
+}
+
+export const contacts: ContactProps[] = [
   {
     name: "Discord",
     value: "K0STUR",
     icon: "ri:discord-fill",
-    action: "copy",
   },
   {
     name: "Itch.io",
     value: "https://k0stur.itch.io/",
     icon: "mdi:games-outline",
+    link: "https://k0stur.itch.io/",
   },
   {
     name: "Location",
