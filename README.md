@@ -48,7 +48,7 @@ There's a script called extractThemes.js inside **src/scripts/** and that helps 
 
 ### **How to add new artwork/images?**
 
-1. Head to `src/assets/showcase/` folder.
+1. Head to `src/assets/showcase/` or `src/assets/banners/` folder.
 2. Paste your image there or download it there.
 3. The name is very important; follow the **number-name.(png | webp | jpeg | jpg)** pattern. For example, `1-my-picture.png`.
 4. The number in the name above is the order of the images shown on the website. The name after the number is the identifier for adding more metadata to the image. 
