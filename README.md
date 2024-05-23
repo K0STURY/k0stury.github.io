@@ -30,6 +30,10 @@ After installing the required tools and extensions from [Requirements Section](#
   --primary-color: #hexcode; /* rgb, hsl, normal name colors and all that are fine */
   --secondary-color: #hexcode; /* rgb, hsl, normal name colors and all that are fine */
   --text-color: #hexcode; /* rgb, hsl, normal name colors and all that are fine */
+  --accent-color: #hexcode; /* rgb, hsl, normal name colors and all that are fine */
+  --accent-color-hover: #hexcode; /* rgb, hsl, normal name colors and all that are fine */
+
+  --font-accent: "Luckiest Guy", system-ui;
 }
 ```
 4. Once that's done, you can quickly push your project and GitHub actions will build your site.
