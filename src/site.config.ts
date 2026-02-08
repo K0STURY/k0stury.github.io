@@ -24,6 +24,7 @@ export const contacts: ContactProps[] = [
     name: "Location",
     value: "Sweden",
     icon: "mdi:location-on-outline",
+    link: "https://en.wikipedia.org/wiki/Sweden",
   },
 ];
 
