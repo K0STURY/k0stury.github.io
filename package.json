@@ -1,12 +1,13 @@
 {
-  "name": "k0stury.art",
+  "name": "k0stury.dev",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "sync:artwork": "node src/scripts/sync-artwork.mjs"
   },
   "dependencies": {
     "@astrojs/svelte": "^5.0.2",

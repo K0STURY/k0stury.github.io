@@ -13,6 +13,11 @@ html {
   background-color: var(--primary-color);
   color: var(--text-color);
   height: 100%;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+html *:not(img):not(picture):not(video) {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, outline-color 0.4s ease;
 }
 
 /* width */
@@ -37,6 +42,44 @@ html {
 
 body {
   height: 100%;
+}
+
+/* Repeating SVG pattern background */
+@keyframes pattern-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 180px 180px; }
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url('../assets/patterns/Pattern_4.svg');
+  background-size: 100px;
+  background-repeat: repeat;
+  opacity: 0.08;
+  animation: pattern-scroll 10s linear infinite;
+}
+
+/* Animated film grain overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 0.4s steps(3) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-2%, -3%); }
+  66% { transform: translate(3%, 1%); }
 }
 
 /* Animations */
@@ -65,4 +108,51 @@ body {
 
 .gelatine-infinite {
   animation: gelatine 0.375s infinite;
+}
+
+/* Avatar pulse ring — hover only, image stays full opacity */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent-color);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
+.avatar-pulse:hover {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* Skeleton shimmer for gallery loading */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.gallery-item {
+  position: relative;
+  min-height: 120px;
+}
+
+.gallery-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  transition: opacity 0.4s ease;
+}
+
+.gallery-item.loaded::before {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hide UI elements when lightbox is open */
+.lightbox-hidden {
+  display: none !important;
 }

@@ -2,51 +2,85 @@
 import { Image } from "astro:assets";
 
 const arts = await Astro.glob("../assets/banners/*.png");
+
+// Optional: sort by ID-Name.png
+arts.sort((a, b) => {
+  const getId = (src: string) =>
+    Number(src.match(/\/(\d+)-/)?.[1] ?? 0);
+  return getId(b.default.src) - getId(a.default.src);
+});
+
 const showThree = arts.slice(0, 3);
 ---
 
-<div class="swiper w-full h-screen">
-  <div class="swiper-wrapper">
-    <!-- Slides -->
-    {
-      showThree.map((art) => (
-        <div class="swiper-slide">
-          <Image
-            class="h-full object-cover"
-            src={art.default}
-            width={art.width}
-            height={art.height}
-            alt="Image"
-          />
-        </div>
-      ))
-    }
-    ...
-  </div>
-  <!-- Pagination -->
-  <div
-    class="swiper-pagination swiper-pagination-clickable swiper-pagination-bullets"
-  >
-  </div>
+<section id="hero">
+  <div id="banner-wrapper">
+    <div class="swiper">
+      <div class="swiper-wrapper">
+        {
+          showThree.map((art, i) => (
+            <div class="swiper-slide">
+              <div
+                class="slide-image"
+                data-depth={0.15 + i * 0.05}
+              >
+                <Image
+                  src={art.default}
+                  width={art.width}
+                  height={art.height}
+                  alt="Banner image"
+                  loading="eager"
+                />
+              </div>
+            </div>
+          ))
+        }
+      </div>
 
-  <!-- Navigation Buttons -->
-  <div class="swiper-button-prev"></div>
-  <div class="swiper-button-next"></div>
-</div>
+      <div class="swiper-pagination"></div>
+      <div class="swiper-button-prev"></div>
+      <div class="swiper-button-next"></div>
+    </div>
+  </div>
+</section>
 
 <style>
+  #hero {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #banner-wrapper {
+    height: 100%;
+    will-change: transform;
+  }
+
+  .swiper,
+  .swiper-wrapper,
+  .swiper-slide {
+    height: 100%;
+  }
+
+  .swiper-slide {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide-image {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+
+  .slide-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
   .swiper {
     --swiper-pagination-color: var(--accent-color);
-    --swiper-pagination-bullet-size: 16px;
-    --swiper-pagination-bullet-width: 32px;
-    --swiper-pagination-bullet-height: 8px;
-    --swiper-pagination-bullet-border-radius: 0;
-    --swiper-pagination-bullet-inactive-color: #000;
-    --swiper-pagination-bullet-inactive-opacity: 0.7;
-    --swiper-pagination-bullet-opacity: 1;
-    --swiper-pagination-bullet-horizontal-gap: 4px;
-    --swiper-pagination-bullet-vertical-gap: 6px;
-
     --swiper-navigation-color: var(--accent-color);
   }
 </style>
@@ -55,15 +89,27 @@ const showThree = arts.slice(0, 3);
   import Swiper from "swiper";
   import { Navigation, Pagination, Autoplay } from "swiper/modules";
 
-  const swiper = new Swiper(".swiper", {
+  const wrapper = document.getElementById("banner-wrapper");
+  const slides = document.querySelectorAll(".swiper-slide");
+
+
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY * 0.3;
+    wrapper.style.transform = `translateY(${y}px)`;
+  });
+
+
+  /* ---------------- Swiper ---------------- */
+
+  new Swiper(".swiper", {
     modules: [Navigation, Pagination, Autoplay],
     loop: true,
-    spaceBetween: 300,
-    slidesPerView: "auto",
-    cssMode: true,
+    slidesPerView: 1,
+    centeredSlides: true,
 
     autoplay: {
-      delay: 5000,
+      delay: 6000,
+      disableOnInteraction: false,
     },
 
     pagination: {
@@ -71,7 +117,6 @@ const showThree = arts.slice(0, 3);
       clickable: true,
     },
 
-    // Navigation arrows
     navigation: {
       nextEl: ".swiper-button-next",
       prevEl: ".swiper-button-prev",

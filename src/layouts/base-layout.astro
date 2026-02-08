@@ -21,8 +21,78 @@ import NavigationBar from "@components/navigation-bar.astro";
   </head>
   <body>
     <NavigationBar />
-    <main class="flex flex-col gap-8">
+    <slot name="banner" />
+    <main class="flex flex-col gap-8 relative z-10">
       <slot />
     </main>
+    <footer class="flex flex-col items-center gap-4 py-12 text-color relative z-10">
+      <p class="text-sm">you made it all the way down?</p>
+      <button
+        id="back-to-top"
+        class="px-4 py-2 rounded-md bg-primary text-color text-sm
+               outline outline-2 outline-secondary
+               hover:bg-secondary hover:outline-primary
+               hover:animate-gelatine-in-out
+               transition-all duration-200 ease-in-out
+               cursor-pointer border-none"
+      >
+        Back to top
+      </button>
+    </footer>
+    <!-- Floating back-to-top button -->
+    <button
+      id="floating-top"
+      class="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full
+             flex items-center justify-center
+             border-none cursor-pointer
+             opacity-0 pointer-events-none
+             transition-all duration-300 ease-in-out"
+      style="background-color: var(--accent-color); box-shadow: 0 4px 14px rgba(0,0,0,0.35);"
+      aria-label="Back to top"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    <script>
+      document.getElementById("back-to-top")?.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      // Floating back-to-top: show after scrolling past one viewport height
+      const floatingBtn = document.getElementById("floating-top");
+      if (floatingBtn) {
+        let ticking = false;
+        window.addEventListener("scroll", () => {
+          if (!ticking) {
+            requestAnimationFrame(() => {
+              if (window.scrollY > window.innerHeight) {
+                floatingBtn.style.opacity = "1";
+                floatingBtn.style.pointerEvents = "auto";
+                floatingBtn.style.transform = "translateY(0)";
+              } else {
+                floatingBtn.style.opacity = "0";
+                floatingBtn.style.pointerEvents = "none";
+                floatingBtn.style.transform = "translateY(12px)";
+              }
+              ticking = false;
+            });
+            ticking = true;
+          }
+        });
+
+        floatingBtn.addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        floatingBtn.addEventListener("mouseenter", () => {
+          floatingBtn.style.transform = "translateY(0) scale(1.1)";
+        });
+        floatingBtn.addEventListener("mouseleave", () => {
+          floatingBtn.style.transform = window.scrollY > window.innerHeight ? "translateY(0)" : "translateY(12px)";
+        });
+      }
+    </script>
   </body>
 </html>

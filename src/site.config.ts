@@ -1,3 +1,5 @@
+import { boolean } from "zod";
+
 export interface ContactProps {
   name: string;
   value: string;
@@ -10,10 +12,11 @@ export const contacts: ContactProps[] = [
     name: "Discord",
     value: "K0STUR",
     icon: "ri:discord-fill",
+    link: "https://discord.com/users/206867415210917888",
   },
   {
     name: "Itch.io",
-    value: "https://k0stur.itch.io/",
+    value: "Itch.io",
     icon: "mdi:games-outline",
     link: "https://k0stur.itch.io/",
   },
@@ -28,6 +31,10 @@ export const details = {
   aboutMe:
     "<strong>YO!</strong> I'm Kostur, and I make art for fun. I love using bright colors in my works and creating something enjoyable.",
 };
+
+export const commisionStatus = {
+  isOpen: true
+}
 
 export const globals = {
   imageQuality: "max", // low, mid, high or max

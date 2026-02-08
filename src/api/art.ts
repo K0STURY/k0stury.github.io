@@ -1,9 +1,20 @@
 import { z } from "zod";
+import artworkMeta from "@data/artwork.json";
+
+const ArtworkMetaSchema = z.object({
+  ID: z.number(),
+  name: z.string(),
+  description: z.string(),
+  date: z.string(),
+  tag: z.array(z.string()),
+});
+
+const ArtworksMetaSchema = z.array(ArtworkMetaSchema);
+
+type ArtworkMeta = z.infer<typeof ArtworkMetaSchema>;
 
 const ArtworksSchema = z.array(
   z.object({
-    title: z.string(),
-    id: z.number(),
     default: z.object({
       src: z.string(),
       width: z.number(),
@@ -13,29 +24,44 @@ const ArtworksSchema = z.array(
   }),
 );
 
-const Artwork = ArtworksSchema.element;
+const ArtworkSchema = ArtworksSchema.element;
 
 export type Artworks = z.infer<typeof ArtworksSchema>;
-export type Artwork = z.infer<typeof Artwork>;
+export type Artwork = z.infer<typeof ArtworkSchema> & {
+  id: number;
+  title: string;
+  description: string;
+  date: string;
+  tags: string[];
+};
 
-export default function getAllArt(artworks: Artworks): Artworks {
-  return (artworks = artworks.map((art) => {
+const parsedMeta = ArtworksMetaSchema.parse(artworkMeta);
+
+const metaById = new Map<number, ArtworkMeta>(
+  parsedMeta.map((entry) => [entry.ID, entry]),
+);
+
+
+export default function getAllArt(artworks: Artworks): Artwork[] {
+  return artworks.map((art) => {
     const src = art.default.src;
+
     const regex = import.meta.env.PROD
-      ? /\/(\d+)-([^\/]+)\.\w+$/
-      : /\/(\d+)-(.+)\.png\?/;
+      ? /\/(\d+)-[^\/]+\.\w+$/
+      : /\/(\d+)-.+\.png\?/;
+
     const match = src.match(regex);
-    let id = 0;
-    let title = "";
-    if (match) {
-      id = Number(match[1]);
-      title = import.meta.env.PROD ? match[2].replace(/\..*$/, "") : match[2];
-    }
+    const id = match ? Number(match[1]) : 0;
+
+    const meta = metaById.get(id);
 
     return {
       ...art,
       id,
-      title,
+      title: meta?.name ?? "",
+      description: meta?.description ?? "",
+      date: meta?.date ?? "",
+      tags: meta?.tag ?? ["Characters"],
     };
-  }));
+  });
 }

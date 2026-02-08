@@ -1,21 +1,34 @@
 ---
 import Avatar from "@assets/logo/avatar.png";
 import { Image } from "astro:assets";
-import { details, contacts } from "src/site.config";
+import { details, contacts, commisionStatus} from "src/site.config";
 import ContactDetailCard from "./contact-detail-card.svelte";
+import DiscordPresence from "./discord-presence.svelte";
 import { Icon } from "astro-icon/components";
+
+
+const statusText = commisionStatus.isOpen ? "OPEN" : "CLOSED";
+const dotClass = commisionStatus.isOpen
+  ? "status-dot-open"
+  : "status-dot-closed";
+
 ---
 
 <section
-  class="flex flex-col md:flex-row gap-4 items-center md:justify-center p-0 md:p-8"
+  class="flex flex-col md:flex-row gap-4 items-center justify-center p-0 md:p-8 max-w-5xl mx-auto"
 >
-  <!-- Logo -->
-  <div class="rounded-2xl overflow-hidden md:w-32 w-32">
-    <Image src={Avatar} alt="Logo" format="webp" />
+
+  <!-- Logo + Presence -->
+  <div class="w-32 flex-shrink-0 flex flex-col items-center gap-2">
+
+    <div class="rounded-2xl overflow-hidden md:w-32 w-32 avatar-pulse">
+      <Image src={Avatar} alt="Logo" format="webp" />
+    </div>
+    <DiscordPresence client:load />
   </div>
   <!-- About -->
-  <div class="md:w-1/3 w-full text-center md:text-left">
-    <p class="text-lg [text-wrap:balance] mb-4">
+  <div class="w-96 text-center md:text-left">
+    <p class="text-lg [text-wrap:balance] mb-4" id="bio-text">
       <Fragment set:html={details.aboutMe} />
     </p>
     <ul class="flex flex-col lg:flex-row gap-4 px-24 md:px-0">
@@ -36,10 +49,126 @@ import { Icon } from "astro-icon/components";
   </div>
 </section>
 
+<!-- Commission Status -->
+<div class="commission-status">
+  <span class={dotClass}></span>
+  <span>
+    Commissions: <strong>{statusText}</strong>
+  </span>
+</div>
+
 <style>
   :global(strong) {
     font-family: var(--font-accent);
     color: var(--accent-color);
     letter-spacing: 0.1em;
   }
+
+  :global(.bio-cursor) {
+    animation: blink 0.7s infinite;
+    color: var(--accent-color);
+    font-weight: bold;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .commission-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.5rem;
+  margin: 1.5rem auto;
+  width: fit-content;
+  border-radius: 999px;
+  border: 2px solid var(--accent-color);
+  font-family: var(--font-accent);
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status-dot-open {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+  animation: pulse-open 2s ease-in-out infinite;
+}
+
+@keyframes pulse-open {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+
+.status-dot-closed {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: pulse-closed 2s ease-in-out infinite;
+}
+
+@keyframes pulse-closed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
 </style>
+
+
+
+<script>
+  const bioEl = document.getElementById("bio-text");
+  if (bioEl) {
+    const fullHtml = bioEl.innerHTML.trim();
+    bioEl.innerHTML = '<span class="bio-cursor">|</span>';
+
+    let charIndex = 0;
+    const speed = 35;
+
+    function typeNext() {
+      if (charIndex >= fullHtml.length) {
+        // Remove cursor after a brief pause
+        setTimeout(() => {
+          const cursor = bioEl!.querySelector(".bio-cursor");
+          if (cursor) cursor.remove();
+        }, 800);
+        return;
+      }
+
+      // Skip entire HTML tags at once
+      if (fullHtml[charIndex] === "<") {
+        const closeIdx = fullHtml.indexOf(">", charIndex);
+        charIndex = closeIdx + 1;
+      } else {
+        charIndex++;
+      }
+
+      bioEl!.innerHTML =
+        fullHtml.substring(0, charIndex) + '<span class="bio-cursor">|</span>';
+
+      const delay = fullHtml[charIndex - 1] === " " ? speed * 0.5 : speed;
+      setTimeout(typeNext, delay);
+    }
+
+    // Start typing when the section scrolls into view
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          setTimeout(typeNext, 300);
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    observer.observe(bioEl);
+  }
+</script>

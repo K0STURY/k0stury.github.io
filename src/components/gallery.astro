@@ -1,28 +1,829 @@
 ---
 import getAllArt, { type Artwork, type Artworks } from "@api/art";
-import { Image } from "astro:assets";
+import { Image, getImage } from "astro:assets";
 import sortByDesc from "src/helpers/utils";
+import Lightbox from "./lightbox.svelte";
+
+const BATCH_SIZE = 30;
 
 let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
   getAllArt(data),
 );
 
 arts = arts.sort(sortByDesc);
+
+// Generate full-res webp versions for the lightbox
+const imageData = await Promise.all(
+  arts.map(async (art) => {
+    const fullRes = await getImage({
+      src: art.default as any,
+      format: "webp",
+      quality: 90,
+    });
+    return {
+      src: art.default.src,
+      fullSrc: fullRes.src,
+      width: art.default.width,
+      height: art.default.height,
+      tags: art.tags,
+      title: art.title,
+      description: art.description,
+      date: art.date,
+    };
+  }),
+);
+
+// Collect unique categories from art tags
+const categorySet = new Set<string>();
+arts.forEach((art) => art.tags.forEach((tag) => categorySet.add(tag)));
+// Separate Highlights from the rest, sorted alphabetically; All goes last
+categorySet.delete("Highlights");
+const otherCategories = [...categorySet].sort();
+
+// Count how many items match "Highlights" for the initial counter
+const highlightsCount = arts.filter((a) => a.tags.includes("Highlights")).length;
+
+// "New" badge: mark the first N items (newest by ID) as new
+const NEW_THRESHOLD = 5;
+const newIds = new Set(arts.slice(0, NEW_THRESHOLD).map((a) => a.id));
+
+// Stats
+const totalArts = arts.length;
+const totalCategories = otherCategories.length + 1; // +1 for Highlights
 ---
 
-<section class="grid grid-cols-3 gap-2 p-4" id="gallery">
+<!-- Stats bar -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num" data-target={totalArts}>0</span>
+    <span class="stat-label">Artworks</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-num" data-target={totalCategories}>0</span>
+    <span class="stat-label">Categories</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-num" data-target={highlightsCount}>0</span>
+    <span class="stat-label">Highlights</span>
+  </div>
+</div>
+
+
+<!-- View toggle + filter pills -->
+<div class="flex flex-wrap gap-2 justify-center items-center px-4 mt-2" id="gallery-controls">
+  <div class="flex gap-1 mr-2" id="view-toggle">
+    <button class="view-btn active" data-view="grid" aria-label="Grid view">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"></rect>
+        <rect x="14" y="3" width="7" height="7"></rect>
+        <rect x="3" y="14" width="7" height="7"></rect>
+        <rect x="14" y="14" width="7" height="7"></rect>
+      </svg>
+    </button>
+    <button class="view-btn" data-view="timeline" aria-label="Timeline view">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="2" x2="12" y2="22"></line>
+        <circle cx="12" cy="6" r="2"></circle>
+        <circle cx="12" cy="12" r="2"></circle>
+        <circle cx="12" cy="18" r="2"></circle>
+        <line x1="14" y1="6" x2="20" y2="6"></line>
+        <line x1="4" y1="12" x2="10" y2="12"></line>
+        <line x1="14" y1="18" x2="20" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="flex flex-wrap gap-2 justify-center" id="gallery-filters">
+    <button class="filter-pill active" data-filter="Highlights">Highlights</button>
+    {otherCategories.map((cat) => (
+      <button class="filter-pill" data-filter={cat}>{cat}</button>
+    ))}
+    <button class="filter-pill" data-filter="all">All</button>
+  </div>
+</div>
+
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4" id="gallery">
   {
-    arts.map((art) => (
-      <div class="rounded-md overflow-hidden transform hover:scale-105 duration-150 hover:z-40 ease-in-out border-primary hover:border-2 transition-all border-0">
+    arts.map((art, index) => (
+      <button
+        class:list={[
+          "gallery-item relative rounded-md overflow-hidden border-primary hover:border-2 border-0 cursor-pointer bg-transparent p-0",
+          "opacity-0 translate-y-4",
+          !art.tags.includes("Highlights") && "hidden",
+        ]}
+        style={`transition: opacity 0.5s ease ${(index % 3) * 80}ms, transform 0.3s ease ${(index % 3) * 80}ms;`}
+        data-lightbox-index={index}
+        data-categories={art.tags.join(",")}
+      >
+        {newIds.has(art.id) && <span class="new-badge">NEW</span>}
         <Image
           src={art.default as any}
-          alt="title"
+          alt={art.title || "Artwork"}
           format="webp"
           width={640}
           height={320}
-          loading="lazy"
+          loading="eager"
+          class="w-full h-full object-cover pointer-events-none"
         />
-      </div>
+      </button>
     ))
   }
 </section>
+
+<div id="gallery-sentinel" class="h-1"></div>
+
+<!-- Timeline view (hidden by default) -->
+<section class="timeline-container hidden" id="gallery-timeline">
+  <div class="timeline-line">
+    {
+      arts.map((art, index) => (
+        <div
+          class:list={[
+            "timeline-entry",
+            index % 2 === 0 ? "timeline-left" : "timeline-right",
+          ]}
+          data-lightbox-index={index}
+          data-categories={art.tags.join(",")}
+        >
+          <div class="timeline-dot"></div>
+          <button class="timeline-card">
+            {newIds.has(art.id) && <span class="new-badge timeline-badge">NEW</span>}
+            <div class="timeline-img-wrap">
+              <Image
+                src={art.default as any}
+                alt={art.title || "Artwork"}
+                format="webp"
+                width={480}
+                height={270}
+                loading="eager"
+                class="timeline-img"
+              />
+            </div>
+            <div class="timeline-info">
+              <h3 class="timeline-title">
+                {art.title || "Untitled"}
+              </h3>
+              {art.date && <span class="timeline-date">{art.date}</span>}
+              {art.tags.length > 0 && (
+                <div class="timeline-tags">
+                  {art.tags.map((tag) => (
+                    <span class="timeline-tag">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </button>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<Lightbox images={imageData} client:idle />
+
+<style>
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem 2rem;
+    margin: 0 auto;
+    max-width: 500px;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  .stat-num {
+    font-family: var(--font-accent);
+    font-size: 2rem;
+    color: var(--accent-color);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 36px;
+    background: linear-gradient(180deg, transparent, var(--accent-color), transparent);
+    opacity: 0.4;
+  }
+
+  /* Tag cloud */
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .tag-cloud-item {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-family: var(--font-accent);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.25s ease;
+    position: relative;
+    line-height: 1.3;
+  }
+
+  .tag-cloud-item:hover {
+    color: var(--accent-color);
+    transform: scale(1.15);
+    text-shadow: 0 0 12px var(--accent-color);
+  }
+
+  /* New badge */
+  .new-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 5;
+    padding: 4px 16px;
+    border-radius: 8px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    font-size: 1.0rem;
+    letter-spacing: 0.08em;
+    font-weight: 900;
+    box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(231, 174, 58, 0.3);
+    animation: badge-pulse 2s ease-in-out infinite;
+  }
+
+  .timeline-badge {
+    position: relative;
+    top: auto;
+    right: auto;
+    align-self: flex-start;
+    margin: 0.5rem 0.75rem 0;
+  }
+
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 6px var(--accent-color), 0 0 12px rgba(231, 174, 58, 0.2); }
+    50% { box-shadow: 0 0 12px var(--accent-color), 0 0 24px rgba(231, 174, 58, 0.4); }
+  }
+
+  .gallery-count {
+    background: linear-gradient(90deg, var(--accent-color), var(--secondary-color), var(--accent-color));
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 3s ease-in-out infinite;
+  }
+
+  @keyframes shine {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .filter-pill {
+    padding: 0.25rem 1rem;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    font-family: var(--font-accent);
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+
+  .filter-pill:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  .filter-pill.active {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(231, 174, 58, 0.3);
+  }
+
+  /* View toggle buttons */
+  .view-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+  }
+
+  .view-btn.active {
+    background: var(--accent-color);
+    color: var(--primary-color);
+  }
+
+  /* Timeline */
+  .timeline-container {
+    padding: 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .timeline-line {
+    position: relative;
+    padding: 1rem 0;
+  }
+
+  .timeline-line::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--accent-color) 5%,
+      var(--accent-color) 95%,
+      transparent 100%
+    );
+    transform: translateX(-50%);
+  }
+
+  .timeline-entry {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 3rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .timeline-entry.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    border: 3px solid var(--primary-color);
+    transform: translateX(-50%);
+    z-index: 2;
+    box-shadow: 0 0 0 3px var(--accent-color);
+    transition: transform 0.2s ease;
+  }
+
+  .timeline-entry:hover .timeline-dot {
+    transform: translateX(-50%) scale(1.4);
+  }
+
+  .timeline-card {
+    width: calc(50% - 40px);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    padding: 0;
+    font-family: inherit;
+    color: inherit;
+  }
+
+  .timeline-card:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .timeline-left .timeline-card {
+    margin-right: auto;
+  }
+
+  .timeline-right .timeline-card {
+    margin-left: auto;
+  }
+
+  .timeline-img-wrap {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .timeline-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+
+  .timeline-card:hover .timeline-img {
+    transform: scale(1.05);
+  }
+
+  .timeline-info {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .timeline-title {
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .timeline-date {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timeline-tags {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+  }
+
+  .timeline-tag {
+    padding: 0.1rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /* Mobile: stack timeline cards to one side */
+  @media (max-width: 640px) {
+    .timeline-line::before {
+      left: 20px;
+    }
+
+    .timeline-dot {
+      left: 20px;
+    }
+
+    .timeline-left .timeline-card,
+    .timeline-right .timeline-card {
+      width: calc(100% - 50px);
+      margin-left: auto;
+      margin-right: 0;
+    }
+  }
+</style>
+
+<script>
+  const BATCH_SIZE = 30;
+  let loaded = BATCH_SIZE;
+  const items = document.querySelectorAll<HTMLElement>(".gallery-item");
+  const sentinel = document.getElementById("gallery-sentinel");
+  const countEl = document.getElementById("gallery-count-num");
+  let currentFilter = "Highlights";
+
+  // Stats bar: animate counters on scroll
+  const statsBar = document.getElementById("stats-bar");
+  if (statsBar) {
+    const statNums = statsBar.querySelectorAll<HTMLElement>(".stat-num");
+    const statsObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          statsObserver.disconnect();
+          statNums.forEach((el) => {
+            const target = parseInt(el.dataset.target ?? "0", 10);
+            const duration = 1000;
+            const start = performance.now();
+            function tick(now: number) {
+              const progress = Math.min((now - start) / duration, 1);
+              const eased = 1 - Math.pow(1 - progress, 3);
+              el.textContent = String(Math.round(eased * target));
+              if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+          });
+        }
+      },
+      { threshold: 0.5 },
+    );
+    statsObserver.observe(statsBar);
+  }
+
+  // Tag cloud: clicking a tag applies that filter
+  document.querySelectorAll<HTMLElement>(".tag-cloud-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const filter = item.dataset.filter ?? "all";
+      // Activate matching filter pill
+      const filterBtnsAll = document.querySelectorAll<HTMLElement>(".filter-pill");
+      filterBtnsAll.forEach((b) => b.classList.remove("active"));
+      const matchingPill = [...filterBtnsAll].find((b) => b.dataset.filter === filter);
+      if (matchingPill) matchingPill.classList.add("active");
+      // Switch to grid view if in timeline
+      const gridViewBtn = document.querySelector<HTMLElement>('.view-btn[data-view="grid"]');
+      if (gridViewBtn && currentView === "timeline") {
+        gridViewBtn.click();
+      }
+      applyFilter(filter);
+    });
+  });
+
+  // Animated counter: rolls up from 0 when scrolled into view
+  if (countEl) {
+    const target = parseInt(countEl.textContent ?? "0", 10);
+    countEl.textContent = "0";
+
+    const counterObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          counterObserver.disconnect();
+          const duration = 1200;
+          const start = performance.now();
+
+          function tick(now: number) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            countEl!.textContent = String(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(tick);
+          }
+
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    counterObserver.observe(countEl);
+  }
+
+  // Fade-in observer: animates images as they enter the viewport
+  const fadeObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el = entry.target as HTMLElement;
+          el.style.opacity = "1";
+          el.style.transform = "translateY(0)";
+          fadeObserver.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.1 },
+  );
+
+  // Observe initially visible items (Highlights by default)
+  items.forEach((item) => {
+    if (!item.classList.contains("hidden")) fadeObserver.observe(item);
+  });
+
+  // Infinite scroll: reveals next batch when sentinel enters viewport
+  const loadObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting || currentFilter !== "all") return;
+
+        const end = Math.min(loaded + BATCH_SIZE, items.length);
+        for (let i = loaded; i < end; i++) {
+          items[i].classList.remove("hidden");
+          fadeObserver.observe(items[i]);
+        }
+        loaded = end;
+
+        if (loaded >= items.length && sentinel) {
+          loadObserver.disconnect();
+        }
+      });
+    },
+    { rootMargin: "200px" },
+  );
+
+  if (sentinel) loadObserver.observe(sentinel);
+
+  // Category filter with staggered animations
+  const FILTER_STAGGER = 30; // ms between each item
+  const FILTER_DURATION = 300; // ms for the animation
+  let filterVersion = 0; // incremented on each click to cancel stale callbacks
+
+  function applyFilter(filter: string) {
+    const version = ++filterVersion;
+    currentFilter = filter;
+
+    // Immediately reset all items to a clean state
+    items.forEach((item) => {
+      item.style.transition = "none";
+    });
+
+    // Force reflow so the transition:none takes effect
+    void document.body.offsetHeight;
+
+    if (filter === "all") {
+      loaded = BATCH_SIZE;
+      let staggerIndex = 0;
+      items.forEach((item, i) => {
+        if (i < loaded) {
+          item.classList.remove("hidden");
+          item.style.opacity = "0";
+          item.style.transform = "scale(0.85)";
+          requestAnimationFrame(() => {
+            if (filterVersion !== version) return;
+            const delay = staggerIndex * FILTER_STAGGER;
+            item.style.transition = `opacity ${FILTER_DURATION}ms ease ${delay}ms, transform ${FILTER_DURATION}ms ease ${delay}ms`;
+            item.style.opacity = "1";
+            item.style.transform = "scale(1)";
+          });
+          staggerIndex++;
+        } else {
+          item.classList.add("hidden");
+          item.style.opacity = "0";
+          item.style.transform = "";
+        }
+      });
+      if (countEl) countEl.textContent = String(items.length);
+      if (sentinel && loaded < items.length) loadObserver.observe(sentinel);
+    } else {
+      const matching: HTMLElement[] = [];
+
+      items.forEach((item) => {
+        const cats = (item.dataset.categories || "").split(",").filter(Boolean);
+        if (cats.includes(filter)) {
+          matching.push(item);
+        } else {
+          item.classList.add("hidden");
+          item.style.opacity = "0";
+          item.style.transform = "";
+        }
+      });
+
+      matching.forEach((item, i) => {
+        item.classList.remove("hidden");
+        item.style.opacity = "0";
+        item.style.transform = "scale(0.85)";
+        requestAnimationFrame(() => {
+          if (filterVersion !== version) return;
+          const delay = i * FILTER_STAGGER;
+          item.style.transition = `opacity ${FILTER_DURATION}ms ease ${delay}ms, transform ${FILTER_DURATION}ms ease ${delay}ms`;
+          item.style.opacity = "1";
+          item.style.transform = "scale(1)";
+        });
+      });
+
+      if (countEl) countEl.textContent = String(matching.length);
+    }
+  }
+
+  const filterBtns = document.querySelectorAll<HTMLElement>(".filter-pill");
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyFilter(btn.dataset.filter ?? "all");
+    });
+  });
+
+  // View toggle: grid vs timeline
+  const gridEl = document.getElementById("gallery") as HTMLElement;
+  const timelineEl = document.getElementById("gallery-timeline") as HTMLElement;
+  const viewBtns = document.querySelectorAll<HTMLElement>(".view-btn");
+  const filtersEl = document.getElementById("gallery-filters") as HTMLElement;
+  let currentView = "grid";
+
+  const timelineObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          (entry.target as HTMLElement).classList.add("visible");
+          timelineObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15 },
+  );
+
+  function setView(view: string) {
+    if (view === currentView) return;
+    currentView = view;
+    viewBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+
+    if (view === "timeline") {
+      gridEl.classList.add("hidden");
+      if (sentinel) sentinel.classList.add("hidden");
+      timelineEl.classList.remove("hidden");
+      filtersEl.classList.add("hidden");
+
+      // Apply current filter to timeline entries
+      const timelineEntries = timelineEl.querySelectorAll<HTMLElement>(".timeline-entry");
+      timelineEntries.forEach((entry) => {
+        const cats = (entry.dataset.categories || "").split(",").filter(Boolean);
+        if (currentFilter === "all" || cats.includes(currentFilter)) {
+          entry.style.display = "";
+          timelineObserver.observe(entry);
+        } else {
+          entry.style.display = "none";
+        }
+      });
+    } else {
+      gridEl.classList.remove("hidden");
+      if (sentinel) sentinel.classList.remove("hidden");
+      timelineEl.classList.add("hidden");
+      filtersEl.classList.remove("hidden");
+    }
+  }
+
+  viewBtns.forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view ?? "grid"));
+  });
+
+  // Timeline card clicks → open lightbox
+  timelineEl.querySelectorAll<HTMLElement>(".timeline-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const entry = card.closest(".timeline-entry") as HTMLElement;
+      const index = parseInt(entry?.dataset.lightboxIndex ?? "0", 10);
+      document.dispatchEvent(new CustomEvent("lightbox:open", { detail: { index } }));
+    });
+  });
+
+  // Skeleton loader: mark items as loaded when their image finishes loading
+  items.forEach((item) => {
+    const img = item.querySelector("img");
+    if (!img) return;
+    if (img.complete) {
+      item.classList.add("loaded");
+    } else {
+      img.addEventListener("load", () => item.classList.add("loaded"), { once: true });
+    }
+  });
+
+  // 3D tilt on hover + lightbox click
+  items.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const index = parseInt(
+        btn.getAttribute("data-lightbox-index") ?? "0",
+        10,
+      );
+      document.dispatchEvent(
+        new CustomEvent("lightbox:open", { detail: { index } }),
+      );
+    });
+
+    btn.addEventListener("mousemove", (e) => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((y - centerY) / centerY) * -3;
+      const rotateY = ((x - centerX) / centerX) * 3;
+      btn.style.transition = "transform 0.1s ease";
+      btn.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+      btn.style.zIndex = "40";
+    });
+
+    btn.addEventListener("mouseleave", () => {
+      btn.style.transition = "transform 0.3s ease";
+      btn.style.transform = "";
+      btn.style.zIndex = "";
+    });
+  });
+</script>
