@@ -1,0 +1,140 @@
+---
+import BaseLayout from "@layouts/base-layout.astro";
+---
+
+<BaseLayout>
+  <section class="error-page">
+    <div class="error-canvas" id="error-canvas"></div>
+
+    <div class="error-content">
+      <h1 class="error-title">
+        4<span class="error-accent">0</span>4
+      </h1>
+      <p class="error-subtitle">this canvas is blank</p>
+      <p class="error-desc">looks like this page doesn't exist — or maybe it was never painted.</p>
+      <a href="/" class="error-btn">back to the gallery</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .error-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .error-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .error-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem;
+  }
+
+  .error-title {
+    font-family: var(--font-accent);
+    font-size: clamp(5rem, 15vw, 10rem);
+    line-height: 1;
+    color: var(--text-color);
+    opacity: 0.9;
+  }
+
+  .error-accent {
+    color: var(--accent-color);
+    display: inline-block;
+    animation: wobble 2s ease-in-out infinite;
+  }
+
+  @keyframes wobble {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-8deg); }
+    75% { transform: rotate(8deg); }
+  }
+
+  .error-subtitle {
+    font-family: var(--font-accent);
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    color: var(--accent-color);
+    text-transform: uppercase;
+  }
+
+  .error-desc {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    opacity: 0.5;
+    max-width: 360px;
+  }
+
+  .error-btn {
+    margin-top: 1rem;
+    padding: 0.6rem 1.5rem;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .error-btn:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  /* Paint splatter dots */
+  .splatter {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent-color);
+    pointer-events: none;
+    animation: splatter-fade 1s ease-out forwards;
+  }
+
+  @keyframes splatter-fade {
+    0% { transform: scale(0); opacity: 0.4; }
+    60% { transform: scale(1); opacity: 0.15; }
+    100% { transform: scale(1.2); opacity: 0; }
+  }
+</style>
+
+<script>
+  // Random paint splatters on the 404 page
+  const canvas = document.getElementById("error-canvas");
+  if (canvas) {
+    function spawnSplatter() {
+      const dot = document.createElement("div");
+      dot.className = "splatter";
+      const size = 20 + Math.random() * 80;
+      dot.style.width = `${size}px`;
+      dot.style.height = `${size}px`;
+      dot.style.left = `${Math.random() * 100}%`;
+      dot.style.top = `${Math.random() * 100}%`;
+      canvas!.appendChild(dot);
+      setTimeout(() => dot.remove(), 1000);
+    }
+
+    // Spawn initial batch
+    for (let i = 0; i < 5; i++) setTimeout(spawnSplatter, i * 200);
+    // Keep spawning
+    setInterval(spawnSplatter, 800);
+  }
+</script>

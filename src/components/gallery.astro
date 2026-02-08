@@ -93,6 +93,16 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
         <line x1="14" y1="18" x2="20" y2="18"></line>
       </svg>
     </button>
+    <button class="view-btn" id="shuffle-btn" aria-label="Shuffle gallery">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+        <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
+      </svg>
+    </button>
   </div>
 
   <div class="flex flex-wrap gap-2 justify-center" id="gallery-filters">
@@ -127,6 +137,16 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
           loading="eager"
           class="w-full h-full object-cover pointer-events-none"
         />
+        <div class="hover-overlay">
+          <span class="hover-title">{art.title || "Untitled"}</span>
+          {art.tags.length > 0 && (
+            <div class="hover-tags">
+              {art.tags.map((tag) => (
+                <span class="hover-tag">{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </button>
     ))
   }
@@ -278,6 +298,52 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
     right: auto;
     align-self: flex-start;
     margin: 0.5rem 0.75rem 0;
+  }
+
+  /* Hover reveal overlay */
+  .hover-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 2rem 0.75rem 0.75rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .gallery-item:hover .hover-overlay {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .hover-title {
+    color: #fff;
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  .hover-tags {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  .hover-tag {
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    font-size: 0.6rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 
   @keyframes badge-pulse {
@@ -772,7 +838,79 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
   }
 
   viewBtns.forEach((btn) => {
+    if (btn.id === "shuffle-btn") return; // handled separately
     btn.addEventListener("click", () => setView(btn.dataset.view ?? "grid"));
+  });
+
+  // Shuffle gallery (toggle: click to shuffle, click again to restore)
+  const shuffleBtn = document.getElementById("shuffle-btn");
+  let isShuffled = false;
+  // Remember original DOM order so we can restore it
+  const originalOrder = [...items];
+
+  if (shuffleBtn) {
+    shuffleBtn.addEventListener("click", () => {
+      if (currentView !== "grid") return;
+
+      const visible = [...gridEl.querySelectorAll<HTMLElement>(".gallery-item")].filter(
+        (el) => !el.classList.contains("hidden"),
+      );
+      if (visible.length < 2) return;
+
+      const version = ++filterVersion;
+
+      // Animate out
+      visible.forEach((item) => {
+        item.style.transition = `opacity 200ms ease, transform 200ms ease`;
+        item.style.opacity = "0";
+        item.style.transform = "scale(0.85)";
+      });
+
+      setTimeout(() => {
+        if (filterVersion !== version) return;
+
+        if (isShuffled) {
+          // Restore original order: re-append all items in original order
+          originalOrder.forEach((item) => gridEl.appendChild(item));
+        } else {
+          // Fisher-Yates shuffle on visible, keep hidden at end
+          for (let i = visible.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [visible[i], visible[j]] = [visible[j], visible[i]];
+          }
+          visible.forEach((item) => gridEl.appendChild(item));
+        }
+
+        // Staggered reveal
+        const nowVisible = [...gridEl.querySelectorAll<HTMLElement>(".gallery-item")].filter(
+          (el) => !el.classList.contains("hidden"),
+        );
+        nowVisible.forEach((item, i) => {
+          const delay = i * FILTER_STAGGER;
+          item.style.transition = `opacity ${FILTER_DURATION}ms ease ${delay}ms, transform ${FILTER_DURATION}ms ease ${delay}ms`;
+          item.style.opacity = "1";
+          item.style.transform = "scale(1)";
+        });
+      }, 220);
+
+      isShuffled = !isShuffled;
+      shuffleBtn.classList.toggle("active", isShuffled);
+
+      // Spin the button
+      shuffleBtn.style.transition = "transform 0.4s ease";
+      shuffleBtn.style.transform = "rotate(180deg)";
+      setTimeout(() => {
+        shuffleBtn.style.transform = "";
+      }, 400);
+    });
+  }
+
+  // Reset shuffle state when a filter is clicked
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      isShuffled = false;
+      if (shuffleBtn) shuffleBtn.classList.remove("active");
+    });
   });
 
   // Timeline card clicks → open lightbox
@@ -784,16 +922,25 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
     });
   });
 
-  // Skeleton loader: mark items as loaded when their image finishes loading
-  items.forEach((item) => {
-    const img = item.querySelector("img");
-    if (!img) return;
-    if (img.complete) {
-      item.classList.add("loaded");
-    } else {
-      img.addEventListener("load", () => item.classList.add("loaded"), { once: true });
-    }
-  });
+  // LQIP blur-up: reveal images when they scroll into view AND finish loading
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const item = entry.target as HTMLElement;
+        const img = item.querySelector("img");
+        revealObserver.unobserve(item);
+        const reveal = () => item.classList.add("revealed");
+        if (img && img.complete) {
+          reveal();
+        } else if (img) {
+          img.addEventListener("load", reveal, { once: true });
+        }
+      });
+    },
+    { threshold: 0.05 },
+  );
+  items.forEach((item) => revealObserver.observe(item));
 
   // 3D tilt on hover + lightbox click
   items.forEach((btn) => {

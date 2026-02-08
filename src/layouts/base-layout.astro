@@ -20,24 +20,36 @@ import NavigationBar from "@components/navigation-bar.astro";
     </script>
   </head>
   <body>
+    <div id="scroll-progress" style="position:fixed;top:0;left:0;height:3px;width:0%;background:var(--accent-color);z-index:9998;pointer-events:none;transition:width 0.1s linear;"></div>
     <NavigationBar />
     <slot name="banner" />
     <main class="flex flex-col gap-8 relative z-10">
       <slot />
     </main>
     <footer class="flex flex-col items-center gap-4 py-12 text-color relative z-10">
-      <p class="text-sm">you made it all the way down?</p>
+      <!-- Accent divider -->
+      <div style="width:60%;max-width:400px;height:1px;background:linear-gradient(90deg,transparent,var(--accent-color),transparent);opacity:0.4;margin-bottom:0.5rem;"></div>
+
+      <!-- Random message + secret click counter -->
+      <p id="footer-msg" class="text-sm footer-fade" style="cursor:default;user-select:none;opacity:0;transform:translateY(12px);transition:opacity 0.6s ease, transform 0.6s ease;"></p>
+
       <button
         id="back-to-top"
-        class="px-4 py-2 rounded-md bg-primary text-color text-sm
+        class="footer-fade px-4 py-2 rounded-md bg-primary text-color text-sm
                outline outline-2 outline-secondary
                hover:bg-secondary hover:outline-primary
                hover:animate-gelatine-in-out
                transition-all duration-200 ease-in-out
                cursor-pointer border-none"
+        style="opacity:0;transform:translateY(12px);transition:opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;"
       >
         Back to top
       </button>
+
+      <!-- Made with credits -->
+      <p class="footer-fade" style="font-size:0.7rem;color:rgba(255,255,255,0.25);opacity:0;transform:translateY(12px);transition:opacity 0.6s ease 0.2s, transform 0.6s ease 0.2s;">
+        made with astro & too much redbull
+      </p>
     </footer>
     <!-- Floating back-to-top button -->
     <button
@@ -60,14 +72,76 @@ import NavigationBar from "@components/navigation-bar.astro";
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
 
+      // Random footer message + secret click counter
+      const footerMsg = document.getElementById("footer-msg");
+      if (footerMsg) {
+        const messages = [
+          "you made it all the way down?",
+          "still scrolling, huh?",
+          "nothing to see here... or is there?",
+          "you're a real one for making it here",
+          "the end. or is it?",
+          "wow, you really scrolled all that",
+          "hi. welcome to the bottom.",
+        ];
+        footerMsg.textContent = messages[Math.floor(Math.random() * messages.length)];
+
+        let clicks = 0;
+        const clickMessages = [
+          null,
+          null,
+          null,
+          "...why are you clicking this?",
+          "seriously?",
+          "ok fine, you found the secret",
+          "there's nothing else here",
+          "stop it",
+          "i'm just a paragraph tag",
+          "ok you win. here's a cookie: 🍪",
+          "that's it. that's all i got.",
+        ];
+        footerMsg.addEventListener("click", () => {
+          clicks++;
+          if (clicks < clickMessages.length && clickMessages[clicks]) {
+            footerMsg.textContent = clickMessages[clicks];
+            footerMsg.style.animation = "none";
+            void footerMsg.offsetHeight;
+            footerMsg.style.animation = "gelatine 0.375s ease-in-out";
+          }
+        });
+      }
+
+      // Footer fade-in on scroll
+      const footerFadeEls = document.querySelectorAll<HTMLElement>(".footer-fade");
+      const footerObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement;
+              el.style.opacity = "1";
+              el.style.transform = "translateY(0)";
+              footerObserver.unobserve(el);
+            }
+          });
+        },
+        { threshold: 0.3 },
+      );
+      footerFadeEls.forEach((el) => footerObserver.observe(el));
+
       // Floating back-to-top: show after scrolling past one viewport height
       const floatingBtn = document.getElementById("floating-top");
+      const progressBar = document.getElementById("scroll-progress");
       if (floatingBtn) {
         let ticking = false;
         window.addEventListener("scroll", () => {
           if (!ticking) {
             requestAnimationFrame(() => {
-              if (window.scrollY > window.innerHeight) {
+              const scrollTop = window.scrollY;
+              const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+              if (progressBar && docHeight > 0) {
+                progressBar.style.width = `${(scrollTop / docHeight) * 100}%`;
+              }
+              if (scrollTop > window.innerHeight) {
                 floatingBtn.style.opacity = "1";
                 floatingBtn.style.pointerEvents = "auto";
                 floatingBtn.style.transform = "translateY(0)";
@@ -93,6 +167,43 @@ import NavigationBar from "@components/navigation-bar.astro";
           floatingBtn.style.transform = window.scrollY > window.innerHeight ? "translateY(0)" : "translateY(12px)";
         });
       }
+
+      // Animated favicon: pulsing accent glow
+      (() => {
+        const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
+        if (!favicon) return;
+
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        img.src = favicon.href;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 32;
+          canvas.height = 32;
+          const ctx = canvas.getContext("2d")!;
+          const link = document.createElement("link");
+          link.rel = "icon";
+          link.type = "image/png";
+
+          let phase = 0;
+          function drawFrame() {
+            phase += 0.03;
+            const glow = 0.3 + Math.sin(phase) * 0.3; // 0 to 0.6
+            ctx.clearRect(0, 0, 32, 32);
+            // Glow layer
+            ctx.shadowColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-color").trim();
+            ctx.shadowBlur = 4 + glow * 8;
+            ctx.drawImage(img, 2, 2, 28, 28);
+            // Sharp layer on top
+            ctx.shadowBlur = 0;
+            ctx.drawImage(img, 2, 2, 28, 28);
+            link.href = canvas.toDataURL("image/png");
+            document.head.appendChild(link);
+            requestAnimationFrame(drawFrame);
+          }
+          requestAnimationFrame(drawFrame);
+        };
+      })();
     </script>
   </body>
 </html>
