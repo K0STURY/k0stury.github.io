@@ -3,27 +3,24 @@ import "@styles/master.css";
 import "@fontsource/luckiest-guy";
 import MetaTags from "@layouts/meta-tags.astro";
 import NavigationBar from "@components/navigation-bar.astro";
+import NowPlaying from "@components/now-playing.svelte";
+import { ViewTransitions } from "astro:transitions";
 ---
 
 <html lang="en">
   <head>
     <MetaTags />
-    <script>
-      const html = document.documentElement;
-
-      if (
-        localStorage.getItem("theme") !== null ||
-        localStorage.getItem("theme") !== undefined
-      ) {
-        html.dataset.theme = localStorage.getItem("theme") ?? "default";
-      }
+    <ViewTransitions />
+    <script is:inline>
+      // Apply theme immediately (before paint) — must be is:inline for View Transitions
+      document.documentElement.dataset.theme = localStorage.getItem("theme") ?? "default";
     </script>
   </head>
   <body>
     <div id="scroll-progress" style="position:fixed;top:0;left:0;height:3px;width:0%;background:var(--accent-color);z-index:9998;pointer-events:none;transition:width 0.1s linear;"></div>
     <NavigationBar />
     <slot name="banner" />
-    <main class="flex flex-col gap-8 relative z-10">
+    <main class="flex flex-col gap-8 relative z-10" transition:animate="fade">
       <slot />
     </main>
     <footer class="flex flex-col items-center gap-4 py-12 text-color relative z-10">
@@ -51,6 +48,9 @@ import NavigationBar from "@components/navigation-bar.astro";
         made with astro & too much redbull
       </p>
     </footer>
+    <!-- Now Playing (Spotify via Lanyard) -->
+    <NowPlaying client:load transition:persist />
+
     <!-- Floating back-to-top button -->
     <button
       id="floating-top"
@@ -68,142 +68,163 @@ import NavigationBar from "@components/navigation-bar.astro";
     </button>
 
     <script>
-      document.getElementById("back-to-top")?.addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-
-      // Random footer message + secret click counter
-      const footerMsg = document.getElementById("footer-msg");
-      if (footerMsg) {
-        const messages = [
-          "you made it all the way down?",
-          "still scrolling, huh?",
-          "nothing to see here... or is there?",
-          "you're a real one for making it here",
-          "the end. or is it?",
-          "wow, you really scrolled all that",
-          "hi. welcome to the bottom.",
-        ];
-        footerMsg.textContent = messages[Math.floor(Math.random() * messages.length)];
-
-        let clicks = 0;
-        const clickMessages = [
-          null,
-          null,
-          null,
-          "...why are you clicking this?",
-          "seriously?",
-          "ok fine, you found the secret",
-          "there's nothing else here",
-          "stop it",
-          "i'm just a paragraph tag",
-          "ok you win. here's a cookie: 🍪",
-          "that's it. that's all i got.",
-        ];
-        footerMsg.addEventListener("click", () => {
-          clicks++;
-          if (clicks < clickMessages.length && clickMessages[clicks]) {
-            footerMsg.textContent = clickMessages[clicks];
-            footerMsg.style.animation = "none";
-            void footerMsg.offsetHeight;
-            footerMsg.style.animation = "gelatine 0.375s ease-in-out";
-          }
-        });
-      }
-
-      // Footer fade-in on scroll
-      const footerFadeEls = document.querySelectorAll<HTMLElement>(".footer-fade");
-      const footerObserver = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const el = entry.target as HTMLElement;
-              el.style.opacity = "1";
-              el.style.transform = "translateY(0)";
-              footerObserver.unobserve(el);
-            }
-          });
-        },
-        { threshold: 0.3 },
-      );
-      footerFadeEls.forEach((el) => footerObserver.observe(el));
-
-      // Floating back-to-top: show after scrolling past one viewport height
-      const floatingBtn = document.getElementById("floating-top");
-      const progressBar = document.getElementById("scroll-progress");
-      if (floatingBtn) {
-        let ticking = false;
-        window.addEventListener("scroll", () => {
-          if (!ticking) {
-            requestAnimationFrame(() => {
-              const scrollTop = window.scrollY;
-              const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-              if (progressBar && docHeight > 0) {
-                progressBar.style.width = `${(scrollTop / docHeight) * 100}%`;
-              }
-              if (scrollTop > window.innerHeight) {
-                floatingBtn.style.opacity = "1";
-                floatingBtn.style.pointerEvents = "auto";
-                floatingBtn.style.transform = "translateY(0)";
-              } else {
-                floatingBtn.style.opacity = "0";
-                floatingBtn.style.pointerEvents = "none";
-                floatingBtn.style.transform = "translateY(12px)";
-              }
-              ticking = false;
-            });
-            ticking = true;
-          }
-        });
-
-        floatingBtn.addEventListener("click", () => {
+      // Re-initialize on every page load (including View Transitions)
+      function initPage() {
+        document.getElementById("back-to-top")?.addEventListener("click", () => {
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
-        floatingBtn.addEventListener("mouseenter", () => {
-          floatingBtn.style.transform = "translateY(0) scale(1.1)";
-        });
-        floatingBtn.addEventListener("mouseleave", () => {
-          floatingBtn.style.transform = window.scrollY > window.innerHeight ? "translateY(0)" : "translateY(12px)";
-        });
+        // Random footer message + secret click counter
+        const footerMsg = document.getElementById("footer-msg");
+        if (footerMsg) {
+          const messages = [
+            "you made it all the way down?",
+            "still scrolling, huh?",
+            "nothing to see here... or is there?",
+            "you're a real one for making it here",
+            "the end. or is it?",
+            "wow, you really scrolled all that",
+            "hi. welcome to the bottom.",
+          ];
+          footerMsg.textContent = messages[Math.floor(Math.random() * messages.length)];
+
+          let clicks = 0;
+          const clickMessages = [
+            null,
+            null,
+            null,
+            "...why are you clicking this?",
+            "seriously?",
+            "ok fine, you found the secret",
+            "there's nothing else here",
+            "stop it",
+            "i'm just a paragraph tag",
+            "ok you win. here's a cookie: 🍪",
+            "that's it. that's all i got.",
+          ];
+          footerMsg.addEventListener("click", () => {
+            clicks++;
+            if (clicks < clickMessages.length && clickMessages[clicks]) {
+              footerMsg.textContent = clickMessages[clicks];
+              footerMsg.style.animation = "none";
+              void footerMsg.offsetHeight;
+              footerMsg.style.animation = "gelatine 0.375s ease-in-out";
+            }
+          });
+        }
+
+        // Footer fade-in on scroll
+        const footerFadeEls = document.querySelectorAll<HTMLElement>(".footer-fade");
+        const footerObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const el = entry.target as HTMLElement;
+                el.style.opacity = "1";
+                el.style.transform = "translateY(0)";
+                footerObserver.unobserve(el);
+              }
+            });
+          },
+          { threshold: 0.3 },
+        );
+        footerFadeEls.forEach((el) => footerObserver.observe(el));
+
+        // Reset scroll progress bar
+        const progressBar = document.getElementById("scroll-progress");
+        if (progressBar) {
+          const scrollTop = window.scrollY;
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          progressBar.style.width = docHeight > 0 ? `${(scrollTop / docHeight) * 100}%` : "0%";
+        }
       }
 
-      // Animated favicon: pulsing accent glow
-      (() => {
-        const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
-        if (!favicon) return;
+      // Run on initial load and every View Transitions navigation
+      document.addEventListener("astro:page-load", initPage);
 
-        const img = new window.Image();
-        img.crossOrigin = "anonymous";
-        img.src = favicon.href;
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = 32;
-          canvas.height = 32;
-          const ctx = canvas.getContext("2d")!;
-          const link = document.createElement("link");
-          link.rel = "icon";
-          link.type = "image/png";
+      // These only need to be set up once (they persist across navigations)
+      if (!(window as any).__layoutInitDone) {
+        (window as any).__layoutInitDone = true;
 
-          let phase = 0;
-          function drawFrame() {
-            phase += 0.03;
-            const glow = 0.3 + Math.sin(phase) * 0.3; // 0 to 0.6
-            ctx.clearRect(0, 0, 32, 32);
-            // Glow layer
-            ctx.shadowColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-color").trim();
-            ctx.shadowBlur = 4 + glow * 8;
-            ctx.drawImage(img, 2, 2, 28, 28);
-            // Sharp layer on top
-            ctx.shadowBlur = 0;
-            ctx.drawImage(img, 2, 2, 28, 28);
-            link.href = canvas.toDataURL("image/png");
-            document.head.appendChild(link);
+        // Floating back-to-top: show after scrolling past one viewport height
+        const floatingBtn = document.getElementById("floating-top");
+        const progressBar = document.getElementById("scroll-progress");
+        if (floatingBtn) {
+          let ticking = false;
+          window.addEventListener("scroll", () => {
+            if (!ticking) {
+              requestAnimationFrame(() => {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const bar = document.getElementById("scroll-progress");
+                if (bar && docHeight > 0) {
+                  bar.style.width = `${(scrollTop / docHeight) * 100}%`;
+                }
+                const btn = document.getElementById("floating-top");
+                if (btn) {
+                  if (scrollTop > window.innerHeight) {
+                    btn.style.opacity = "1";
+                    btn.style.pointerEvents = "auto";
+                    btn.style.transform = "translateY(0)";
+                  } else {
+                    btn.style.opacity = "0";
+                    btn.style.pointerEvents = "none";
+                    btn.style.transform = "translateY(12px)";
+                  }
+                }
+                ticking = false;
+              });
+              ticking = true;
+            }
+          });
+
+          floatingBtn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+
+          floatingBtn.addEventListener("mouseenter", () => {
+            floatingBtn.style.transform = "translateY(0) scale(1.1)";
+          });
+          floatingBtn.addEventListener("mouseleave", () => {
+            floatingBtn.style.transform = window.scrollY > window.innerHeight ? "translateY(0)" : "translateY(12px)";
+          });
+        }
+
+        // Animated favicon: pulsing accent glow
+        (() => {
+          const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
+          if (!favicon) return;
+
+          const img = new window.Image();
+          img.crossOrigin = "anonymous";
+          img.src = favicon.href;
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext("2d")!;
+            const link = document.createElement("link");
+            link.rel = "icon";
+            link.type = "image/png";
+
+            let phase = 0;
+            function drawFrame() {
+              phase += 0.03;
+              const glow = 0.3 + Math.sin(phase) * 0.3;
+              ctx.clearRect(0, 0, 32, 32);
+              ctx.shadowColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-color").trim();
+              ctx.shadowBlur = 4 + glow * 8;
+              ctx.drawImage(img, 2, 2, 28, 28);
+              ctx.shadowBlur = 0;
+              ctx.drawImage(img, 2, 2, 28, 28);
+              link.href = canvas.toDataURL("image/png");
+              document.head.appendChild(link);
+              requestAnimationFrame(drawFrame);
+            }
             requestAnimationFrame(drawFrame);
-          }
-          requestAnimationFrame(drawFrame);
-        };
-      })();
+          };
+        })();
+      }
     </script>
   </body>
 </html>

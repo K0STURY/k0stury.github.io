@@ -50,12 +50,12 @@ const dotClass = commisionStatus.isOpen
 </section>
 
 <!-- Commission Status -->
-<div class="commission-status">
+<a href="/coms" class="commission-status">
   <span class={dotClass}></span>
   <span>
     Commissions: <strong>{statusText}</strong>
   </span>
-</div>
+</a>
 
 <style>
   :global(strong) {
@@ -89,6 +89,14 @@ const dotClass = commisionStatus.isOpen
   font-size: 1.2rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.commission-status:hover {
+  background: var(--accent-color);
+  color: var(--primary-color);
 }
 
 .status-dot-open {
@@ -125,50 +133,49 @@ const dotClass = commisionStatus.isOpen
 
 
 <script>
+document.addEventListener("astro:page-load", () => {
   const bioEl = document.getElementById("bio-text");
-  if (bioEl) {
-    const fullHtml = bioEl.innerHTML.trim();
-    bioEl.innerHTML = '<span class="bio-cursor">|</span>';
+  if (!bioEl) return;
 
-    let charIndex = 0;
-    const speed = 35;
+  const fullHtml = bioEl.innerHTML.trim();
+  bioEl.innerHTML = '<span class="bio-cursor">|</span>';
 
-    function typeNext() {
-      if (charIndex >= fullHtml.length) {
-        // Remove cursor after a brief pause
-        setTimeout(() => {
-          const cursor = bioEl!.querySelector(".bio-cursor");
-          if (cursor) cursor.remove();
-        }, 800);
-        return;
-      }
+  let charIndex = 0;
+  const speed = 35;
 
-      // Skip entire HTML tags at once
-      if (fullHtml[charIndex] === "<") {
-        const closeIdx = fullHtml.indexOf(">", charIndex);
-        charIndex = closeIdx + 1;
-      } else {
-        charIndex++;
-      }
-
-      bioEl!.innerHTML =
-        fullHtml.substring(0, charIndex) + '<span class="bio-cursor">|</span>';
-
-      const delay = fullHtml[charIndex - 1] === " " ? speed * 0.5 : speed;
-      setTimeout(typeNext, delay);
+  function typeNext() {
+    if (charIndex >= fullHtml.length) {
+      setTimeout(() => {
+        const cursor = bioEl!.querySelector(".bio-cursor");
+        if (cursor) cursor.remove();
+      }, 800);
+      return;
     }
 
-    // Start typing when the section scrolls into view
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          observer.disconnect();
-          setTimeout(typeNext, 300);
-        }
-      },
-      { threshold: 0.5 },
-    );
+    if (fullHtml[charIndex] === "<") {
+      const closeIdx = fullHtml.indexOf(">", charIndex);
+      charIndex = closeIdx + 1;
+    } else {
+      charIndex++;
+    }
 
-    observer.observe(bioEl);
+    bioEl!.innerHTML =
+      fullHtml.substring(0, charIndex) + '<span class="bio-cursor">|</span>';
+
+    const delay = fullHtml[charIndex - 1] === " " ? speed * 0.5 : speed;
+    setTimeout(typeNext, delay);
   }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        observer.disconnect();
+        setTimeout(typeNext, 300);
+      }
+    },
+    { threshold: 0.5 },
+  );
+
+  observer.observe(bioEl);
+});
 </script>

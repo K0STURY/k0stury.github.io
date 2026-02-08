@@ -582,6 +582,10 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
 </style>
 
 <script>
+document.addEventListener("astro:page-load", () => {
+  const galleryEl = document.getElementById("gallery");
+  if (!galleryEl) return; // Not on a page with the gallery
+
   const BATCH_SIZE = 30;
   let loaded = BATCH_SIZE;
   const items = document.querySelectorAll<HTMLElement>(".gallery-item");
@@ -973,4 +977,5 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
       btn.style.zIndex = "";
     });
   });
+}); // end astro:page-load
 </script>

@@ -15,76 +15,79 @@ import ThemeToggler from "./theme-toggler.svelte";
 </nav>
 
 <script>
-  // Intersection Observer setup
-  const gallerySection = document.querySelector("#gallery")!;
-  const navbar = document.querySelector("nav")!;
+  function initNav() {
+    // Intersection Observer setup — only on pages with #gallery
+    const gallerySection = document.querySelector("#gallery");
+    const navbar = document.querySelector("nav");
 
-  const options = {
-    threshold: 1.0,
-  };
+    if (gallerySection && navbar) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          navbar.setAttribute("data-inview", JSON.stringify(entry.isIntersecting));
+        });
+      }, { threshold: 1.0 });
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const intersecting = entry.isIntersecting;
-
-      navbar.setAttribute("data-inview", JSON.stringify(intersecting));
-    }, options);
-  });
-
-  observer.observe(gallerySection);
-
-  // Text scramble effect on nav title
-  const navTitle = document.getElementById("nav-title");
-  if (navTitle) {
-    const finalText = navTitle.dataset.text ?? "Kostur.";
-    const accentStart = 3; // "tur." starts at index 3
-    const chars = "!@#$%&*?/\\|<>{}[]~^";
-    const duration = 800;  // total ms
-    const steps = 12;
-    let step = 0;
-
-    function scrambleStep() {
-      if (step >= steps) {
-        // Restore original HTML
-        navTitle!.innerHTML = `Kos<span class="text-accent">tur.</span>`;
-        return;
-      }
-
-      const progress = step / steps;
-      let result = "";
-      for (let i = 0; i < finalText.length; i++) {
-        if (i / finalText.length < progress) {
-          // Revealed character
-          const ch = finalText[i];
-          if (i >= accentStart) {
-            result += `<span class="text-accent">${ch}</span>`;
-          } else {
-            result += ch;
-          }
-        } else {
-          // Random character
-          const ch = chars[Math.floor(Math.random() * chars.length)];
-          if (i >= accentStart) {
-            result += `<span class="text-accent">${ch}</span>`;
-          } else {
-            result += ch;
-          }
-        }
-      }
-      navTitle!.innerHTML = result;
-      step++;
-      setTimeout(scrambleStep, duration / steps);
+      observer.observe(gallerySection);
+    } else if (navbar) {
+      // Non-gallery pages — keep nav transparent
+      navbar.setAttribute("data-inview", "false");
     }
 
-    // Also scramble on hover
-    navTitle.addEventListener("mouseenter", () => {
+    // Text scramble effect on nav title
+    const navTitle = document.getElementById("nav-title");
+    if (navTitle) {
+      const finalText = navTitle.dataset.text ?? "Kostur.";
+      const accentStart = 3;
+      const chars = "!@#$%&*?/\\|<>{}[]~^";
+      const duration = 800;
+      const steps = 12;
+      let step = 0;
+
+      function scrambleStep() {
+        if (step >= steps) {
+          navTitle!.innerHTML = `Kos<span class="text-accent">tur.</span>`;
+          return;
+        }
+
+        const progress = step / steps;
+        let result = "";
+        for (let i = 0; i < finalText.length; i++) {
+          if (i / finalText.length < progress) {
+            const ch = finalText[i];
+            if (i >= accentStart) {
+              result += `<span class="text-accent">${ch}</span>`;
+            } else {
+              result += ch;
+            }
+          } else {
+            const ch = chars[Math.floor(Math.random() * chars.length)];
+            if (i >= accentStart) {
+              result += `<span class="text-accent">${ch}</span>`;
+            } else {
+              result += ch;
+            }
+          }
+        }
+        navTitle!.innerHTML = result;
+        step++;
+        setTimeout(scrambleStep, duration / steps);
+      }
+
+      // Remove old listener before adding new one
+      const newTitle = navTitle.cloneNode(true) as HTMLElement;
+      navTitle.parentNode?.replaceChild(newTitle, navTitle);
+      newTitle.addEventListener("mouseenter", () => {
+        step = 0;
+        scrambleStep();
+      });
+
+      // Initial scramble on page load
       step = 0;
       scrambleStep();
-    });
-
-    // Initial scramble on page load
-    scrambleStep();
+    }
   }
+
+  document.addEventListener("astro:page-load", initNav);
 </script>
 
 <style>

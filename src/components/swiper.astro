@@ -89,37 +89,41 @@ const showThree = arts.slice(0, 3);
   import Swiper from "swiper";
   import { Navigation, Pagination, Autoplay } from "swiper/modules";
 
-  const wrapper = document.getElementById("banner-wrapper");
-  const slides = document.querySelectorAll(".swiper-slide");
+  let scrollHandler: (() => void) | null = null;
 
+  document.addEventListener("astro:page-load", () => {
+    const wrapper = document.getElementById("banner-wrapper");
+    if (!wrapper) return; // Not on a page with the banner
 
-  window.addEventListener("scroll", () => {
-    const y = window.scrollY * 0.3;
-    wrapper.style.transform = `translateY(${y}px)`;
-  });
+    // Clean up previous scroll handler
+    if (scrollHandler) window.removeEventListener("scroll", scrollHandler);
 
+    scrollHandler = () => {
+      wrapper.style.transform = `translateY(${window.scrollY * 0.3}px)`;
+    };
+    window.addEventListener("scroll", scrollHandler);
 
-  /* ---------------- Swiper ---------------- */
+    /* ---------------- Swiper ---------------- */
+    new Swiper(".swiper", {
+      modules: [Navigation, Pagination, Autoplay],
+      loop: true,
+      slidesPerView: 1,
+      centeredSlides: true,
 
-  new Swiper(".swiper", {
-    modules: [Navigation, Pagination, Autoplay],
-    loop: true,
-    slidesPerView: 1,
-    centeredSlides: true,
+      autoplay: {
+        delay: 6000,
+        disableOnInteraction: false,
+      },
 
-    autoplay: {
-      delay: 6000,
-      disableOnInteraction: false,
-    },
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true,
+      },
 
-    pagination: {
-      el: ".swiper-pagination",
-      clickable: true,
-    },
-
-    navigation: {
-      nextEl: ".swiper-button-next",
-      prevEl: ".swiper-button-prev",
-    },
+      navigation: {
+        nextEl: ".swiper-button-next",
+        prevEl: ".swiper-button-prev",
+      },
+    });
   });
 </script>

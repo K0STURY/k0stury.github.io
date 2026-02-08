@@ -1,0 +1,762 @@
+---
+import BaseLayout from "@layouts/base-layout.astro";
+import { Image } from "astro:assets";
+import { commisionStatus, contacts } from "src/site.config";
+
+// Example images per tier
+import sf1 from "@assets/showcase/163-Piece.png";
+import sf2 from "@assets/showcase/146-Piece.png";
+import sf3 from "@assets/showcase/125-Piece.png";
+import sf4 from "@assets/showcase/79-Piece.png";
+
+import sc1 from "@assets/showcase/161-Piece.png";
+import sc2 from "@assets/showcase/157-Piece.png";
+import sc3 from "@assets/showcase/150-Piece.png";
+import sc4 from "@assets/showcase/113-Piece.png";
+
+import fbf1 from "@assets/showcase/167-Piece.png";
+import fbf2 from "@assets/showcase/164-Piece.png";
+import fbf3 from "@assets/showcase/148-Piece.png";
+import fbf4 from "@assets/showcase/147-Piece.png";
+
+import fbc1 from "@assets/showcase/166-Piece.png";
+import fbc2 from "@assets/showcase/165-Piece.png";
+import fbc3 from "@assets/showcase/154-Piece.png";
+import fbc4 from "@assets/showcase/151-Piece.png";
+
+const isOpen = commisionStatus.isOpen;
+const statusText = isOpen ? "OPEN" : "CLOSED";
+
+const discord = contacts.find((c) => c.name === "Discord");
+
+const tiers = [
+  {
+    name: "Simple Flat",
+    price: "$10",
+    description: "Flat-colored simple piece — clean, bold, and straight to the point.",
+    images: [sf1, sf2, sf3, sf4],
+  },
+  {
+    name: "Simple Curved",
+    price: "$15",
+    description: "Simple piece with curved shading — adds depth and dimension.",
+    images: [sc1, sc2, sc3, sc4],
+  },
+  {
+    name: "Fullbody Flat",
+    price: "$25",
+    description: "Full-body character with flat coloring — head to toe, clean style.",
+    images: [fbf1, fbf2, fbf3, fbf4],
+  },
+  {
+    name: "Fullbody Curved",
+    price: "$35",
+    description: "Full-body character with curved shading — the full package.",
+    images: [fbc1, fbc2, fbc3, fbc4],
+  },
+];
+---
+
+<BaseLayout>
+  <section class="coms-page">
+    <!-- Header -->
+    <div class="coms-header">
+      <h1 class="coms-title">
+        Commi<span class="text-accent">ssions</span>
+      </h1>
+      <div class={`status-badge ${isOpen ? "status-open" : "status-closed"}`}>
+        <span class="status-dot"></span>
+        {statusText}
+      </div>
+      <p class="coms-sub">
+        {isOpen
+          ? "I'm currently accepting commissions — check out the tiers below!"
+          : "Commissions are currently closed. Check back later!"}
+      </p>
+    </div>
+
+    <!-- Tiers -->
+    <div class="tiers-list">
+      {tiers.map((tier, idx) => (
+        <div class={`tier-row ${idx % 2 === 1 ? "tier-row--reverse" : ""}`}>
+          <!-- Slider -->
+          <div class="tier-slider" data-slider>
+            <div class="slider-track">
+              {tier.images.map((img, i) => (
+                <div class={`slider-slide ${i === 0 ? "active" : ""}`}>
+                  <Image src={img} alt={`${tier.name} example ${i + 1}`} format="webp" width={500} />
+                </div>
+              ))}
+            </div>
+            <button class="slider-arrow slider-arrow--left" data-dir="prev" aria-label="Previous">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button class="slider-arrow slider-arrow--right" data-dir="next" aria-label="Next">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <div class="slider-dots">
+              {tier.images.map((_, i) => (
+                <button class={`slider-dot ${i === 0 ? "active" : ""}`} data-slide={i} aria-label={`Show example ${i + 1}`} />
+              ))}
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="tier-info">
+            <span class="tier-price">{tier.price}</span>
+            <h2 class="tier-name">{tier.name}</h2>
+            <p class="tier-desc">{tier.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Turnaround + How to Order -->
+    <div class="order-section">
+      <h2 class="section-label">// how to order</h2>
+
+      <!-- Turnaround notice -->
+      <div class="turnaround-card">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <div>
+          <strong>Turnaround time</strong>
+          <p>1–2 weeks on average, depending on complexity and queue. I'll keep you updated!</p>
+        </div>
+      </div>
+
+      <div class="order-steps">
+        <div class="step">
+          <span class="step-num">1</span>
+          <div>
+            <strong>DM me on Discord</strong>
+            <p>Send me a message with what you'd like — references help a lot!</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">2</span>
+          <div>
+            <strong>We figure out the details</strong>
+            <p>We'll talk about the character, style, and any specifics you want.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <div>
+            <strong>I get to work</strong>
+            <p>You'll get a sketch for approval before I finish the final piece.</p>
+          </div>
+        </div>
+      </div>
+      {discord && (
+        <a href={discord.link} target="_blank" rel="noopener noreferrer" class="discord-btn">
+          Contact on Discord &nearr;
+        </a>
+      )}
+    </div>
+
+    <!-- Terms of Service -->
+    <div class="tos-section">
+      <h2 class="section-label">// terms of service</h2>
+      <ul class="tos-list">
+        <li class="tos-item">
+          <span class="tos-icon">&#x1F4B0;</span>
+          <div>
+            <strong>Payment upfront</strong>
+            <p>Full payment is required before work begins.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x1F504;</span>
+          <div>
+            <strong>Revisions</strong>
+            <p>Up to 2 minor revisions are included. Major changes may incur extra cost.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x1F6AB;</span>
+          <div>
+            <strong>No refunds</strong>
+            <p>Once work has started, refunds cannot be issued.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x2705;</span>
+          <div>
+            <strong>Personal use</strong>
+            <p>Commissions are for personal use unless discussed otherwise.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x1F3A8;</span>
+          <div>
+            <strong>Credit required</strong>
+            <p>Please credit me if you post the artwork publicly.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x26D4;</span>
+          <div>
+            <strong>No AI / NFT use</strong>
+            <p>My work may not be used for AI training or minted as NFTs.</p>
+          </div>
+        </li>
+        <li class="tos-item">
+          <span class="tos-icon">&#x270B;</span>
+          <div>
+            <strong>Right to decline</strong>
+            <p>I reserve the right to decline any commission for any reason.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Back link -->
+    <div class="back-section">
+      <a href="/" class="back-link">back to the gallery &rarr;</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .coms-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 4rem 3rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  /* Header */
+  .coms-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    opacity: 0;
+    animation: fade-up 0.6s ease forwards;
+  }
+
+  .coms-title {
+    font-family: var(--font-accent);
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 1.1;
+  }
+
+  .coms-sub {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.4);
+    max-width: 400px;
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1rem;
+    border-radius: 9999px;
+    font-family: var(--font-accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .status-open {
+    border: 1px solid #4ade80;
+    color: #4ade80;
+  }
+
+  .status-open .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  .status-closed {
+    border: 1px solid #ef4444;
+    color: #ef4444;
+  }
+
+  .status-closed .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+    50% { box-shadow: 0 0 0 5px transparent; }
+  }
+
+  /* Tiers */
+  .tiers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
+  .tier-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    opacity: 0;
+    animation: fade-up 0.6s ease forwards;
+  }
+
+  .tier-row:nth-child(1) { animation-delay: 0.15s; }
+  .tier-row:nth-child(2) { animation-delay: 0.3s; }
+  .tier-row:nth-child(3) { animation-delay: 0.45s; }
+  .tier-row:nth-child(4) { animation-delay: 0.6s; }
+
+  .tier-row--reverse {
+    direction: rtl;
+  }
+
+  .tier-row--reverse > * {
+    direction: ltr;
+  }
+
+  .tier-row--reverse .tier-info {
+    text-align: right;
+    align-items: flex-end;
+  }
+
+  /* Slider */
+  .tier-slider {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    aspect-ratio: 1;
+    width: 100%;
+    transition: border-color 0.2s ease;
+  }
+
+  .tier-slider:hover {
+    border-color: var(--accent-color);
+  }
+
+  /* Arrow handles */
+  .slider-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+
+  .tier-slider:hover .slider-arrow {
+    opacity: 1;
+  }
+
+  .slider-arrow:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: var(--primary-color);
+  }
+
+  .slider-arrow--left {
+    left: 10px;
+  }
+
+  .slider-arrow--right {
+    right: 10px;
+  }
+
+  .slider-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .slider-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .slider-slide.active {
+    opacity: 1;
+  }
+
+  .slider-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .slider-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .slider-dot.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+
+  .slider-dot:hover {
+    border-color: var(--accent-color);
+  }
+
+  /* Info */
+  .tier-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 0;
+  }
+
+  .tier-price {
+    font-family: var(--font-accent);
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    line-height: 1;
+    letter-spacing: 0.05em;
+  }
+
+  .tier-name {
+    font-family: var(--font-accent);
+    font-size: 1.6rem;
+    color: var(--text-color);
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+  }
+
+  .tier-desc {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.6;
+    margin-top: 0.25rem;
+  }
+
+  /* How to order */
+  .order-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    opacity: 0;
+    animation: fade-up 0.6s ease 0.75s forwards;
+  }
+
+  .section-label {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--accent-color);
+    opacity: 0.6;
+    letter-spacing: 0.05em;
+  }
+
+  .order-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s ease;
+  }
+
+  .step:hover {
+    border-color: var(--accent-color);
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step strong {
+    font-family: var(--font-accent);
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+  }
+
+  .step p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+  }
+
+  .discord-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.65rem 1.5rem;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    text-transform: uppercase;
+    width: fit-content;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .discord-btn:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+  }
+
+  /* Turnaround card */
+  .turnaround-card {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s ease;
+  }
+
+  .turnaround-card:hover {
+    border-color: var(--accent-color);
+  }
+
+  .turnaround-card svg {
+    flex-shrink: 0;
+    color: var(--accent-color);
+    margin-top: 0.1rem;
+  }
+
+  .turnaround-card strong {
+    font-family: var(--font-accent);
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+  }
+
+  .turnaround-card p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+  }
+
+  /* TOS */
+  .tos-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    opacity: 0;
+    animation: fade-up 0.6s ease 0.9s forwards;
+  }
+
+  .tos-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .tos-item {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    padding: 0.7rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s ease;
+  }
+
+  .tos-item:hover {
+    border-color: var(--accent-color);
+  }
+
+  .tos-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .tos-item strong {
+    font-family: var(--font-accent);
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+  }
+
+  .tos-item p {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 0.1rem;
+    line-height: 1.4;
+  }
+
+  /* Back link */
+  .back-section {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    opacity: 0;
+    animation: fade-up 0.6s ease 0.9s forwards;
+  }
+
+  .back-link {
+    color: var(--accent-color);
+    font-family: var(--font-accent);
+    font-size: 0.85rem;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s ease;
+  }
+
+  .back-link:hover {
+    opacity: 0.7;
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mobile: stack vertically */
+  @media (max-width: 768px) {
+    .coms-page {
+      padding: 4rem 1.5rem 6rem;
+    }
+
+    .tier-row,
+    .tier-row--reverse {
+      grid-template-columns: 1fr;
+      direction: ltr;
+    }
+
+    .tier-row--reverse .tier-info {
+      text-align: left;
+      align-items: flex-start;
+    }
+
+    .tier-slider {
+      max-width: 380px;
+      justify-self: center;
+    }
+
+    .slider-arrow {
+      opacity: 1;
+    }
+
+    .tier-info {
+      text-align: center;
+      align-items: center !important;
+    }
+
+    .tos-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Image sliders — auto-advance + dot + arrow navigation
+  document.querySelectorAll<HTMLElement>("[data-slider]").forEach((slider) => {
+    const slides = slider.querySelectorAll<HTMLElement>(".slider-slide");
+    const dots = slider.querySelectorAll<HTMLElement>(".slider-dot");
+    const arrows = slider.querySelectorAll<HTMLElement>(".slider-arrow");
+    let current = 0;
+    let interval: ReturnType<typeof setInterval>;
+
+    function goTo(index: number) {
+      slides[current].classList.remove("active");
+      dots[current].classList.remove("active");
+      current = ((index % slides.length) + slides.length) % slides.length;
+      slides[current].classList.add("active");
+      dots[current].classList.add("active");
+    }
+
+    function advance() {
+      goTo(current + 1);
+    }
+
+    function startAuto() {
+      interval = setInterval(advance, 5000);
+    }
+
+    // Dot clicks
+    dots.forEach((dot) => {
+      dot.addEventListener("click", () => {
+        clearInterval(interval);
+        goTo(Number(dot.dataset.slide));
+        startAuto();
+      });
+    });
+
+    // Arrow clicks
+    arrows.forEach((arrow) => {
+      arrow.addEventListener("click", () => {
+        clearInterval(interval);
+        goTo(arrow.dataset.dir === "next" ? current + 1 : current - 1);
+        startAuto();
+      });
+    });
+
+    // Pause on hover
+    slider.addEventListener("mouseenter", () => clearInterval(interval));
+    slider.addEventListener("mouseleave", startAuto);
+
+    startAuto();
+  });
+</script>
