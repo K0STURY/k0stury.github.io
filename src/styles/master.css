@@ -124,12 +124,34 @@ body::after {
   animation: pulse-ring 1.5s ease-out infinite;
 }
 
+/* Skeleton shimmer for gallery items while images load */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* Gallery item base */
 .gallery-item {
   position: relative;
   min-height: 120px;
   background: #2a2a2a;
   contain: layout style paint;
+}
+
+.gallery-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  transition: opacity 0.4s ease;
+}
+
+.gallery-item.loaded::before {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Blur-up for first visible items on filter switch */

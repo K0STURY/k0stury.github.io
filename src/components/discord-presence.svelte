@@ -154,7 +154,7 @@
           </div>
         </div>
       {:else}
-        <span class="presence-idle">Nothing going on right now</span>
+        <span class="presence-idle">Prob doodling</span>
       {/if}
     </div>
   </div>

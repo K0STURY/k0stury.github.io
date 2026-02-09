@@ -1040,6 +1040,17 @@ document.addEventListener("astro:page-load", () => {
     btn.addEventListener("touchstart", () => preloadOnInteract(btn), { once: true, passive: true });
   });
 
+  // Skeleton loaders: mark gallery items as loaded when their image finishes
+  items.forEach((btn) => {
+    const img = btn.querySelector("img");
+    if (!img) return;
+    if (img.complete && img.naturalWidth > 0) {
+      btn.classList.add("loaded");
+    } else {
+      img.addEventListener("load", () => btn.classList.add("loaded"), { once: true });
+    }
+  });
+
   // 3D tilt on hover + lightbox click
   items.forEach((btn) => {
     btn.addEventListener("click", () => {

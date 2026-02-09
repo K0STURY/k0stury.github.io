@@ -9,7 +9,7 @@ import ThemeToggler from "./theme-toggler.svelte";
   <h1
     class="group-data-[inview='false']:text-4xl font-accent tracking-tighter transition-transform duration-200 ease-linear hover:animate-gelatine-in-out"
   >
-    <a href="/" class="text-white" id="nav-title" data-text="Kostur.">Kos<span class="text-accent">tur.</span></a>
+    <a href="/" class="text-white" id="nav-title" data-text="Kostur." data-astro-prefetch="load">Kos<span class="text-accent">tur.</span></a>
   </h1>
   <ThemeToggler client:load />
 </nav>
@@ -33,7 +33,7 @@ import ThemeToggler from "./theme-toggler.svelte";
       navbar.setAttribute("data-inview", "false");
     }
 
-    // Text scramble effect on nav title
+    // Text scramble + glitch effect on nav title
     const navTitle = document.getElementById("nav-title");
     if (navTitle) {
       const finalText = navTitle.dataset.text ?? "Kostur.";
@@ -42,10 +42,12 @@ import ThemeToggler from "./theme-toggler.svelte";
       const duration = 800;
       const steps = 12;
       let step = 0;
+      let titleEl: HTMLElement = navTitle;
 
       function scrambleStep() {
         if (step >= steps) {
-          navTitle!.innerHTML = `Kos<span class="text-accent">tur.</span>`;
+          titleEl.innerHTML = `Kos<span class="text-accent">tur.</span>`;
+          titleEl.classList.remove("glitching");
           return;
         }
 
@@ -68,7 +70,7 @@ import ThemeToggler from "./theme-toggler.svelte";
             }
           }
         }
-        navTitle!.innerHTML = result;
+        titleEl.innerHTML = result;
         step++;
         setTimeout(scrambleStep, duration / steps);
       }
@@ -76,13 +78,17 @@ import ThemeToggler from "./theme-toggler.svelte";
       // Remove old listener before adding new one
       const newTitle = navTitle.cloneNode(true) as HTMLElement;
       navTitle.parentNode?.replaceChild(newTitle, navTitle);
+      titleEl = newTitle;
+
       newTitle.addEventListener("mouseenter", () => {
         step = 0;
+        titleEl.classList.add("glitching");
         scrambleStep();
       });
 
       // Initial scramble on page load
       step = 0;
+      titleEl.classList.add("glitching");
       scrambleStep();
     }
   }
@@ -97,5 +103,23 @@ import ThemeToggler from "./theme-toggler.svelte";
 
   [data-inview="true"] > h1 {
     @apply transform scale-110 text-4xl transition-transform duration-300 ease-linear;
+  }
+
+  /* Glitch effect on logo hover */
+  #nav-title {
+    position: relative;
+    display: inline-block;
+  }
+
+  #nav-title.glitching {
+    animation: glitch-jitter 0.1s steps(2) infinite;
+  }
+
+  @keyframes glitch-jitter {
+    0% { transform: translate(0); }
+    25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
   }
 </style>

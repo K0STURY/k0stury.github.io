@@ -8,6 +8,9 @@ import icon from "astro-icon";
 export default defineConfig({
   site: "https://k0stur.art",
   integrations: [tailwind(), svelte(), icon()],
+  prefetch: {
+    defaultStrategy: "viewport",
+  },
   build: {
     format: "file"
   }

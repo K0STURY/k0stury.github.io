@@ -3,26 +3,12 @@ import BaseLayout from "@layouts/base-layout.astro";
 import { Image } from "astro:assets";
 import { commisionStatus, contacts } from "src/site.config";
 
-// Example images per tier
-import sf1 from "@assets/showcase/163-Piece.png";
-import sf2 from "@assets/showcase/146-Piece.png";
-import sf3 from "@assets/showcase/125-Piece.png";
-import sf4 from "@assets/showcase/79-Piece.png";
-
-import sc1 from "@assets/showcase/161-Piece.png";
-import sc2 from "@assets/showcase/157-Piece.png";
-import sc3 from "@assets/showcase/150-Piece.png";
-import sc4 from "@assets/showcase/113-Piece.png";
-
-import fbf1 from "@assets/showcase/167-Piece.png";
-import fbf2 from "@assets/showcase/164-Piece.png";
-import fbf3 from "@assets/showcase/148-Piece.png";
-import fbf4 from "@assets/showcase/147-Piece.png";
-
-import fbc1 from "@assets/showcase/166-Piece.png";
-import fbc2 from "@assets/showcase/165-Piece.png";
-import fbc3 from "@assets/showcase/154-Piece.png";
-import fbc4 from "@assets/showcase/151-Piece.png";
+// Dynamically load images from src/assets/coms/<tier-folder>/
+// Just drop images into the right folder — no code changes needed.
+const sfImages = await Astro.glob("../assets/coms/simple-flat/*.{png,jpg,jpeg,webp}");
+const scImages = await Astro.glob("../assets/coms/simple-curved/*.{png,jpg,jpeg,webp}");
+const fbfImages = await Astro.glob("../assets/coms/fullbody-flat/*.{png,jpg,jpeg,webp}");
+const fbcImages = await Astro.glob("../assets/coms/fullbody-curved/*.{png,jpg,jpeg,webp}");
 
 const isOpen = commisionStatus.isOpen;
 const statusText = isOpen ? "OPEN" : "CLOSED";
@@ -34,25 +20,25 @@ const tiers = [
     name: "Simple Flat",
     price: "$10",
     description: "Clean flat colors, no fuss — just a solid, bold piece.",
-    images: [sf1, sf2, sf3, sf4],
+    images: sfImages.map((m) => m.default),
   },
   {
     name: "Simple Curved",
     price: "$15",
     description: "Same clean look but with curved shading to give it some extra pop.",
-    images: [sc1, sc2, sc3, sc4],
+    images: scImages.map((m) => m.default),
   },
   {
     name: "Fullbody Flat",
     price: "$25",
     description: "Your character head to toe, flat colored — simple and clean.",
-    images: [fbf1, fbf2, fbf3, fbf4],
+    images: fbfImages.map((m) => m.default),
   },
   {
     name: "Fullbody Curved",
     price: "$35",
     description: "The full deal — full body with curved shading and all the details.",
-    images: [fbc1, fbc2, fbc3, fbc4],
+    images: fbcImages.map((m) => m.default),
   },
 ];
 ---
@@ -212,7 +198,7 @@ const tiers = [
 
     <!-- Back link -->
     <div class="back-section">
-      <a href="/" class="back-link">back to the gallery &rarr;</a>
+      <a href="/" class="back-link" data-astro-prefetch="load">back to the gallery &rarr;</a>
     </div>
   </section>
 </BaseLayout>
