@@ -18,13 +18,11 @@ const dotClass = commisionStatus.isOpen
   class="flex flex-col md:flex-row gap-4 items-center justify-center p-0 md:p-8 max-w-5xl mx-auto"
 >
 
-  <!-- Logo + Presence -->
+  <!-- Logo -->
   <div class="w-32 flex-shrink-0 flex flex-col items-center gap-2">
-
     <div class="rounded-2xl overflow-hidden md:w-32 w-32 avatar-pulse">
       <Image src={Avatar} alt="Logo" format="webp" />
     </div>
-    <DiscordPresence client:load />
   </div>
   <!-- About -->
   <div class="w-96 text-center md:text-left">
@@ -48,6 +46,11 @@ const dotClass = commisionStatus.isOpen
     </ul>
   </div>
 </section>
+
+<!-- Discord Presence -->
+<div class="discord-presence-wrapper">
+  <DiscordPresence client:load />
+</div>
 
 <!-- Commission Status -->
 <a href="/coms" class="commission-status">
@@ -73,6 +76,15 @@ const dotClass = commisionStatus.isOpen
   @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+  }
+
+  .discord-presence-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 1rem auto 0;
+    max-width: 420px;
+    width: 100%;
+    padding: 0 1rem;
   }
 
   .commission-status {

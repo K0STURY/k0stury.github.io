@@ -16,7 +16,7 @@ html {
   transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-html *:not(img):not(picture):not(video) {
+html *:not(img):not(picture):not(video):not(.gallery-item):not(.gallery-item *):not(.filter-pill):not(.timeline-entry):not(.timeline-entry *) {
   transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, outline-color 0.4s ease;
 }
 
@@ -47,7 +47,7 @@ body {
 /* Repeating SVG pattern background */
 @keyframes pattern-scroll {
   0% { background-position: 0 0; }
-  100% { background-position: 180px 180px; }
+  100% { background-position: 100px 100px; }
 }
 
 body::before {
@@ -129,6 +129,7 @@ body::after {
   position: relative;
   min-height: 120px;
   background: #2a2a2a;
+  contain: layout style paint;
 }
 
 /* LQIP blur-up: images start blurred and sharpen on reveal */
@@ -141,6 +142,17 @@ body::after {
 .gallery-item.revealed img {
   filter: blur(0);
   transform: scale(1);
+}
+
+/* Reduce GPU load on mobile */
+@media (max-width: 768px) {
+  body::after {
+    display: none;
+  }
+
+  body::before {
+    animation: none;
+  }
 }
 
 /* Hide UI elements when lightbox is open */

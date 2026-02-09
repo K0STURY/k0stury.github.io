@@ -74,7 +74,7 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
 <!-- View toggle + filter pills -->
 <div class="flex flex-wrap gap-2 justify-center items-center px-4 mt-2" id="gallery-controls">
   <div class="flex gap-1 mr-2" id="view-toggle">
-    <button class="view-btn active" data-view="grid" aria-label="Grid view">
+    <button class="view-btn active" data-view="grid" data-tooltip="Grid" aria-label="Grid view">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"></rect>
         <rect x="14" y="3" width="7" height="7"></rect>
@@ -135,7 +135,7 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
           width={640}
           height={320}
           loading="eager"
-          class="w-full h-full object-cover pointer-events-none"
+          class="w-full h-auto object-cover pointer-events-none"
         />
         <div class="hover-overlay">
           <span class="hover-title">{art.title || "Untitled"}</span>
@@ -723,6 +723,9 @@ document.addEventListener("astro:page-load", () => {
     // Immediately reset all items to a clean state
     items.forEach((item) => {
       item.style.transition = "none";
+      // Strip revealed class so LQIP blur-up replays
+      item.classList.remove("revealed");
+      revealObserver.unobserve(item);
     });
 
     // Force reflow so the transition:none takes effect
@@ -743,6 +746,11 @@ document.addEventListener("astro:page-load", () => {
             item.style.opacity = "1";
             item.style.transform = "scale(1)";
           });
+          // Re-observe for blur-up after the scale animation finishes
+          setTimeout(() => {
+            if (filterVersion !== version) return;
+            revealObserver.observe(item);
+          }, staggerIndex * FILTER_STAGGER + FILTER_DURATION);
           staggerIndex++;
         } else {
           item.classList.add("hidden");
@@ -777,6 +785,11 @@ document.addEventListener("astro:page-load", () => {
           item.style.opacity = "1";
           item.style.transform = "scale(1)";
         });
+        // Re-observe for blur-up after the scale animation finishes
+        setTimeout(() => {
+          if (filterVersion !== version) return;
+          revealObserver.observe(item);
+        }, i * FILTER_STAGGER + FILTER_DURATION);
       });
 
       if (countEl) countEl.textContent = String(matching.length);
@@ -784,8 +797,12 @@ document.addEventListener("astro:page-load", () => {
   }
 
   const filterBtns = document.querySelectorAll<HTMLElement>(".filter-pill");
+  let filterLocked = false;
   filterBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (filterLocked) return;
+      filterLocked = true;
+      setTimeout(() => { filterLocked = false; }, FILTER_DURATION + 100);
       filterBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       applyFilter(btn.dataset.filter ?? "all");
@@ -922,7 +939,7 @@ document.addEventListener("astro:page-load", () => {
     card.addEventListener("click", () => {
       const entry = card.closest(".timeline-entry") as HTMLElement;
       const index = parseInt(entry?.dataset.lightboxIndex ?? "0", 10);
-      document.dispatchEvent(new CustomEvent("lightbox:open", { detail: { index } }));
+      document.dispatchEvent(new CustomEvent("lightbox:open", { detail: { index, filter: currentFilter } }));
     });
   });
 
@@ -954,7 +971,7 @@ document.addEventListener("astro:page-load", () => {
         10,
       );
       document.dispatchEvent(
-        new CustomEvent("lightbox:open", { detail: { index } }),
+        new CustomEvent("lightbox:open", { detail: { index, filter: currentFilter } }),
       );
     });
 

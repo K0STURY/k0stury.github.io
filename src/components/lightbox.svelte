@@ -26,35 +26,73 @@
     loadedFullRes = loadedFullRes; // trigger reactivity
   }
 
+  // Preload a full-res image; when it finishes mark it as loaded
+  function preloadFullRes(filteredIdx: number) {
+    const origIdx = filteredMap[filteredIdx];
+    if (origIdx == null || loadedFullRes.has(origIdx)) return;
+    const img = new Image();
+    img.onload = () => onFullResLoad(origIdx);
+    img.src = filteredImages[filteredIdx].fullSrc;
+  }
+
   let isOpen = false;
   let initialSlide = 0;
   let activeIndex = 0;
   let swiperInstance: Swiper | null = null;
   let swiperContainer: HTMLElement;
 
-  $: currentImage = images[activeIndex] || null;
+  // Filtered subset of images based on active gallery tag
+  let filteredImages: typeof images = images;
+  // Map from filtered index back to original index (for full-res tracking)
+  let filteredMap: number[] = [];
+
+  $: currentImage = filteredImages[activeIndex] || null;
   $: hasInfo = currentImage?.title || currentImage?.description;
 
+  // Resolve displayed src per slide: full-res if loaded, otherwise thumbnail
+  function resolvedSrc(filteredIdx: number): string {
+    const origIdx = filteredMap[filteredIdx];
+    if (origIdx != null && loadedFullRes.has(origIdx)) {
+      return filteredImages[filteredIdx].fullSrc;
+    }
+    return filteredImages[filteredIdx].src;
+  }
+
   // Preload adjacent full-res images so next/prev are ready
-  $: if (isOpen && images.length > 0) {
-    const preloadOffsets = [-1, 1, 2];
-    for (const offset of preloadOffsets) {
-      const idx = (activeIndex + offset + images.length) % images.length;
-      if (!loadedFullRes.has(idx)) {
-        const img = new Image();
-        img.src = images[idx].fullSrc;
-      }
+  $: if (isOpen && filteredImages.length > 0) {
+    for (const offset of [-1, 0, 1, 2]) {
+      const idx = (activeIndex + offset + filteredImages.length) % filteredImages.length;
+      preloadFullRes(idx);
     }
   }
 
-  function open(index: number) {
-    initialSlide = index;
-    activeIndex = index;
+  function open(index: number, filter?: string) {
+    // Build filtered subset based on current gallery tag
+    if (filter && filter !== "all") {
+      filteredMap = [];
+      filteredImages = images.filter((img, i) => {
+        if (img.tags.includes(filter)) {
+          filteredMap.push(i);
+          return true;
+        }
+        return false;
+      });
+    } else {
+      filteredImages = images;
+      filteredMap = images.map((_, i) => i);
+    }
+
+    // Find where the clicked image lands in the filtered list
+    const filteredIndex = filteredMap.indexOf(index);
+    initialSlide = filteredIndex >= 0 ? filteredIndex : 0;
+    activeIndex = initialSlide;
+
     isOpen = true;
     document.body.style.overflow = "hidden";
     document.querySelector("nav")?.classList.add("lightbox-hidden");
     document.getElementById("floating-top")?.classList.add("lightbox-hidden");
-    requestAnimationFrame(() => initSwiper());
+    // Double-rAF so mobile has time to compute the flex layout before Swiper reads dimensions
+    requestAnimationFrame(() => requestAnimationFrame(() => initSwiper()));
   }
 
   function close() {
@@ -70,12 +108,15 @@
 
   function initSwiper() {
     if (!swiperContainer) return;
+
     swiperInstance = new Swiper(swiperContainer, {
       modules: [Navigation, Keyboard, Zoom],
       initialSlide,
       slidesPerView: 1,
       spaceBetween: 0,
       loop: true,
+      observer: true,
+      observeParents: true,
       keyboard: {
         enabled: true,
         onlyInViewport: false,
@@ -113,7 +154,7 @@
 
     const handleLightboxOpen = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      open(detail.index);
+      open(detail.index, detail.filter);
     };
     document.addEventListener("lightbox:open", handleLightboxOpen);
 
@@ -148,30 +189,17 @@
         class="swiper lightbox-swiper"
       >
         <div class="swiper-wrapper">
-          {#each images as image, i}
-            <div class="swiper-slide flex items-center justify-center">
-              <div class="swiper-zoom-container lightbox-img-wrapper">
-                <!-- Thumbnail (blurred placeholder) -->
+          {#each filteredImages as image, i}
+            <div class="swiper-slide">
+              <div class="swiper-zoom-container lightbox-slide-inner">
                 <img
-                  src={image.src}
-                  width={image.width}
-                  height={image.height}
-                  alt=""
-                  class="lightbox-thumb max-w-full max-h-[90vh] object-contain select-none"
-                  class:loaded={loadedFullRes.has(i)}
-                  draggable="false"
-                  aria-hidden="true"
-                />
-                <!-- Full-res (loads on top) -->
-                <img
-                  src={image.fullSrc}
+                  src={resolvedSrc(i)}
                   width={image.width}
                   height={image.height}
                   alt={image.title || "Artwork"}
-                  class="lightbox-full max-w-full max-h-[90vh] object-contain select-none"
-                  class:loaded={loadedFullRes.has(i)}
+                  class="lightbox-img"
+                  class:is-thumb={!loadedFullRes.has(filteredMap[i])}
                   draggable="false"
-                  on:load={() => onFullResLoad(i)}
                 />
               </div>
             </div>
@@ -200,9 +228,9 @@
         <div class="panel-counter">
           <span class="counter-current">{String(activeIndex + 1).padStart(2, '0')}</span>
           <div class="counter-bar">
-            <div class="counter-fill" style="width: {((activeIndex + 1) / images.length) * 100}%"></div>
+            <div class="counter-fill" style="width: {((activeIndex + 1) / filteredImages.length) * 100}%"></div>
           </div>
-          <span class="counter-total">{String(images.length).padStart(2, '0')}</span>
+          <span class="counter-total">{String(filteredImages.length).padStart(2, '0')}</span>
         </div>
 
         <!-- Decorative divider -->
@@ -266,6 +294,7 @@
   .lightbox-swiper {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     height: 100%;
     --swiper-navigation-color: var(--accent-color);
     --swiper-navigation-size: 24px;
@@ -277,31 +306,28 @@
     justify-content: center;
   }
 
-  /* Progressive image loading */
-  .lightbox-img-wrapper {
-    position: relative;
+  .lightbox-slide-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
 
-  .lightbox-thumb {
+  /* Single image element — src swaps from thumb to full-res */
+  .lightbox-img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    user-select: none;
+    transition: filter 0.4s ease;
+  }
+
+  .lightbox-img.is-thumb {
     filter: blur(8px);
-    transition: opacity 0.4s ease;
-  }
-
-  .lightbox-thumb.loaded {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .lightbox-full {
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-  }
-
-  .lightbox-full.loaded {
-    opacity: 1;
   }
 
   /* Side panel */
@@ -318,7 +344,7 @@
     overflow: hidden;
   }
 
-  /* Close button — now inside the panel */
+  /* Close button */
   .lightbox-close {
     align-self: flex-end;
     width: 36px;
@@ -441,7 +467,7 @@
     text-transform: uppercase;
   }
 
-  /* Decorative accent shape — large faded circle in the corner */
+  /* Decorative accent shape */
   .panel-accent-shape {
     position: absolute;
     bottom: -60px;
@@ -459,16 +485,25 @@
     .lightbox-layout {
       flex-direction: column;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       border-radius: 0;
     }
 
     .lightbox-swiper {
       flex: 1;
+      min-height: 0;
+      height: auto;
+      overflow: hidden;
+    }
+
+    .lightbox-img {
+      max-width: 100%;
+      max-height: 100%;
     }
 
     .lightbox-panel {
       width: 100%;
+      flex-shrink: 0;
       flex-direction: row;
       flex-wrap: wrap;
       align-items: center;

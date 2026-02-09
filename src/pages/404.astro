@@ -117,24 +117,23 @@ import BaseLayout from "@layouts/base-layout.astro";
 </style>
 
 <script>
-  // Random paint splatters on the 404 page
+document.addEventListener("astro:page-load", () => {
   const canvas = document.getElementById("error-canvas");
-  if (canvas) {
-    function spawnSplatter() {
-      const dot = document.createElement("div");
-      dot.className = "splatter";
-      const size = 20 + Math.random() * 80;
-      dot.style.width = `${size}px`;
-      dot.style.height = `${size}px`;
-      dot.style.left = `${Math.random() * 100}%`;
-      dot.style.top = `${Math.random() * 100}%`;
-      canvas!.appendChild(dot);
-      setTimeout(() => dot.remove(), 1000);
-    }
+  if (!canvas) return;
 
-    // Spawn initial batch
-    for (let i = 0; i < 5; i++) setTimeout(spawnSplatter, i * 200);
-    // Keep spawning
-    setInterval(spawnSplatter, 800);
+  function spawnSplatter() {
+    const dot = document.createElement("div");
+    dot.className = "splatter";
+    const size = 20 + Math.random() * 80;
+    dot.style.width = `${size}px`;
+    dot.style.height = `${size}px`;
+    dot.style.left = `${Math.random() * 100}%`;
+    dot.style.top = `${Math.random() * 100}%`;
+    canvas!.appendChild(dot);
+    setTimeout(() => dot.remove(), 1000);
   }
+
+  for (let i = 0; i < 5; i++) setTimeout(spawnSplatter, i * 200);
+  setInterval(spawnSplatter, 800);
+});
 </script>

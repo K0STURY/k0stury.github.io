@@ -711,8 +711,11 @@ const tiers = [
 </style>
 
 <script>
-  // Image sliders — auto-advance + dot + arrow navigation
-  document.querySelectorAll<HTMLElement>("[data-slider]").forEach((slider) => {
+document.addEventListener("astro:page-load", () => {
+  const sliders = document.querySelectorAll<HTMLElement>("[data-slider]");
+  if (!sliders.length) return;
+
+  sliders.forEach((slider) => {
     const slides = slider.querySelectorAll<HTMLElement>(".slider-slide");
     const dots = slider.querySelectorAll<HTMLElement>(".slider-dot");
     const arrows = slider.querySelectorAll<HTMLElement>(".slider-arrow");
@@ -735,7 +738,6 @@ const tiers = [
       interval = setInterval(advance, 5000);
     }
 
-    // Dot clicks
     dots.forEach((dot) => {
       dot.addEventListener("click", () => {
         clearInterval(interval);
@@ -744,7 +746,6 @@ const tiers = [
       });
     });
 
-    // Arrow clicks
     arrows.forEach((arrow) => {
       arrow.addEventListener("click", () => {
         clearInterval(interval);
@@ -753,10 +754,10 @@ const tiers = [
       });
     });
 
-    // Pause on hover
     slider.addEventListener("mouseenter", () => clearInterval(interval));
     slider.addEventListener("mouseleave", startAuto);
 
     startAuto();
   });
+});
 </script>

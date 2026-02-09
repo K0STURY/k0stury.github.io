@@ -3,7 +3,6 @@ import "@styles/master.css";
 import "@fontsource/luckiest-guy";
 import MetaTags from "@layouts/meta-tags.astro";
 import NavigationBar from "@components/navigation-bar.astro";
-import NowPlaying from "@components/now-playing.svelte";
 import { ViewTransitions } from "astro:transitions";
 ---
 
@@ -48,9 +47,6 @@ import { ViewTransitions } from "astro:transitions";
         made with astro & too much redbull
       </p>
     </footer>
-    <!-- Now Playing (Spotify via Lanyard) -->
-    <NowPlaying client:load transition:persist />
-
     <!-- Floating back-to-top button -->
     <button
       id="floating-top"

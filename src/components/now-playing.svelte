@@ -236,9 +236,43 @@
 
   @media (max-width: 640px) {
     .now-playing {
-      bottom: 1rem;
-      left: 1rem;
-      max-width: 240px;
+      bottom: auto;
+      top: 0;
+      left: 0;
+      right: 0;
+      max-width: 100%;
+      border-radius: 0;
+      border: none;
+      border-bottom: 1px solid rgba(29, 185, 84, 0.2);
+    }
+
+    .now-playing.collapsed {
+      border-radius: 0;
+      max-width: 100%;
+    }
+
+    .collapsed .np-toggle {
+      width: 100%;
+      height: 28px;
+      border-radius: 0;
+      background: rgba(20, 20, 20, 0.9);
+    }
+
+    .np-content {
+      padding: 0.4rem 0.6rem;
+    }
+
+    .np-art {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+
+    .np-toggle {
+      top: 4px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
     }
   }
 </style>
