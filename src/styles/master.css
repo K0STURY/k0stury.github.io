@@ -55,8 +55,8 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: url('../assets/patterns/Pattern_4.svg');
-  background-size: 100px;
+  background-image: url('../assets/patterns/Pattern_5.svg');
+  background-size: 800px;
   background-repeat: repeat;
   opacity: 0.08;
   animation: pattern-scroll 10s linear infinite;
