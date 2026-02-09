@@ -12,16 +12,24 @@ let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
 
 arts = arts.sort(sortByDesc);
 
-// Generate full-res webp versions for the lightbox
+// Generate thumbnail + capped full-res webp for the lightbox
+// Source images are ~5000x5000; loading those raw kills browser memory after ~137 images
 const imageData = await Promise.all(
   arts.map(async (art) => {
+    const thumb = await getImage({
+      src: art.default as any,
+      format: "webp",
+      width: 480,
+      quality: 60,
+    });
     const fullRes = await getImage({
       src: art.default as any,
       format: "webp",
-      quality: 90,
+      width: 1920,
+      quality: 85,
     });
     return {
-      src: art.default.src,
+      src: thumb.src,
       fullSrc: fullRes.src,
       width: art.default.width,
       height: art.default.height,
@@ -126,6 +134,7 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
         style={`transition: opacity 0.5s ease ${(index % 3) * 80}ms, transform 0.3s ease ${(index % 3) * 80}ms;`}
         data-lightbox-index={index}
         data-categories={art.tags.join(",")}
+        data-full-src={imageData[index].fullSrc}
       >
         {newIds.has(art.id) && <span class="new-badge">NEW</span>}
         <Image
@@ -766,6 +775,8 @@ document.addEventListener("astro:page-load", () => {
   const FILTER_DURATION = 300; // ms for the animation
   let filterVersion = 0; // incremented on each click to cancel stale callbacks
 
+  const BLUR_COUNT = 9; // only first 9 items get the blur-up effect
+
   function applyFilter(filter: string) {
     const version = ++filterVersion;
     currentFilter = filter;
@@ -773,9 +784,7 @@ document.addEventListener("astro:page-load", () => {
     // Immediately reset all items to a clean state
     items.forEach((item) => {
       item.style.transition = "none";
-      // Strip revealed class so LQIP blur-up replays
-      item.classList.remove("revealed");
-      revealObserver.unobserve(item);
+      item.classList.remove("revealed", "blur-entering");
     });
 
     // Force reflow so the transition:none takes effect
@@ -789,6 +798,14 @@ document.addEventListener("astro:page-load", () => {
           item.classList.remove("hidden");
           item.style.opacity = "0";
           item.style.transform = "scale(0.85)";
+
+          // First 9 get blur-up, rest stay crisp
+          if (staggerIndex < BLUR_COUNT) {
+            item.classList.add("blur-entering");
+          } else {
+            item.classList.add("revealed");
+          }
+
           requestAnimationFrame(() => {
             if (filterVersion !== version) return;
             const delay = staggerIndex * FILTER_STAGGER;
@@ -796,11 +813,16 @@ document.addEventListener("astro:page-load", () => {
             item.style.opacity = "1";
             item.style.transform = "scale(1)";
           });
-          // Re-observe for blur-up after the scale animation finishes
-          setTimeout(() => {
-            if (filterVersion !== version) return;
-            revealObserver.observe(item);
-          }, staggerIndex * FILTER_STAGGER + FILTER_DURATION);
+
+          // Reveal blur after stagger animation completes
+          if (staggerIndex < BLUR_COUNT) {
+            const idx = staggerIndex;
+            setTimeout(() => {
+              if (filterVersion !== version) return;
+              item.classList.add("revealed");
+            }, idx * FILTER_STAGGER + FILTER_DURATION);
+          }
+
           staggerIndex++;
         } else {
           item.classList.add("hidden");
@@ -828,6 +850,14 @@ document.addEventListener("astro:page-load", () => {
         item.classList.remove("hidden");
         item.style.opacity = "0";
         item.style.transform = "scale(0.85)";
+
+        // First 9 get blur-up, rest stay crisp
+        if (i < BLUR_COUNT) {
+          item.classList.add("blur-entering");
+        } else {
+          item.classList.add("revealed");
+        }
+
         requestAnimationFrame(() => {
           if (filterVersion !== version) return;
           const delay = i * FILTER_STAGGER;
@@ -835,11 +865,14 @@ document.addEventListener("astro:page-load", () => {
           item.style.opacity = "1";
           item.style.transform = "scale(1)";
         });
-        // Re-observe for blur-up after the scale animation finishes
-        setTimeout(() => {
-          if (filterVersion !== version) return;
-          revealObserver.observe(item);
-        }, i * FILTER_STAGGER + FILTER_DURATION);
+
+        // Reveal blur after stagger animation completes
+        if (i < BLUR_COUNT) {
+          setTimeout(() => {
+            if (filterVersion !== version) return;
+            item.classList.add("revealed");
+          }, i * FILTER_STAGGER + FILTER_DURATION);
+        }
       });
 
       if (countEl) countEl.textContent = String(matching.length);
@@ -993,25 +1026,19 @@ document.addEventListener("astro:page-load", () => {
     });
   });
 
-  // LQIP blur-up: reveal images when they scroll into view AND finish loading
-  const revealObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        const item = entry.target as HTMLElement;
-        const img = item.querySelector("img");
-        revealObserver.unobserve(item);
-        const reveal = () => item.classList.add("revealed");
-        if (img && img.complete) {
-          reveal();
-        } else if (img) {
-          img.addEventListener("load", reveal, { once: true });
-        }
-      });
-    },
-    { threshold: 0.05 },
-  );
-  items.forEach((item) => revealObserver.observe(item));
+  // Preload full-res on hover/touch so it's cached when lightbox opens
+  const preloaded = new Set<string>();
+  function preloadOnInteract(btn: HTMLElement) {
+    const fullSrc = btn.dataset.fullSrc;
+    if (!fullSrc || preloaded.has(fullSrc)) return;
+    preloaded.add(fullSrc);
+    const img = new Image();
+    img.src = fullSrc;
+  }
+  items.forEach((btn) => {
+    btn.addEventListener("mouseenter", () => preloadOnInteract(btn), { once: true });
+    btn.addEventListener("touchstart", () => preloadOnInteract(btn), { once: true, passive: true });
+  });
 
   // 3D tilt on hover + lightbox click
   items.forEach((btn) => {

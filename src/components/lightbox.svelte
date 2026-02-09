@@ -52,22 +52,24 @@
     (currentImage?.tags && currentImage.tags.length > 0)
   );
 
-  // Resolve displayed src per slide: full-res if loaded, otherwise thumbnail
-  function resolvedSrc(filteredIdx: number): string {
-    const origIdx = filteredMap[filteredIdx];
-    if (origIdx != null && loadedFullRes.has(origIdx)) {
-      return filteredImages[filteredIdx].fullSrc;
-    }
-    return filteredImages[filteredIdx].src;
-  }
+  // Hold references to in-flight preload images so they aren't garbage-collected
+  let preloadQueue = new Map<number, HTMLImageElement>();
 
   // Preload a full-res image; when it finishes mark it as loaded
   function preloadFullRes(filteredIdx: number) {
     const origIdx = filteredMap[filteredIdx];
     if (origIdx == null || loadedFullRes.has(origIdx)) return;
+    if (preloadQueue.has(origIdx)) return; // already in flight
 
     const img = new Image();
-    img.onload = () => onFullResLoad(origIdx);
+    preloadQueue.set(origIdx, img);
+    img.onload = () => {
+      onFullResLoad(origIdx);
+      preloadQueue.delete(origIdx);
+    };
+    img.onerror = () => {
+      preloadQueue.delete(origIdx);
+    };
     img.src = filteredImages[filteredIdx].fullSrc;
   }
 
@@ -108,13 +110,11 @@
     document.querySelector("nav")?.classList.add("lightbox-hidden");
     document.getElementById("floating-top")?.classList.add("lightbox-hidden");
 
-    // Wait for DOM mount + two frames so CSS grid resolves before Swiper measures
+    // Wait for DOM mount + one frame so flex layout resolves before Swiper measures
     await tick();
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        initSwiper();
-        refreshSwiper();
-      });
+      initSwiper();
+      refreshSwiper();
     });
   }
 
@@ -247,7 +247,7 @@
             <div class="swiper-slide">
               <div class="lightbox-slide-inner">
                 <img
-                  src={resolvedSrc(i)}
+                  src={loadedFullRes.has(filteredMap[i]) ? image.fullSrc : image.src}
                   width={image.width}
                   height={image.height}
                   alt={image.title || "Artwork"}
