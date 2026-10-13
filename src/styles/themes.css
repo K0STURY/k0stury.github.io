@@ -1,9 +1,11 @@
 :root {
-  --primary-color: #27232a;
-  --secondary-color: #ad770a;
-  --text-color: #fff;
+  --primary-color: #1a1820;
+  --panel-color: #221f28;
+  --secondary-color: #3c6e68;
+  --text-color: #f4f0e8;
   --accent-color: #e7ae3a;
-  --accent-color-hover: #ad770a;
+  --accent-color-hover: #f2c266;
+  --edge-color: #0c0b0e;
 
   --font-accent: "Luckiest Guy", system-ui;
 }
@@ -11,16 +13,20 @@
 /* Themes */
 
 [data-theme="ashfid-original"] {
-  --primary-color: #27232a;
+  --primary-color: #1a1820;
+  --panel-color: #221f28;
   --secondary-color: #ff0062;
-  --text-color: #fff;
+  --text-color: #f4f0e8;
   --accent-color: #ff0062;
-  --accent-color-hover: #9c0941;
+  --accent-color-hover: #ff5c93;
+  --edge-color: #0c0b0e;
 }
 [data-theme="new-design"] {
-  --primary-color: #27232a;
-  --secondary-color: #ad770a;
-  --text-color: #fff;
+  --primary-color: #1a1820;
+  --panel-color: #221f28;
+  --secondary-color: #3c6e68;
+  --text-color: #f4f0e8;
   --accent-color: #e7ae3a;
-  --accent-color-hover: #ad770a;
+  --accent-color-hover: #f2c266;
+  --edge-color: #0c0b0e;
 }

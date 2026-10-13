@@ -16,35 +16,82 @@
 </script>
 
 {#if contact.link}
-  <a
-    data-action="overlay"
-    class="flex items-center gap-4 p-4 transition-all duration-200 ease-in-out rounded-md cursor-pointer bg-primary outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group hover:animate-gelatine-in-out"
-    href={contact.link}
-    target="_blank"
-  >
-    <div><slot name="icon" /></div>
-    <div class="pointer-events-none">
-      <span class="font-mono">{contact.value}</span>
-    </div>
+  <a class="tag" href={contact.link} target="_blank" rel="noopener noreferrer">
+    <span class="tag-icon"><slot name="icon" /></span>
+    <span class="tag-text">{contact.value}</span>
   </a>
 {:else}
-  <button
-    data-action="overlay"
-    class="relative flex items-center gap-4 p-4 transition-all duration-200 ease-in-out rounded-md cursor-pointer bg-primary outline outline-2 outline-primary hover:bg-secondary hover:outline-primary group hover:animate-gelatine-in-out"
-    on:click={copy}
-  >
-    <div><slot name="icon" /></div>
-    <div class="pointer-events-none">
-      <span class="font-mono">{contact.value}</span>
-    </div>
+  <button class="tag" on:click={copy}>
+    <span class="tag-icon"><slot name="icon" /></span>
+    <span class="tag-text">{contact.value}</span>
     {#if copied}
-      <div
-        transition:fade={{ duration: 250 }}
-        data-action="copy"
-        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-1 bg-primary font-bold text-accent"
-      >
-        Copied
-      </div>
+      <span class="tag-copied" transition:fade={{ duration: 250 }}>Copied</span>
     {/if}
   </button>
 {/if}
+
+<style>
+  /* A paper tag: rounded "string" end with a punched hole; tilt comes from --tilt on the parent */
+  .tag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem 0.55rem 1.75rem;
+    border: none;
+    border-radius: 16px 6px 6px 16px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transform: rotate(var(--tilt, 0deg));
+    transition:
+      transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .tag::before {
+    content: "";
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    transform: translateY(-50%);
+  }
+
+  .tag:hover,
+  .tag:focus-visible {
+    transform: rotate(0deg) translateY(-3px);
+    background: var(--accent-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+  }
+
+  .tag:focus-visible {
+    outline: 2px solid var(--text-color);
+    outline-offset: 3px;
+  }
+
+  .tag-icon {
+    display: inline-flex;
+  }
+
+  .tag-copied {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    pointer-events: none;
+  }
+</style>

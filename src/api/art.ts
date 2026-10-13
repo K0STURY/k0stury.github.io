@@ -37,6 +37,17 @@ export type Artwork = z.infer<typeof ArtworkSchema> & {
 
 const parsedMeta = ArtworksMetaSchema.parse(artworkMeta);
 
+// Pieces that haven't been written up yet carry these stand-ins in artwork.json.
+// They count as empty, so the site shows "Untitled" and no description for them;
+// replacing the text in the data file is all it takes for a piece to get its own.
+const PLACEHOLDER_TITLE = "Coming Soon";
+const PLACEHOLDER_DESCRIPTION = "In progress";
+
+function realText(value: string | undefined, placeholder: string) {
+  const text = value?.trim() ?? "";
+  return text.toLowerCase() === placeholder.toLowerCase() ? "" : text;
+}
+
 const metaById = new Map<number, ArtworkMeta>(
   parsedMeta.map((entry) => [entry.ID, entry]),
 );
@@ -58,8 +69,8 @@ export default function getAllArt(artworks: Artworks): Artwork[] {
     return {
       ...art,
       id,
-      title: meta?.name ?? "",
-      description: meta?.description ?? "",
+      title: realText(meta?.name, PLACEHOLDER_TITLE),
+      description: realText(meta?.description, PLACEHOLDER_DESCRIPTION),
       date: meta?.date ?? "",
       tags: meta?.tag ?? ["Characters"],
     };

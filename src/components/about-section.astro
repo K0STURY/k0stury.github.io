@@ -1,75 +1,185 @@
 ---
 import Avatar from "@assets/logo/avatar.png";
 import { Image } from "astro:assets";
-import { details, contacts, commisionStatus} from "src/site.config";
+import { details, contacts, tools } from "src/site.config";
 import ContactDetailCard from "./contact-detail-card.svelte";
-import DiscordPresence from "./discord-presence.svelte";
 import { Icon } from "astro-icon/components";
 
-
-const statusText = commisionStatus.isOpen ? "OPEN" : "CLOSED";
-const dotClass = commisionStatus.isOpen
-  ? "status-dot-open"
-  : "status-dot-closed";
-
+const tagTilts = [-3, 2, -2, 3];
 ---
 
-<section
-  class="flex flex-col md:flex-row gap-4 items-center justify-center p-0 md:p-8 max-w-5xl mx-auto"
->
-
-  <!-- Logo -->
-  <div class="w-32 flex-shrink-0 flex flex-col items-center gap-2">
-    <div class="rounded-2xl overflow-hidden md:w-32 w-32 avatar-pulse">
-      <Image src={Avatar} alt="Logo" format="webp" />
+<section class="about-desk" id="about">
+  <div class="about-inner">
+    <div class="drop" style="--i:0;">
+      <div class="avatar-sticker">
+        <Image
+          src={Avatar}
+          alt="Portrait of Kostur's character"
+          format="webp"
+          width={320}
+          class="avatar-img"
+        />
+      </div>
     </div>
-  </div>
-  <!-- About -->
-  <div class="w-96 text-center md:text-left">
-    <p class="text-lg [text-wrap:balance] mb-4" id="bio-text">
-      <Fragment set:html={details.aboutMe} />
-    </p>
-    <ul class="flex flex-col lg:flex-row gap-4 px-24 md:px-0">
+
+    <div class="about-side">
+      <div class="drop" style="--i:1;">
+        <div class="bio-note">
+          <!-- Invisible full copy reserves the note's final size while the visible copy types in -->
+          <p class="bio-ghost" aria-hidden="true"><Fragment set:html={details.aboutMe} /></p>
+          <p class="bio-text" id="bio-text"><Fragment set:html={details.aboutMe} /></p>
+        </div>
+      </div>
+
+      <ul class="tag-row">
+        {
+          contacts.map((contact, i) => (
+            <li class="drop" style={`--i:${2 + i}; --tilt:${tagTilts[i % tagTilts.length]}deg;`}>
+              <ContactDetailCard contact={contact} client:idle>
+                <Icon name={contact.icon} slot="icon" class="text-xl" />
+              </ContactDetailCard>
+            </li>
+          ))
+        }
+      </ul>
+
       {
-        contacts.map((contact) => (
-          <li>
-            <ContactDetailCard contact={contact} client:idle>
-              <Icon
-                name={contact.icon}
-                slot="icon"
-                class="text-accent text-xl"
-              />
-            </ContactDetailCard>
-          </li>
-        ))
+        tools.length > 0 && (
+          <div class="drop" style={`--i:${2 + contacts.length};`}>
+            <p class="tools-slip">
+              <Icon name="mdi:draw" class="tools-icon" />
+              <span class="tools-label">tools I use</span>
+              {tools.map((tool) => (
+                <span class="tool">{tool}</span>
+              ))}
+            </p>
+          </div>
+        )
       }
-    </ul>
+    </div>
   </div>
 </section>
 
-<!-- Discord Presence -->
-<div class="discord-presence-wrapper">
-  <DiscordPresence client:load />
-</div>
-
-<!-- Commission Status -->
-<a href="/coms" class="commission-status" data-astro-prefetch="load">
-  <span class={dotClass}></span>
-  <span>
-    Commissions: <strong>{statusText}</strong>
-  </span>
-</a>
-
 <style>
-  :global(strong) {
-    font-family: var(--font-accent);
-    color: var(--accent-color);
-    letter-spacing: 0.1em;
+  .about-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2.75rem;
+    align-items: start;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 2rem;
   }
 
-  :global(.bio-cursor) {
+  .about-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  /* Drop-in: only armed by the script (.pre), so the section is fully visible without JS */
+  .about-desk.pre .drop {
+    opacity: 0;
+  }
+
+  .about-desk.is-in .drop {
+    animation: about-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: calc(var(--i) * 90ms);
+  }
+
+  @keyframes about-drop {
+    from { opacity: 0; transform: translateY(-22px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Avatar: die-cut sticker */
+  .avatar-sticker {
+    width: 150px;
+    height: 150px;
+    border-radius: 1.9rem;
+    border: 6px solid var(--text-color);
+    background: var(--text-color);
+    box-shadow: 7px 7px 0 var(--edge-color);
+    overflow: hidden;
+    transform: rotate(-5deg);
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+  }
+
+  .avatar-sticker:hover {
+    transform: rotate(4deg) scale(1.06);
+    box-shadow: 10px 10px 0 var(--accent-color);
+  }
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Bio: sticky note with a strip of tape */
+  .bio-note {
+    position: relative;
+    display: grid;
+    max-width: 34rem;
+    padding: 1.6rem 1.6rem 1.4rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 6px 6px 0 var(--edge-color);
+    transform: rotate(1deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .bio-note:hover {
+    transform: rotate(-0.5deg) translateY(-3px);
+  }
+
+  .bio-note::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 72px;
+    height: 20px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+    transform: translateX(-50%) rotate(-3deg);
+  }
+
+  .bio-ghost,
+  .bio-text {
+    grid-area: 1 / 1;
+    font-family: var(--font-accent);
+    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+
+  .bio-ghost {
+    visibility: hidden;
+  }
+
+  /* :global — the typewriter rewrites this markup, so it never carries Astro's scope attribute */
+  .bio-note :global(strong) {
+    display: inline-block;
+    padding: 0.05em 0.35em 0;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    transform: rotate(-2deg);
+  }
+
+  .bio-note :global(.bio-cursor) {
     animation: blink 0.7s infinite;
-    color: var(--accent-color);
     font-weight: bold;
   }
 
@@ -78,116 +188,129 @@ const dotClass = commisionStatus.isOpen
     50% { opacity: 0; }
   }
 
-  .discord-presence-wrapper {
+  /* Links: paper tags (the tag itself is styled in contact-detail-card.svelte) */
+  .tag-row {
     display: flex;
-    justify-content: center;
-    margin: 1rem auto 0;
-    max-width: 420px;
-    width: 100%;
-    padding: 0 1rem;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.1rem;
+    list-style: none;
   }
 
-  .commission-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 0.5rem 1.5rem;
-  margin: 1.5rem auto;
-  width: fit-content;
-  border-radius: 999px;
-  border: 2px solid var(--accent-color);
-  font-family: var(--font-accent);
-  font-size: 1.2rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: var(--text-color);
-  transition: background 0.2s ease, color 0.2s ease;
-}
+  /* Tools: a dashed cut-out slip */
+  .tools-slip {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.9rem;
+    border: 2px dashed rgba(244, 240, 232, 0.28);
+    border-radius: 8px;
+    transform: rotate(-1.5deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
 
-.commission-status:hover {
-  background: var(--accent-color);
-  color: var(--primary-color);
-}
+  .tools-slip:hover {
+    transform: rotate(0deg) translateY(-2px);
+  }
 
-.status-dot-open {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #4ade80;
-  flex-shrink: 0;
-  animation: pulse-open 2s ease-in-out infinite;
-}
+  .tools-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--accent-color);
+  }
 
-@keyframes pulse-open {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
-  50% { box-shadow: 0 0 0 6px transparent; }
-}
+  .tools-label {
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    color: var(--text-color);
+  }
 
+  .tool {
+    padding: 0.15rem 0.7rem;
+    border-radius: 9999px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
 
-.status-dot-closed {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ef4444;
-  flex-shrink: 0;
-  animation: pulse-closed 2s ease-in-out infinite;
-}
+  /* Mobile: stack and center */
+  @media (max-width: 640px) {
+    .about-inner {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      gap: 2rem;
+      padding: 3rem 1.25rem 1.5rem;
+    }
 
-@keyframes pulse-closed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); }
-  50% { box-shadow: 0 0 0 6px transparent; }
-}
+    .about-side {
+      align-items: center;
+    }
 
+    .avatar-sticker {
+      width: 132px;
+      height: 132px;
+    }
+
+    .tag-row {
+      justify-content: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .about-desk.is-in .drop {
+      animation: none;
+    }
+  }
 </style>
 
-
-
 <script>
-document.addEventListener("astro:page-load", () => {
-  const bioEl = document.getElementById("bio-text");
-  if (!bioEl) return;
+  document.addEventListener("astro:page-load", () => {
+    const section = document.getElementById("about");
+    const bioEl = document.getElementById("bio-text");
+    if (!section || !bioEl) return;
 
-  const fullHtml = bioEl.innerHTML.trim();
-  bioEl.innerHTML = '<span class="bio-cursor">|</span>';
+    // Reduced motion: leave everything in place, fully visible, with the bio already written
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  let charIndex = 0;
-  const speed = 35;
+    const cursorHtml = '<span class="bio-cursor">|</span>';
+    const fullHtml = bioEl.innerHTML.trim();
+    bioEl.innerHTML = cursorHtml;
+    section.classList.add("pre");
 
-  function typeNext() {
-    if (charIndex >= fullHtml.length) {
-      setTimeout(() => {
-        const cursor = bioEl!.querySelector(".bio-cursor");
-        if (cursor) cursor.remove();
-      }, 800);
-      return;
-    }
+    let charIndex = 0;
+    const speed = 35;
 
-    if (fullHtml[charIndex] === "<") {
-      const closeIdx = fullHtml.indexOf(">", charIndex);
-      charIndex = closeIdx + 1;
-    } else {
-      charIndex++;
-    }
-
-    bioEl!.innerHTML =
-      fullHtml.substring(0, charIndex) + '<span class="bio-cursor">|</span>';
-
-    const delay = fullHtml[charIndex - 1] === " " ? speed * 0.5 : speed;
-    setTimeout(typeNext, delay);
-  }
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting) {
-        observer.disconnect();
-        setTimeout(typeNext, 300);
+    function typeNext() {
+      if (charIndex >= fullHtml.length) {
+        setTimeout(() => bioEl!.querySelector(".bio-cursor")?.remove(), 800);
+        return;
       }
-    },
-    { threshold: 0.5 },
-  );
 
-  observer.observe(bioEl);
-});
+      // Jump over whole tags so markup is never typed out half-open
+      if (fullHtml[charIndex] === "<") {
+        charIndex = fullHtml.indexOf(">", charIndex) + 1;
+      } else {
+        charIndex++;
+      }
+
+      bioEl!.innerHTML = fullHtml.substring(0, charIndex) + cursorHtml;
+
+      const delay = fullHtml[charIndex - 1] === " " ? speed * 0.5 : speed;
+      setTimeout(typeNext, delay);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        observer.disconnect();
+        section.classList.add("is-in");
+        setTimeout(typeNext, 450);
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(section);
+  });
 </script>

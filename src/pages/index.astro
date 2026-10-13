@@ -1,15 +1,12 @@
 ---
 import BaseLayout from "@layouts/base-layout.astro";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
-import Swiper from "@components/swiper.astro";
+import HeroCollage from "@components/hero-collage.astro";
 import AboutSection from "@components/about-section.astro";
 import Gallery from "@components/gallery.astro";
 ---
 
 <BaseLayout>
-  <Swiper slot="banner" />
+  <HeroCollage slot="banner" />
   <AboutSection />
   <Gallery />
 </BaseLayout>

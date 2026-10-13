@@ -1,7 +1,7 @@
 ---
-import getAllArt, { type Artwork, type Artworks } from "@api/art";
-import { Image, getImage } from "astro:assets";
+import getAllArt, { type Artwork } from "@api/art";
 import sortByDesc from "src/helpers/utils";
+import { getArtImages, THUMB_WIDTH } from "src/helpers/art-images";
 import Lightbox from "./lightbox.svelte";
 
 const BATCH_SIZE = 30;
@@ -12,25 +12,14 @@ let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
 
 arts = arts.sort(sortByDesc);
 
-// Generate thumbnail + capped full-res webp for the lightbox
-// Source images are ~5000x5000; loading those raw kills browser memory after ~137 images
+// Thumbnail for the tile + capped full-res webp for the lightbox.
+// The lightbox shows the tile's own thumbnail (already downloaded) until the full-res arrives.
 const imageData = await Promise.all(
   arts.map(async (art) => {
-    const thumb = await getImage({
-      src: art.default as any,
-      format: "webp",
-      width: 480,
-      quality: 60,
-    });
-    const fullRes = await getImage({
-      src: art.default as any,
-      format: "webp",
-      width: 1920,
-      quality: 85,
-    });
+    const { thumb, full } = await getArtImages(art.default as any);
     return {
-      src: thumb.src,
-      fullSrc: fullRes.src,
+      src: thumb,
+      fullSrc: full,
       width: art.default.width,
       height: art.default.height,
       tags: art.tags,
@@ -58,259 +47,359 @@ const newIds = new Set(arts.slice(0, NEW_THRESHOLD).map((a) => a.id));
 // Stats
 const totalArts = arts.length;
 const totalCategories = otherCategories.length + 1; // +1 for Highlights
+
+// Hand-tuned scatter: small rotation/offset cycled by index, so tiles read as
+// hand-pinned instead of a rigid grid, without any per-item randomness.
+const scatter = [
+  { rotate: -3, y: 4 },
+  { rotate: 2.5, y: -5 },
+  { rotate: -2, y: 5 },
+  { rotate: 3, y: -4 },
+];
 ---
 
-<!-- Stats bar -->
-<div class="stats-bar" id="stats-bar">
-  <div class="stat-item">
-    <span class="stat-num" data-target={totalArts}>0</span>
-    <span class="stat-label">Artworks</span>
-  </div>
-  <div class="stat-divider"></div>
-  <div class="stat-item">
-    <span class="stat-num" data-target={totalCategories}>0</span>
-    <span class="stat-label">Categories</span>
-  </div>
-  <div class="stat-divider"></div>
-  <div class="stat-item">
-    <span class="stat-num" data-target={highlightsCount}>0</span>
-    <span class="stat-label">Highlights</span>
-  </div>
-</div>
+<section class="gallery-scene" id="gallery-scene">
+  <h2 class="gallery-heading">the whole <span class="text-accent">stash</span></h2>
 
+  <!-- Stats -->
+  <div class="stats-card" id="stats-bar">
+    <span class="pin" aria-hidden="true"></span>
+    <div class="stat-item">
+      <span class="stat-num" data-target={totalArts}>0</span>
+      <span class="stat-label">Artworks</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target={totalCategories}>0</span>
+      <span class="stat-label">Categories</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-num" data-target={highlightsCount}>0</span>
+      <span class="stat-label">Highlights</span>
+    </div>
+  </div>
 
-<!-- View toggle + filter pills -->
-<div class="flex flex-wrap gap-2 justify-center items-center px-4 mt-2" id="gallery-controls">
-  <div class="flex gap-1 mr-2" id="view-toggle">
-    <button class="view-btn active" data-view="grid" data-tooltip="Grid" aria-label="Grid view">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7"></rect>
-        <rect x="14" y="3" width="7" height="7"></rect>
-        <rect x="3" y="14" width="7" height="7"></rect>
-        <rect x="14" y="14" width="7" height="7"></rect>
-      </svg>
-    </button>
+  <!-- Filter tabs + shuffle -->
+  <div class="flex flex-wrap items-center justify-center gap-3 px-4 mt-2" id="gallery-controls">
+    <div class="flex flex-wrap gap-2 justify-center" id="gallery-filters">
+      <button class="filter-pill active" data-filter="Highlights">Highlights</button>
+      {otherCategories.map((cat) => (
+        <button class="filter-pill" data-filter={cat}>{cat}</button>
+      ))}
+      <button class="filter-pill" data-filter="all">All</button>
+    </div>
     <button class="view-btn" id="shuffle-btn" data-tooltip="Shuffle" aria-label="Shuffle gallery">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="4" y="4" width="16" height="16" rx="3"></rect>
-        <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
-        <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
-        <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
-        <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
-        <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
+        <!-- All seven pip positions; the script shows the ones for the rolled face (starts on 5) -->
+        <circle data-pip="tl" cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle data-pip="tr" cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle data-pip="ml" cx="8.5" cy="12" r="1.2" fill="currentColor" stroke="none" style="display:none"></circle>
+        <circle data-pip="mr" cx="15.5" cy="12" r="1.2" fill="currentColor" stroke="none" style="display:none"></circle>
+        <circle data-pip="bl" cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle data-pip="br" cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"></circle>
+        <circle data-pip="c" cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
       </svg>
     </button>
   </div>
 
-  <div class="flex flex-wrap gap-2 justify-center" id="gallery-filters">
-    <button class="filter-pill active" data-filter="Highlights">Highlights</button>
-    {otherCategories.map((cat) => (
-      <button class="filter-pill" data-filter={cat}>{cat}</button>
-    ))}
-    <button class="filter-pill" data-filter="all">All</button>
-  </div>
-  <button class="view-btn ml-2" data-view="timeline" data-tooltip="Timeline" aria-label="Timeline view">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="12" y1="2" x2="12" y2="22"></line>
-      <circle cx="12" cy="6" r="2"></circle>
-      <circle cx="12" cy="12" r="2"></circle>
-      <circle cx="12" cy="18" r="2"></circle>
-      <line x1="14" y1="6" x2="20" y2="6"></line>
-      <line x1="4" y1="12" x2="10" y2="12"></line>
-      <line x1="14" y1="18" x2="20" y2="18"></line>
-    </svg>
-  </button>
-</div>
-
-<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4" id="gallery">
-  {
-    arts.map((art, index) => (
-      <button
-        class:list={[
-          "gallery-item relative rounded-md overflow-hidden border-primary hover:border-2 border-0 cursor-pointer bg-transparent p-0",
-          "opacity-0 translate-y-4",
-          !art.tags.includes("Highlights") && "hidden",
-        ]}
-        style={`transition: opacity 0.5s ease ${(index % 3) * 80}ms, transform 0.3s ease ${(index % 3) * 80}ms;`}
-        data-lightbox-index={index}
-        data-categories={art.tags.join(",")}
-        data-full-src={imageData[index].fullSrc}
-      >
-        {newIds.has(art.id) && <span class="new-badge">NEW</span>}
-        <Image
-          src={art.default as any}
-          alt={art.title || "Artwork"}
-          format="webp"
-          width={640}
-          height={320}
-          loading="eager"
-          class="w-full h-auto object-cover pointer-events-none"
-        />
-        <div class="hover-overlay">
-          <span class="hover-title">{art.title || "Untitled"}</span>
-          {art.tags.length > 0 && (
-            <div class="hover-tags">
-              {art.tags.map((tag) => (
-                <span class="hover-tag">{tag}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      </button>
-    ))
-  }
-</section>
-
-<div id="gallery-sentinel" class="h-1"></div>
-
-<!-- Timeline view (hidden by default) -->
-<section class="timeline-container hidden" id="gallery-timeline">
-  <div class="timeline-line">
+  <!-- Simple grid: 3 pieces per row on desktop, scattered sticker tiles -->
+  <section class="gallery-grid" id="gallery">
     {
-      arts.map((art, index) => (
-        <div
-          class:list={[
-            "timeline-entry",
-            index % 2 === 0 ? "timeline-left" : "timeline-right",
-          ]}
-          data-lightbox-index={index}
-          data-categories={art.tags.join(",")}
-        >
-          <div class="timeline-dot"></div>
-          <button class="timeline-card">
-            {newIds.has(art.id) && <span class="new-badge timeline-badge">NEW</span>}
-            <div class="timeline-img-wrap">
-              <Image
-                src={art.default as any}
-                alt={art.title || "Artwork"}
-                format="webp"
-                width={720}
-                height={405}
-                loading="eager"
-                class="timeline-img"
-              />
-            </div>
-            <div class="timeline-info">
-              <h3 class="timeline-title">
-                {art.title || "Untitled"}
-              </h3>
-              {art.description && <p class="timeline-desc">{art.description}</p>}
-              {art.date && <span class="timeline-date">{art.date}</span>}
-              {art.tags.length > 0 && (
-                <div class="timeline-tags">
-                  {art.tags.map((tag) => (
-                    <span class="timeline-tag">{tag}</span>
-                  ))}
+      arts.map((art, index) => {
+        const s = scatter[index % scatter.length];
+        return (
+          <button
+            class:list={[
+              "gallery-item",
+              "opacity-0 translate-y-4",
+              !art.tags.includes("Highlights") && "hidden",
+            ]}
+            style={`transition: opacity 0.5s ease ${(index % 3) * 80}ms, transform 0.3s ease ${(index % 3) * 80}ms;`}
+            data-lightbox-index={index}
+            data-categories={art.tags.join(",")}
+            data-full-src={imageData[index].fullSrc}
+            aria-label={art.title || "Untitled artwork"}
+          >
+            <div class="sticker-frame" style={`--rotate:${s.rotate}deg; --y:${s.y}px;`}>
+              <span class="pin" aria-hidden="true"></span>
+              {newIds.has(art.id) && <span class="new-badge">NEW</span>}
+              <div class="sticker-clip">
+                {/* Lazy: only tiles near the screen download; filtered-out ones never do */}
+                <img
+                  src={imageData[index].src}
+                  alt=""
+                  width={THUMB_WIDTH}
+                  height={THUMB_WIDTH}
+                  loading="lazy"
+                  decoding="async"
+                  class="sticker-img pointer-events-none"
+                />
+                <div class="hover-overlay">
+                  <span class="hover-title">{art.title || "Untitled"}</span>
+                  {art.tags.length > 0 && (
+                    <div class="hover-tags">
+                      {art.tags.map((tag) => (
+                        <span class="hover-tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </button>
-        </div>
-      ))
+        );
+      })
     }
-  </div>
+  </section>
+
+  <div id="gallery-sentinel" class="h-1"></div>
 </section>
 
 <Lightbox images={imageData} client:idle />
 
 <style>
-  /* Stats bar */
-  .stats-bar {
+  .gallery-scene {
+    position: relative;
+    padding-bottom: 1rem;
+  }
+
+  .gallery-heading {
+    font-family: var(--font-accent);
+    text-align: center;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    padding-top: 6rem;
+    color: var(--text-color);
+  }
+
+  /* Stats: a small pinned card */
+  .stats-card {
+    position: relative;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: baseline;
     gap: 1.5rem;
-    padding: 1.25rem 2rem;
-    margin: 0 auto;
-    max-width: 500px;
+    width: fit-content;
+    padding: 0.9rem 1.75rem;
+    margin: 1.5rem auto 0.5rem;
+    background: var(--text-color);
+    border-radius: 10px;
+    box-shadow: 5px 5px 0 var(--edge-color);
+    transform: rotate(-1.5deg);
   }
 
   .stat-item {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.15rem;
+    align-items: baseline;
+    gap: 0.4rem;
   }
 
   .stat-num {
     font-family: var(--font-accent);
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: var(--accent-color);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
 
   .stat-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--primary-color);
   }
 
   .stat-divider {
     width: 1px;
-    height: 36px;
-    background: linear-gradient(180deg, transparent, var(--accent-color), transparent);
-    opacity: 0.4;
+    height: 12px;
+    align-self: center;
+    background: rgba(12, 11, 14, 0.15);
   }
 
-  /* Tag cloud */
-  .tag-cloud {
+  /* Filters: underline tabs */
+  .filter-pill {
+    padding: 0.3rem 0.1rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: rgba(244, 240, 232, 0.5);
+    cursor: pointer;
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    font-size: 1rem;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .filter-pill:hover {
+    color: var(--text-color);
+  }
+
+  .filter-pill.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  /* Shuffle button */
+  .view-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    max-width: 700px;
+    transition: all 0.2s ease;
+  }
+
+  .view-btn:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  .view-btn[data-tooltip] {
+    position: relative;
+  }
+
+  .view-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    background: var(--edge-color);
+    color: var(--text-color);
+    font-size: 0.7rem;
+    font-family: var(--font-accent);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .view-btn[data-tooltip]:hover::after {
+    opacity: 1;
+  }
+
+  /* Shared push-pin accent */
+  .pin {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+  }
+
+  /* Grid: simple, 3 per row on desktop */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 2rem 1.5rem;
+    padding: 2.5rem 1.5rem 1rem;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
-  .tag-cloud-item {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    cursor: pointer;
-    font-family: var(--font-accent);
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-    transition: all 0.25s ease;
+  @media (min-width: 640px) {
+    .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 2.5rem 2rem; }
+  }
+
+  .gallery-item {
     position: relative;
-    line-height: 1.3;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
   }
 
-  .tag-cloud-item:hover {
-    color: var(--accent-color);
-    transform: scale(1.15);
-    text-shadow: 0 0 12px var(--accent-color);
+  .gallery-item:not(.hidden) {
+    display: block;
   }
 
-  /* New badge */
+  .gallery-item:hover,
+  .gallery-item:focus-visible {
+    z-index: 5;
+  }
+
+  /* The frame itself must not clip: it is rotated, and carries the pin and the
+     offset shadow outside its box. Only the inner .sticker-clip clips the art. */
+  .sticker-frame {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 16px;
+    border: 5px solid var(--text-color);
+    background: var(--text-color);
+    box-shadow: 6px 6px 0 var(--edge-color);
+    transform: rotate(var(--rotate, 0deg)) translateY(var(--y, 0px));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+  }
+
+  .sticker-clip {
+    position: absolute;
+    inset: 0;
+    border-radius: 11px;
+    overflow: hidden;
+  }
+
+  .gallery-item:hover .sticker-frame,
+  .gallery-item:focus-visible .sticker-frame {
+    transform: rotate(0deg) translateY(calc(var(--y, 0px) - 6px)) scale(1.04);
+    box-shadow: 10px 10px 0 var(--accent-color);
+    z-index: 5;
+  }
+
+  .sticker-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Set by the script while a tile's image is still on its way: the paper frame
+     stands in, then the art fades onto it */
+  .sticker-img.img-pending {
+    opacity: 0;
+  }
+
   .new-badge {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 14px;
+    right: 14px;
     z-index: 5;
-    padding: 4px 16px;
+    padding: 4px 14px;
     border-radius: 8px;
     background: var(--accent-color);
     color: var(--primary-color);
     font-family: var(--font-accent);
-    font-size: 1.0rem;
-    letter-spacing: 0.08em;
-    font-weight: 900;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
     box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(231, 174, 58, 0.3);
     animation: badge-pulse 2s ease-in-out infinite;
   }
 
-  .timeline-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    z-index: 5;
-    margin: 0;
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 6px var(--accent-color), 0 0 12px rgba(231, 174, 58, 0.2); }
+    50% { box-shadow: 0 0 12px var(--accent-color), 0 0 24px rgba(231, 174, 58, 0.4); }
   }
 
-  /* Hover reveal overlay */
   .hover-overlay {
     position: absolute;
     inset: auto 0 0 0;
@@ -335,7 +424,7 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
   .hover-title {
     color: #fff;
     font-family: var(--font-accent);
-    font-size: 0.9rem;
+    font-size: 1rem;
     line-height: 1.2;
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   }
@@ -347,295 +436,47 @@ const totalCategories = otherCategories.length + 1; // +1 for Highlights
   }
 
   .hover-tag {
-    padding: 0.1rem 0.45rem;
-    border-radius: 9999px;
-    border: 1px solid var(--accent-color);
-    color: var(--accent-color);
-    font-size: 0.6rem;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-
-  @keyframes badge-pulse {
-    0%, 100% { box-shadow: 0 0 6px var(--accent-color), 0 0 12px rgba(231, 174, 58, 0.2); }
-    50% { box-shadow: 0 0 12px var(--accent-color), 0 0 24px rgba(231, 174, 58, 0.4); }
-  }
-
-  .gallery-count {
-    background: linear-gradient(90deg, var(--accent-color), var(--secondary-color), var(--accent-color));
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shine 3s ease-in-out infinite;
-  }
-
-  @keyframes shine {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
-  .filter-pill {
-    padding: 0.25rem 1rem;
-    border-radius: 9999px;
-    border: 2px solid var(--accent-color);
-    background: transparent;
-    color: var(--text-color);
-    cursor: pointer;
-    font-family: var(--font-accent);
-    letter-spacing: 0.05em;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-  }
-
-  .filter-pill:hover {
-    background: var(--accent-color);
-    color: var(--primary-color);
-    animation: gelatine 0.375s ease-in-out;
-  }
-
-  .filter-pill.active {
-    background: var(--accent-color);
-    color: var(--primary-color);
-    transform: scale(1.1);
-    box-shadow: 0 0 12px rgba(231, 174, 58, 0.3);
-  }
-
-  /* View toggle buttons */
-  .view-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 2px solid var(--accent-color);
-    background: transparent;
-    color: var(--text-color);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-  }
-
-  .view-btn:hover {
-    background: var(--accent-color);
-    color: var(--primary-color);
-  }
-
-  .view-btn.active {
-    background: var(--accent-color);
-    color: var(--primary-color);
-  }
-
-  /* Tooltip on hover */
-  .view-btn[data-tooltip] {
-    position: relative;
-  }
-
-  .view-btn[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    font-size: 0.7rem;
-    font-family: var(--font-accent);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .view-btn[data-tooltip]:hover::after {
-    opacity: 1;
-  }
-
-  /* Timeline */
-  .timeline-container {
-    padding: 2rem 1rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .timeline-line {
-    position: relative;
-    padding: 1rem 0;
-  }
-
-  .timeline-line::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      var(--accent-color) 5%,
-      var(--accent-color) 95%,
-      transparent 100%
-    );
-    transform: translateX(-50%);
-  }
-
-  .timeline-entry {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 3rem;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-
-  .timeline-entry.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .timeline-dot {
-    position: absolute;
-    left: 50%;
-    top: 20px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--accent-color);
-    border: 3px solid var(--primary-color);
-    transform: translateX(-50%);
-    z-index: 2;
-    box-shadow: 0 0 0 3px var(--accent-color);
-    transition: transform 0.2s ease;
-  }
-
-  .timeline-entry:hover .timeline-dot {
-    transform: translateX(-50%) scale(1.4);
-  }
-
-  .timeline-card {
-    width: calc(50% - 40px);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: row;
-    text-align: left;
-    padding: 0;
-    font-family: inherit;
-    color: inherit;
-    position: relative;
-  }
-
-  .timeline-card:hover {
-    border-color: var(--accent-color);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  }
-
-  .timeline-left .timeline-card {
-    margin-right: auto;
-  }
-
-  .timeline-right .timeline-card {
-    margin-left: auto;
-    flex-direction: row-reverse;
-  }
-
-  .timeline-img-wrap {
-    width: 55%;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  .timeline-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.4s ease;
-  }
-
-  .timeline-card:hover .timeline-img {
-    transform: scale(1.05);
-  }
-
-  .timeline-info {
-    padding: 1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    flex: 1;
-    justify-content: center;
-  }
-
-  .timeline-title {
-    color: white;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .timeline-desc {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.8rem;
-    line-height: 1.5;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .timeline-date {
-    color: rgba(255, 255, 255, 0.35);
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .timeline-tags {
-    display: flex;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-    margin-top: 0.2rem;
-  }
-
-  .timeline-tag {
     padding: 0.1rem 0.5rem;
     border-radius: 9999px;
     border: 1px solid var(--accent-color);
     color: var(--accent-color);
     font-size: 0.65rem;
     letter-spacing: 0.03em;
-    text-transform: uppercase;
   }
 
-  /* Mobile: stack timeline cards to one side */
-  @media (max-width: 640px) {
-    .timeline-line::before {
-      left: 20px;
+  /* Phones: tighten the stats card so three-digit counts still fit the screen */
+  @media (max-width: 480px) {
+    .stats-card {
+      gap: 0.75rem;
+      padding: 0.8rem 1rem;
     }
 
-    .timeline-dot {
-      left: 20px;
+    .stat-item {
+      gap: 0.3rem;
     }
 
-    .timeline-left .timeline-card,
-    .timeline-right .timeline-card {
-      width: calc(100% - 50px);
-      margin-left: auto;
-      margin-right: 0;
-      flex-direction: column;
+    .stat-label {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Very small phones: drop the dividers, and let the card wrap rather than overflow */
+  @media (max-width: 350px) {
+    .stats-card {
+      flex-wrap: wrap;
+      gap: 0.4rem 0.7rem;
+      max-width: calc(100% - 1.5rem);
+      padding: 0.7rem 0.8rem;
     }
 
-    .timeline-img-wrap {
-      width: 100%;
+    .stat-divider {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .new-badge {
+      animation: none;
     }
   }
 </style>
@@ -649,7 +490,6 @@ document.addEventListener("astro:page-load", () => {
   let loaded = BATCH_SIZE;
   const items = document.querySelectorAll<HTMLElement>(".gallery-item");
   const sentinel = document.getElementById("gallery-sentinel");
-  const countEl = document.getElementById("gallery-count-num");
   let currentFilter = "Highlights";
 
   // Stats bar: animate counters on scroll
@@ -679,54 +519,6 @@ document.addEventListener("astro:page-load", () => {
     statsObserver.observe(statsBar);
   }
 
-  // Tag cloud: clicking a tag applies that filter
-  document.querySelectorAll<HTMLElement>(".tag-cloud-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      const filter = item.dataset.filter ?? "all";
-      // Activate matching filter pill
-      const filterBtnsAll = document.querySelectorAll<HTMLElement>(".filter-pill");
-      filterBtnsAll.forEach((b) => b.classList.remove("active"));
-      const matchingPill = [...filterBtnsAll].find((b) => b.dataset.filter === filter);
-      if (matchingPill) matchingPill.classList.add("active");
-      // Switch to grid view if in timeline
-      const gridViewBtn = document.querySelector<HTMLElement>('.view-btn[data-view="grid"]');
-      if (gridViewBtn && currentView === "timeline") {
-        gridViewBtn.click();
-      }
-      applyFilter(filter);
-    });
-  });
-
-  // Animated counter: rolls up from 0 when scrolled into view
-  if (countEl) {
-    const target = parseInt(countEl.textContent ?? "0", 10);
-    countEl.textContent = "0";
-
-    const counterObserver = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          counterObserver.disconnect();
-          const duration = 1200;
-          const start = performance.now();
-
-          function tick(now: number) {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            // Ease-out cubic
-            const eased = 1 - Math.pow(1 - progress, 3);
-            countEl!.textContent = String(Math.round(eased * target));
-            if (progress < 1) requestAnimationFrame(tick);
-          }
-
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.5 },
-    );
-
-    counterObserver.observe(countEl);
-  }
-
   // Fade-in observer: animates images as they enter the viewport
   const fadeObserver = new IntersectionObserver(
     (entries) => {
@@ -742,9 +534,17 @@ document.addEventListener("astro:page-load", () => {
     { threshold: 0.1 },
   );
 
-  // Observe initially visible items (Highlights by default)
   items.forEach((item) => {
     if (!item.classList.contains("hidden")) fadeObserver.observe(item);
+  });
+
+  // Tile images load lazily; fade each one in when it lands instead of popping
+  galleryEl.querySelectorAll<HTMLImageElement>(".sticker-img").forEach((img) => {
+    if (img.complete) return;
+    img.classList.add("img-pending");
+    const reveal = () => img.classList.remove("img-pending");
+    img.addEventListener("load", reveal, { once: true });
+    img.addEventListener("error", reveal, { once: true });
   });
 
   // Infinite scroll: reveals next batch when sentinel enters viewport
@@ -771,23 +571,17 @@ document.addEventListener("astro:page-load", () => {
   if (sentinel) loadObserver.observe(sentinel);
 
   // Category filter with staggered animations
-  const FILTER_STAGGER = 30; // ms between each item
-  const FILTER_DURATION = 300; // ms for the animation
-  let filterVersion = 0; // incremented on each click to cancel stale callbacks
-
-  const BLUR_COUNT = 9; // only first 9 items get the blur-up effect
+  const FILTER_STAGGER = 30;
+  const FILTER_DURATION = 300;
+  let filterVersion = 0;
 
   function applyFilter(filter: string) {
     const version = ++filterVersion;
     currentFilter = filter;
 
-    // Immediately reset all items to a clean state
     items.forEach((item) => {
       item.style.transition = "none";
-      item.classList.remove("revealed", "blur-entering");
     });
-
-    // Force reflow so the transition:none takes effect
     void document.body.offsetHeight;
 
     if (filter === "all") {
@@ -798,43 +592,23 @@ document.addEventListener("astro:page-load", () => {
           item.classList.remove("hidden");
           item.style.opacity = "0";
           item.style.transform = "scale(0.85)";
-
-          // First 9 get blur-up, rest stay crisp
-          if (staggerIndex < BLUR_COUNT) {
-            item.classList.add("blur-entering");
-          } else {
-            item.classList.add("revealed");
-          }
-
+          const myIndex = staggerIndex++; // capture per-iteration; RAF fires after the loop ends
           requestAnimationFrame(() => {
             if (filterVersion !== version) return;
-            const delay = staggerIndex * FILTER_STAGGER;
+            const delay = myIndex * FILTER_STAGGER;
             item.style.transition = `opacity ${FILTER_DURATION}ms ease ${delay}ms, transform ${FILTER_DURATION}ms ease ${delay}ms`;
             item.style.opacity = "1";
             item.style.transform = "scale(1)";
           });
-
-          // Reveal blur after stagger animation completes
-          if (staggerIndex < BLUR_COUNT) {
-            const idx = staggerIndex;
-            setTimeout(() => {
-              if (filterVersion !== version) return;
-              item.classList.add("revealed");
-            }, idx * FILTER_STAGGER + FILTER_DURATION);
-          }
-
-          staggerIndex++;
         } else {
           item.classList.add("hidden");
           item.style.opacity = "0";
           item.style.transform = "";
         }
       });
-      if (countEl) countEl.textContent = String(items.length);
       if (sentinel && loaded < items.length) loadObserver.observe(sentinel);
     } else {
       const matching: HTMLElement[] = [];
-
       items.forEach((item) => {
         const cats = (item.dataset.categories || "").split(",").filter(Boolean);
         if (cats.includes(filter)) {
@@ -850,14 +624,6 @@ document.addEventListener("astro:page-load", () => {
         item.classList.remove("hidden");
         item.style.opacity = "0";
         item.style.transform = "scale(0.85)";
-
-        // First 9 get blur-up, rest stay crisp
-        if (i < BLUR_COUNT) {
-          item.classList.add("blur-entering");
-        } else {
-          item.classList.add("revealed");
-        }
-
         requestAnimationFrame(() => {
           if (filterVersion !== version) return;
           const delay = i * FILTER_STAGGER;
@@ -865,17 +631,7 @@ document.addEventListener("astro:page-load", () => {
           item.style.opacity = "1";
           item.style.transform = "scale(1)";
         });
-
-        // Reveal blur after stagger animation completes
-        if (i < BLUR_COUNT) {
-          setTimeout(() => {
-            if (filterVersion !== version) return;
-            item.classList.add("revealed");
-          }, i * FILTER_STAGGER + FILTER_DURATION);
-        }
       });
-
-      if (countEl) countEl.textContent = String(matching.length);
     }
   }
 
@@ -888,151 +644,170 @@ document.addEventListener("astro:page-load", () => {
       setTimeout(() => { filterLocked = false; }, FILTER_DURATION + 100);
       filterBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
+
+      // A filter is a fresh view: stop any shuffle in flight and go back to newest-first
+      if (shuffling) {
+        shuffleRun++;
+        shuffling = false;
+        items.forEach((item) => item.getAnimations().forEach((a) => a.cancel()));
+      }
+      if (orderDirty) {
+        originalOrder.forEach((item) => galleryEl.appendChild(item));
+        orderDirty = false;
+      }
+
       applyFilter(btn.dataset.filter ?? "all");
     });
   });
 
-  // View toggle: grid vs timeline
-  const gridEl = document.getElementById("gallery") as HTMLElement;
-  const timelineEl = document.getElementById("gallery-timeline") as HTMLElement;
-  const viewBtns = document.querySelectorAll<HTMLElement>(".view-btn");
-  const filtersEl = document.getElementById("gallery-filters") as HTMLElement;
-  let currentView = "grid";
+  // --- Shuffle: every click deals the visible pieces into a new random order ---
+  const shuffleBtn = document.getElementById("shuffle-btn");
+  const originalOrder = [...items];
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let shuffleRun = 0; // bumped to abandon a shuffle that a filter change interrupted
+  let shuffling = false;
+  let orderDirty = false;
 
-  const timelineObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          (entry.target as HTMLElement).classList.add("visible");
-          timelineObserver.unobserve(entry.target);
-        }
+  const DIE_FACES: Record<number, string[]> = {
+    1: ["c"],
+    2: ["tl", "br"],
+    3: ["tl", "c", "br"],
+    4: ["tl", "tr", "bl", "br"],
+    5: ["tl", "tr", "c", "bl", "br"],
+    6: ["tl", "tr", "ml", "mr", "bl", "br"],
+  };
+  let dieFace = 5;
+
+  // The icon is a die: roll it to a different face on every shuffle
+  function rollDie() {
+    const svg = shuffleBtn?.querySelector("svg");
+    if (!svg) return;
+
+    let next = dieFace;
+    while (next === dieFace) next = 1 + Math.floor(Math.random() * 6);
+    dieFace = next;
+
+    const showFace = () => {
+      svg.querySelectorAll<SVGElement>("[data-pip]").forEach((pip) => {
+        pip.style.display = DIE_FACES[next].includes(pip.dataset.pip ?? "") ? "" : "none";
       });
-    },
-    { threshold: 0.15 },
-  );
+    };
 
-  function setView(view: string) {
-    if (view === currentView) return;
-    currentView = view;
-    viewBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+    if (reduceMotion.matches) {
+      showFace();
+      return;
+    }
 
-    if (view === "timeline") {
-      gridEl.classList.add("hidden");
-      if (sentinel) sentinel.classList.add("hidden");
-      timelineEl.classList.remove("hidden");
-      filtersEl.classList.add("hidden");
+    // Animate the icon, not the button, so it never fights the button's hover wobble
+    svg.animate(
+      [
+        { transform: "rotate(0deg) scale(1)" },
+        { transform: "rotate(200deg) scale(1.35)", offset: 0.5 },
+        { transform: "rotate(360deg) scale(1)" },
+      ],
+      { duration: 520, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)" },
+    );
+    setTimeout(showFace, 260); // swap the face mid-spin, while it is a blur
+  }
 
-      // Apply current filter to timeline entries
-      const timelineEntries = timelineEl.querySelectorAll<HTMLElement>(".timeline-entry");
-      timelineEntries.forEach((entry) => {
-        const cats = (entry.dataset.categories || "").split(",").filter(Boolean);
-        if (currentFilter === "all" || cats.includes(currentFilter)) {
-          entry.style.display = "";
-          timelineObserver.observe(entry);
-        } else {
-          entry.style.display = "none";
-        }
-      });
-    } else {
-      gridEl.classList.remove("hidden");
-      if (sentinel) sentinel.classList.remove("hidden");
-      timelineEl.classList.add("hidden");
-      filtersEl.classList.remove("hidden");
+  // Where the deck gathers: the middle of whatever part of the grid is on screen
+  function pileCenter() {
+    const g = galleryEl!.getBoundingClientRect();
+    const top = Math.max(g.top, 0);
+    const bottom = Math.min(g.bottom, window.innerHeight);
+    return {
+      x: g.left + g.width / 2,
+      y: bottom > top ? (top + bottom) / 2 : g.top + Math.min(g.height / 2, 200),
+    };
+  }
+
+  async function shuffleGallery() {
+    if (shuffling) return;
+
+    const visible = [...galleryEl!.querySelectorAll<HTMLElement>(".gallery-item:not(.hidden)")];
+    if (visible.length < 2) return;
+
+    shuffling = true;
+    const run = ++shuffleRun;
+    rollDie();
+
+    // Tiles still waiting on their scroll-in reveal would fly around invisible
+    visible.forEach((item) => {
+      fadeObserver.unobserve(item);
+      item.style.transition = "none";
+      item.style.opacity = "1";
+      item.style.transform = "none";
+    });
+
+    const spin = () => (Math.random() * 40 - 20).toFixed(1);
+    const toPile = (item: HTMLElement, c: { x: number; y: number }) => {
+      const r = item.getBoundingClientRect();
+      const dx = c.x - (r.left + r.width / 2);
+      const dy = c.y - (r.top + r.height / 2);
+      return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+    };
+
+    try {
+      if (!reduceMotion.matches) {
+        // 1. Gather every tile into a pile, with a last little riffle
+        const c = pileCenter();
+        const moves = visible.map((item) => toPile(item, c));
+        const gather = visible.map((item, i) =>
+          item.animate(
+            [
+              { transform: "none" },
+              { transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)`, offset: 0.7 },
+              { transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)` },
+            ],
+            { duration: 560, delay: Math.min(i, 14) * 14, easing: "cubic-bezier(0.5, 0, 0.3, 1)", fill: "forwards" },
+          ),
+        );
+        await Promise.all(gather.map((a) => a.finished));
+        if (run !== shuffleRun) return;
+        gather.forEach((a) => a.cancel());
+      }
+
+      // 2. Reorder. Hidden tiles keep their original order after the visible ones,
+      //    so pieces revealed later by infinite scroll still arrive at the end.
+      for (let i = visible.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [visible[i], visible[j]] = [visible[j], visible[i]];
+      }
+      const hidden = originalOrder.filter((item) => item.classList.contains("hidden"));
+      [...visible, ...hidden].forEach((item) => galleryEl!.appendChild(item));
+      orderDirty = true;
+
+      if (reduceMotion.matches) {
+        visible.forEach((item) => item.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 }));
+        return;
+      }
+
+      // 3. Deal them back out from the pile into their new places
+      const c = pileCenter();
+      const moves = visible.map((item) => toPile(item, c));
+      const deal = visible.map((item, i) =>
+        item.animate(
+          [{ transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)` }, { transform: "none" }],
+          { duration: 520, delay: Math.min(i, 24) * 26, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)", fill: "backwards" },
+        ),
+      );
+      await Promise.all(deal.map((a) => a.finished));
+    } catch {
+      // Animations were cancelled by a filter change; nothing to clean up
+    } finally {
+      if (run === shuffleRun) shuffling = false;
     }
   }
 
-  viewBtns.forEach((btn) => {
-    if (btn.id === "shuffle-btn") return; // handled separately
-    btn.addEventListener("click", () => setView(btn.dataset.view ?? "grid"));
-  });
+  shuffleBtn?.addEventListener("click", shuffleGallery);
 
-  // Shuffle gallery (toggle: click to shuffle, click again to restore)
-  const shuffleBtn = document.getElementById("shuffle-btn");
-  let isShuffled = false;
-  // Remember original DOM order so we can restore it
-  const originalOrder = [...items];
-
-  if (shuffleBtn) {
-    shuffleBtn.addEventListener("click", () => {
-      if (currentView !== "grid") return;
-
-      const visible = [...gridEl.querySelectorAll<HTMLElement>(".gallery-item")].filter(
-        (el) => !el.classList.contains("hidden"),
-      );
-      if (visible.length < 2) return;
-
-      const version = ++filterVersion;
-
-      // Animate out
-      visible.forEach((item) => {
-        item.style.transition = `opacity 200ms ease, transform 200ms ease`;
-        item.style.opacity = "0";
-        item.style.transform = "scale(0.85)";
-      });
-
-      setTimeout(() => {
-        if (filterVersion !== version) return;
-
-        if (isShuffled) {
-          // Restore original order: re-append all items in original order
-          originalOrder.forEach((item) => gridEl.appendChild(item));
-        } else {
-          // Fisher-Yates shuffle on visible, keep hidden at end
-          for (let i = visible.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [visible[i], visible[j]] = [visible[j], visible[i]];
-          }
-          visible.forEach((item) => gridEl.appendChild(item));
-        }
-
-        // Staggered reveal
-        const nowVisible = [...gridEl.querySelectorAll<HTMLElement>(".gallery-item")].filter(
-          (el) => !el.classList.contains("hidden"),
-        );
-        nowVisible.forEach((item, i) => {
-          const delay = i * FILTER_STAGGER;
-          item.style.transition = `opacity ${FILTER_DURATION}ms ease ${delay}ms, transform ${FILTER_DURATION}ms ease ${delay}ms`;
-          item.style.opacity = "1";
-          item.style.transform = "scale(1)";
-        });
-      }, 220);
-
-      isShuffled = !isShuffled;
-      shuffleBtn.classList.toggle("active", isShuffled);
-
-      // Spin the button
-      shuffleBtn.style.transition = "transform 0.4s ease";
-      shuffleBtn.style.transform = "rotate(180deg)";
-      setTimeout(() => {
-        shuffleBtn.style.transform = "";
-      }, 400);
-    });
-  }
-
-  // Reset shuffle state when a filter is clicked
-  filterBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      isShuffled = false;
-      if (shuffleBtn) shuffleBtn.classList.remove("active");
-    });
-  });
-
-  // Timeline card clicks → open lightbox
-  timelineEl.querySelectorAll<HTMLElement>(".timeline-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const entry = card.closest(".timeline-entry") as HTMLElement;
-      const index = parseInt(entry?.dataset.lightboxIndex ?? "0", 10);
-      document.dispatchEvent(new CustomEvent("lightbox:open", { detail: { index, filter: currentFilter } }));
-    });
-  });
-
-  // Preload full-res on hover/touch so it's cached when lightbox opens
-  const preloaded = new Set<string>();
+  // Preload full-res on hover/touch so it's cached when the lightbox opens
+  const preloaded = new Map<string, HTMLImageElement>(); // held so in-flight loads aren't garbage-collected
   function preloadOnInteract(btn: HTMLElement) {
     const fullSrc = btn.dataset.fullSrc;
     if (!fullSrc || preloaded.has(fullSrc)) return;
-    preloaded.add(fullSrc);
     const img = new Image();
+    preloaded.set(fullSrc, img);
     img.src = fullSrc;
   }
   items.forEach((btn) => {
@@ -1040,46 +815,13 @@ document.addEventListener("astro:page-load", () => {
     btn.addEventListener("touchstart", () => preloadOnInteract(btn), { once: true, passive: true });
   });
 
-  // Skeleton loaders: mark gallery items as loaded when their image finishes
-  items.forEach((btn) => {
-    const img = btn.querySelector("img");
-    if (!img) return;
-    if (img.complete && img.naturalWidth > 0) {
-      btn.classList.add("loaded");
-    } else {
-      img.addEventListener("load", () => btn.classList.add("loaded"), { once: true });
-    }
-  });
-
-  // 3D tilt on hover + lightbox click
+  // Click → open lightbox
   items.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const index = parseInt(
-        btn.getAttribute("data-lightbox-index") ?? "0",
-        10,
-      );
+      const index = parseInt(btn.getAttribute("data-lightbox-index") ?? "0", 10);
       document.dispatchEvent(
         new CustomEvent("lightbox:open", { detail: { index, filter: currentFilter } }),
       );
-    });
-
-    btn.addEventListener("mousemove", (e) => {
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const rotateX = ((y - centerY) / centerY) * -3;
-      const rotateY = ((x - centerX) / centerX) * 3;
-      btn.style.transition = "transform 0.1s ease";
-      btn.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-      btn.style.zIndex = "40";
-    });
-
-    btn.addEventListener("mouseleave", () => {
-      btn.style.transition = "transform 0.3s ease";
-      btn.style.transform = "";
-      btn.style.zIndex = "";
     });
   });
 }); // end astro:page-load

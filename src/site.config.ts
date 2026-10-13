@@ -1,5 +1,3 @@
-import { boolean } from "zod";
-
 export interface ContactProps {
   name: string;
   value: string;
@@ -33,9 +31,8 @@ export const details = {
     "<strong>YO!</strong> I'm Kostur, and I make art for fun. I love using bright colors in my works and creating something enjoyable.",
 };
 
-export const commisionStatus = {
-  isOpen: true
-}
+// Shown in the about section's "tools I use" row; add software or hardware here
+export const tools: string[] = ["Affinity Designer"];
 
 export const globals = {
   imageQuality: "max", // low, mid, high or max

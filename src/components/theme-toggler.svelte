@@ -31,9 +31,9 @@
     <li>
       <button
         data-theme={theme}
-        class=" rounded-md cursor-pointer  hover:animate-gelatine-in-out w-6 h-6 gradient"
+        class="rounded-md cursor-pointer w-6 h-6 gradient hover:animate-gelatine-in-out"
         class:outline={theme === selectedTheme}
-        class:outline-primary={theme === selectedTheme}
+        class:outline-accent={theme === selectedTheme}
         class:outline-offset-2={theme === selectedTheme}
         on:click={(e) => setTheme(theme)}
       ></button>

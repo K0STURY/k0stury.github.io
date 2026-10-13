@@ -1,0 +1,495 @@
+---
+import getAllArt, { type Artwork } from "@api/art";
+import sortByDesc from "src/helpers/utils";
+import { getArtImages } from "src/helpers/art-images";
+import { contacts } from "src/site.config";
+
+const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#gallery-scene";
+
+let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
+  getAllArt(data),
+);
+arts = arts.sort(sortByDesc);
+
+// Every piece is a candidate for the desk. Same helper as the gallery/lightbox,
+// so these resolve to the very same image files and nothing extra gets built.
+const pool = await Promise.all(
+  arts.map(async (art) => {
+    const { thumb, full } = await getArtImages(art.default as any);
+    return { src: thumb, full, title: art.title || "Untitled" };
+  }),
+);
+
+// Server-rendered set (and the no-JS fallback): the newest highlights.
+// The inline script below swaps in a random set before the stickers drop in.
+const SLOTS = 9;
+const pinned = pool.filter((_, i) => arts[i].tags.includes("Highlights")).slice(0, SLOTS);
+
+// Hand-placed desk layout: position + rotation + parallax depth per item.
+// Depth is how far an item drifts on mouse move (px); bigger = closer to the "camera".
+const layout = [
+  { top: "6%", left: "38%", rotate: -4, depth: 10, size: "lg" },
+  { top: "10%", left: "60%", rotate: 6, depth: 16, size: "md" },
+  { top: "4%", left: "82%", rotate: -8, depth: 24, size: "sm" },
+  { top: "30%", left: "72%", rotate: -6, depth: 20, size: "md" },
+  { top: "38%", left: "28%", rotate: 9, depth: 18, size: "sm" },
+  { top: "46%", left: "50%", rotate: 3, depth: 14, size: "sm" },
+  { top: "58%", left: "66%", rotate: -5, depth: 12, size: "md" },
+  { top: "66%", left: "36%", rotate: 7, depth: 22, size: "sm" },
+  { top: "72%", left: "82%", rotate: -9, depth: 16, size: "sm" },
+];
+
+---
+
+<section class="hero-desk" id="hero">
+  <!-- Big faded copy of whichever sticker is hovered -->
+  <div class="desk-backdrop" id="desk-backdrop" aria-hidden="true">
+    <div class="desk-backdrop-art" id="desk-backdrop-art"></div>
+  </div>
+
+  <div class="desk-item desk-item--title" style="top:10%; left:5%; --delay:0ms;">
+    <div class="desk-parallax" style="--depth:6px;">
+      <div class="sticky-note sticky-note--title" style={`--rotate:-3deg;`}>
+        <h1 class="hero-word">Kos<span class="text-accent">tur.</span></h1>
+      </div>
+    </div>
+  </div>
+
+  <div class="desk-item desk-item--tag" style="top:27%; left:6%; --delay:80ms;">
+    <div class="desk-parallax" style="--depth:8px;">
+      <p class="hero-tag">character art &amp; doodles that bite back</p>
+      <a href={discordLink} class="hero-badge" target="_blank" rel="noopener noreferrer">
+        Say hi on Discord
+      </a>
+    </div>
+  </div>
+
+  <div class="desk-pins">
+    {pinned.map((art, i) => {
+      const pos = layout[i % layout.length];
+      return (
+        <div
+          class="desk-item"
+          style={`top:${pos.top}; left:${pos.left}; --delay:${100 + i * 90}ms;`}
+        >
+          <div class="desk-parallax" style={`--depth:${pos.depth}px;`}>
+            <div class:list={["pinned-sketch", `pinned-sketch--${pos.size}`]} style={`--rotate:${pos.rotate}deg;`}>
+              <span class="pin" aria-hidden="true"></span>
+              <div class="sketch-clip">
+                <img src={art.src} data-full={art.full} alt="" loading="eager" decoding="async" />
+                <span class="pin-title">{art.title}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <div class="desk-item desk-item--joke" style="top:80%; left:10%; --delay:680ms;">
+    <div class="desk-parallax" style="--depth:18px;">
+      <div class="sticky-note sticky-note--joke" style="--rotate:4deg;">
+        fueled by redbull.<br />flat is justice!
+      </div>
+    </div>
+  </div>
+
+  <button class="hero-more" id="hero-scroll-btn" aria-label="Scroll to gallery">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </button>
+</section>
+
+<!-- Inline on purpose: runs while the page is still parsing, so the random set is
+     what first drops in (a deferred script would show the default set, then swap). -->
+<script is:inline define:vars={{ pool }}>
+  const slots = document.querySelectorAll("#hero .pinned-sketch");
+  const picks = pool.slice();
+  for (let i = picks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picks[i], picks[j]] = [picks[j], picks[i]];
+  }
+  slots.forEach((slot, i) => {
+    const art = picks[i];
+    if (!art) return;
+    const img = slot.querySelector("img");
+    const title = slot.querySelector(".pin-title");
+    if (img) {
+      img.src = art.src;
+      img.dataset.full = art.full;
+    }
+    if (title) title.textContent = art.title;
+  });
+</script>
+
+<style>
+  .hero-desk {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    padding: 0 2rem;
+  }
+
+  .desk-backdrop {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .desk-backdrop.is-on {
+    opacity: 0.2;
+  }
+
+  .desk-backdrop-art {
+    height: 112%;
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    /* melt into the desk instead of ending on a hard square edge */
+    mask-image: radial-gradient(closest-side, #000 55%, transparent 100%);
+    -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent 100%);
+  }
+
+  .desk-item {
+    position: absolute;
+    opacity: 0;
+    animation: desk-drop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: var(--delay);
+  }
+
+  @keyframes desk-drop {
+    from { opacity: 0; transform: translateY(-26px) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .desk-parallax {
+    transform: translate(calc(var(--mx, 0) * var(--depth, 10px)), calc(var(--my, 0) * var(--depth, 10px)));
+    transition: transform 0.2s ease-out;
+  }
+
+  /* Sticky notes */
+  .sticky-note {
+    position: relative;
+    transform: rotate(var(--rotate, 0deg));
+    box-shadow: 5px 5px 0 var(--edge-color);
+  }
+
+  .sticky-note::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-4deg);
+    width: 44px;
+    height: 16px;
+    background: rgba(244, 240, 232, 0.35);
+    border-radius: 2px;
+  }
+
+  .sticky-note--title {
+    padding: 1.25rem 1.75rem 1.5rem;
+    background: var(--accent-color);
+    border-radius: 6px;
+  }
+
+  .sticky-note--title .hero-word {
+    font-family: var(--font-accent);
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: 0.95;
+    color: var(--primary-color);
+  }
+
+  .sticky-note--title .hero-word .text-accent {
+    color: var(--text-color);
+  }
+
+  .sticky-note--joke {
+    max-width: 180px;
+    padding: 1rem 1.1rem;
+    background: var(--text-color);
+    color: var(--primary-color);
+    border-radius: 4px;
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+
+  /* Paper notes get accent tape, matching the bio note; the title note keeps the
+     pale tape because accent tape would vanish against its accent background */
+  .sticky-note--joke::before {
+    background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+  }
+
+  .hero-tag {
+    font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    color: rgba(244, 240, 232, 0.65);
+    max-width: 28ch;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.2rem;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-color);
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+
+  .hero-badge:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  /* Pinned sketches. The frame itself must not clip, or it cuts the pin in half;
+     only the inner .sketch-clip clips the art and its hover title. */
+  .pinned-sketch {
+    position: relative;
+    border: 5px solid var(--text-color);
+    background: var(--text-color);
+    border-radius: 4px;
+    box-shadow: 6px 6px 0 var(--edge-color);
+    transform: rotate(var(--rotate, 0deg));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+  }
+
+  .sketch-clip {
+    position: absolute;
+    inset: 0;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .pinned-sketch:hover {
+    transform: rotate(0deg) scale(1.05);
+    box-shadow: 10px 10px 0 var(--accent-color);
+    z-index: 5;
+  }
+
+  .pinned-sketch--lg { width: 190px; height: 190px; }
+  .pinned-sketch--md { width: 150px; height: 150px; }
+  .pinned-sketch--sm { width: 118px; height: 118px; }
+
+  .pinned-sketch img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  .pin {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+  }
+
+  /* Hover reveal: title, without committing to opening the lightbox from the hero */
+  .pin-title {
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 3;
+    padding: 0.5rem 0.55rem 0.4rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+    color: #fff;
+    font-family: var(--font-accent);
+    font-size: 0.7rem;
+    line-height: 1.15;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+
+  .pinned-sketch:hover .pin-title {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .hero-more {
+    position: absolute;
+    bottom: 1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+    background: transparent;
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    animation: scroll-bounce 2s ease-in-out infinite;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .hero-more:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+  }
+
+  @keyframes scroll-bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* Mobile: abandon absolute scatter for a simple, calm flow */
+  @media (max-width: 900px) {
+    .hero-desk {
+      min-height: 0;
+      padding: 6.5rem 1.25rem 5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      text-align: center;
+    }
+
+    .desk-item {
+      position: static;
+      opacity: 1;
+      animation: none;
+      top: auto !important;
+      left: auto !important;
+    }
+
+    .desk-item--title,
+    .desk-item--tag {
+      align-self: center;
+    }
+
+    .hero-tag {
+      max-width: 100%;
+    }
+
+    /* Sketches flow into a wrapped grid instead of the absolute scatter */
+    .desk-pins {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.85rem;
+    }
+
+    .pinned-sketch--lg,
+    .pinned-sketch--md,
+    .pinned-sketch--sm {
+      width: 108px;
+      height: 108px;
+    }
+
+    .desk-item--joke {
+      order: 10;
+    }
+
+    .desk-backdrop {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .desk-item, .hero-more {
+      animation: none;
+      opacity: 1;
+    }
+
+    .desk-parallax {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener("astro:page-load", () => {
+    document.getElementById("hero-scroll-btn")?.addEventListener("click", () => {
+      document.getElementById("gallery-scene")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    const desk = document.getElementById("hero") as HTMLElement | null;
+    if (!desk) return;
+
+    const canHover = window.matchMedia("(hover: hover)").matches;
+    if (!canHover) return; // backdrop and parallax are mouse-only flourishes
+
+    // Hovering a sticker fades a big copy of it in behind the desk. The sticker's own
+    // (already loaded) image shows instantly, then the sharp version replaces it.
+    const backdrop = document.getElementById("desk-backdrop");
+    const backdropArt = document.getElementById("desk-backdrop-art");
+    if (backdrop && backdropArt) {
+      const sharp = new Map<string, HTMLImageElement>(); // held so in-flight loads aren't garbage-collected
+      let wanted = "";
+      const show = (url: string) => {
+        backdropArt.style.backgroundImage = `url("${url}")`;
+      };
+
+      desk.querySelectorAll<HTMLElement>(".pinned-sketch").forEach((sketch) => {
+        sketch.addEventListener("mouseenter", () => {
+          const img = sketch.querySelector("img");
+          if (!img) return;
+          const full = img.dataset.full ?? "";
+          wanted = full;
+
+          const cached = sharp.get(full);
+          show(cached?.complete && cached.naturalWidth > 0 ? full : img.src);
+          backdrop.classList.add("is-on");
+
+          if (full && !cached) {
+            const hi = new Image();
+            sharp.set(full, hi);
+            hi.onload = () => {
+              if (wanted === full) show(full);
+            };
+            hi.onerror = () => sharp.delete(full);
+            hi.src = full;
+          }
+        });
+
+        sketch.addEventListener("mouseleave", () => {
+          wanted = "";
+          backdrop.classList.remove("is-on");
+        });
+      });
+    }
+
+    const PARALLAX_STRENGTH = 0.3; // dialed down 70% from the original full-strength drift
+
+    let raf = 0;
+    desk.addEventListener("mousemove", (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        const rect = desk.getBoundingClientRect();
+        const mx = ((e.clientX - rect.left) / rect.width - 0.5) * 2 * PARALLAX_STRENGTH;
+        const my = ((e.clientY - rect.top) / rect.height - 0.5) * 2 * PARALLAX_STRENGTH;
+        desk.style.setProperty("--mx", mx.toFixed(3));
+        desk.style.setProperty("--my", my.toFixed(3));
+        raf = 0;
+      });
+    });
+
+    desk.addEventListener("mouseleave", () => {
+      desk.style.setProperty("--mx", "0");
+      desk.style.setProperty("--my", "0");
+    });
+  });
+</script>

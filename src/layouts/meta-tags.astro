@@ -1,22 +1,33 @@
 ---
+import getAllArt, { type Artwork } from "@api/art";
 import Avatar from "@assets/logo/avatar.png";
 import { getImage } from "astro:assets";
+import sortByDesc from "src/helpers/utils";
 
+// Link previews (Discord, socials) show the newest highlighted piece
+const arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
+  getAllArt(data),
+);
+const cover = arts.sort(sortByDesc).find((art) => art.tags.includes("Highlights"));
+
+// PNG on purpose: not every service that builds previews reads WebP
 const contentImg = await getImage({
-  src: Avatar,
-  width: 1280,
-  height: 720,
+  src: (cover?.default ?? Avatar) as any,
+  width: 1200,
+  format: "png",
 });
 
-const ogImageUrl = new URL(contentImg.src, Astro.site ?? Astro.url).href;
-const siteUrl = "https://k0stur.dev";
+const siteUrl = (Astro.site ?? Astro.url).href;
+const ogImageUrl = new URL(contentImg.src, siteUrl).href;
+const title = "Kostur's Art";
+const description = "Character art and doodles that bite back. The art portfolio of Kostur.";
 ---
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kostur's Art</title>
-<meta name="title" content="Kostur's Art" />
-<meta name="description" content="Portfolio of Kostur 🎨" />
+<title>{title}</title>
+<meta name="title" content={title} />
+<meta name="description" content={description} />
 
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -27,15 +38,16 @@ const siteUrl = "https://k0stur.dev";
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="language" content="English" />
 
-<meta property="og:site_name" content="k0stur.dev" />
-<meta property="og:title" content="Kostur's Art" />
+<meta property="og:site_name" content={new URL(siteUrl).hostname} />
+<meta property="og:title" content={title} />
 <meta property="og:type" content="website" />
 <meta property="og:url" content={siteUrl} />
 <meta property="og:image" content={ogImageUrl} />
-<meta property="og:description" content="Portfolio of Kostur 🎨" />
+<meta property="og:image:alt" content={cover?.title ? `${cover.title}, by Kostur` : "Artwork by Kostur"} />
+<meta property="og:description" content={description} />
 
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content={siteUrl} />
-<meta property="twitter:title" content="Kostur's Art" />
-<meta property="twitter:description" content="Portfolio of Kostur 🎨" />
+<meta property="twitter:title" content={title} />
+<meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={ogImageUrl} />

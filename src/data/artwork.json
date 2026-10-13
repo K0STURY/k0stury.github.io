@@ -30,7 +30,7 @@
     "ID": 4,
     "name": "Coming Soon",
     "description": "In progress",
-    "date": "TBA",
+    "date": "TBA~",
     "tag": [
       "Characters"
     ]
@@ -1551,6 +1551,96 @@
     "date": "6 FEB 2026",
     "tag": [
       "Characters", "Highlights"
+    ]
+  },
+  {
+    "ID": 168,
+    "name": "Shadow Smile Punk",
+    "description": "Found an older piece and got inspired to redo it",
+    "date": "10 FEB 2026",
+    "tag": [
+      "Characters"
+    ]
+  },
+  {
+    "ID": 169,
+    "name": "Magic Huntress",
+    "description": "Found an unfinished piece I decided to finish, I am happy with the result",
+    "date": "18 FEB 2026",
+    "tag": [
+      "Characters", "Highlights", "Witch"
+    ]
+  },
+  {
+    "ID": 170,
+    "name": "Antlers",
+    "description": "Just simple and fun",
+    "date": "28 FEB 2026",
+    "tag": [
+      "Characters"
+    ]
+  },
+  {
+    "ID": 171,
+    "name": "Hotel Stay",
+    "description": "Tried staying at the hotel and just did day 1. . .",
+    "date": "1 MAR 2026",
+    "tag": [
+      "Characters"
+    ]
+  },
+  {
+    "ID": 172,
+    "name": "Battle Witch",
+    "description": "One of my proudest works to date. Love drawing witches",
+    "date": "18 APR 2026",
+    "tag": [
+      "Characters", "Highlights", "Witch"
+    ]
+  },
+  {
+    "ID": 173,
+    "name": "Battle Ready",
+    "description": "3rd gen redraw in this one, feels epic",
+    "date": "28 APR 2026",
+    "tag": [
+      "Characters", "Highlights"
+    ]
+  },
+  {
+    "ID": 174,
+    "name": "Red Devil",
+    "description": "Yet another redraw of an older piece, I am happy with the result",
+    "date": "29 APR 2026",
+    "tag": [
+      "Characters"
+    ]
+  },
+  {
+    "ID": 175,
+    "name": "Uni Quil",
+    "description": "One of my favorite pieces of Quil, really proud of this one",
+    "date": "30 AUG 2026",
+    "tag": [
+      "Characters", "Quil", "Highlights"
+    ]
+  },
+  {
+    "ID": 176,
+    "name": "Red Gaze",
+    "description": "Mommy?, Love the glare",
+    "date": "26 SEP 2026",
+    "tag": [
+      "Characters"
+    ]
+  },
+  {
+    "ID": 177,
+    "name": "Cosplay Quil : Jin Mori",
+    "description": "Best work to date, Cosplaying Jin Mori from The God of Highschool, I am proud of this one",
+    "date": "4 OCT 2026",
+    "tag": [
+      "Characters", "Highlights", "Quil"
     ]
   }
 ]

@@ -3,13 +3,13 @@ import ThemeToggler from "./theme-toggler.svelte";
 ---
 
 <nav
-  class="fixed items-center flex justify-between w-full z-50 group p-4"
+  class="fixed items-center flex justify-between w-full z-50 group px-5 py-4 md:px-8"
   data-inview="false"
 >
   <h1
-    class="group-data-[inview='false']:text-4xl font-accent tracking-tighter transition-transform duration-200 ease-linear hover:animate-gelatine-in-out"
+    class="group-data-[inview='false']:text-3xl md:group-data-[inview='false']:text-4xl font-accent tracking-tighter transition-[font-size,transform] duration-300 ease-out hover:animate-gelatine-in-out"
   >
-    <a href="/" class="text-white" id="nav-title" data-text="Kostur." data-astro-prefetch="load">Kos<span class="text-accent">tur.</span></a>
+    <a href="/" class="text-color" id="nav-title" data-text="Kostur." data-astro-prefetch="load">Kos<span class="text-accent">tur.</span></a>
   </h1>
   <ThemeToggler client:load />
 </nav>
@@ -25,7 +25,7 @@ import ThemeToggler from "./theme-toggler.svelte";
         entries.forEach((entry) => {
           navbar.setAttribute("data-inview", JSON.stringify(entry.isIntersecting));
         });
-      }, { threshold: 1.0 });
+      }, { threshold: 0 });
 
       observer.observe(gallerySection);
     } else if (navbar) {
@@ -98,11 +98,13 @@ import ThemeToggler from "./theme-toggler.svelte";
 
 <style>
   [data-inview="true"] {
-    @apply backdrop-blur-3xl bg-black bg-opacity-60;
+    backdrop-filter: blur(28px);
+    background-color: rgba(12, 11, 14, 0.72);
+    border-bottom: 1px solid rgba(244, 240, 232, 0.06);
   }
 
   [data-inview="true"] > h1 {
-    @apply transform scale-110 text-4xl transition-transform duration-300 ease-linear;
+    @apply text-3xl md:text-4xl transition-[font-size] duration-300 ease-out;
   }
 
   /* Glitch effect on logo hover */

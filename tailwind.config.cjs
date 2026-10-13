@@ -5,9 +5,11 @@ module.exports = {
     extend: {
       colors: {
         primary: "var(--primary-color)",
+        panel: "var(--panel-color)",
         secondary: "var(--secondary-color)",
         color: "var(--text-color)",
         accent: "var(--accent-color)",
+        edge: "var(--edge-color)",
       },
       animation: {
         "gelatine-infite": "gelatine 0.375s infinite",
@@ -15,8 +17,7 @@ module.exports = {
       },
       fontFamily: {
         accent: "var(--font-accent)",
-        content: ["inter"],
-        stylized: ["Rancho", "cursive"],
+        display: "var(--font-display)",
       },
     },
   },
