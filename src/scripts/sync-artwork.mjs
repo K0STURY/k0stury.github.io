@@ -10,6 +10,7 @@ const DEFAULT_ENTRY = (id) => ({
   description: "",
   date: "",
   tag: ["Characters"],
+  redrawOf: null,
 });
 
 // Load existing artwork.json
@@ -33,8 +34,21 @@ files.forEach((file) => {
   }
 });
 
-// Sort by ID ascending 
+// Sort by ID ascending
 const merged = [...artworkById.values()].sort((a, b) => a.ID - b.ID);
+
+// Every entry carries the redraw line, blank unless it's filled in
+const ids = new Set(merged.map((a) => a.ID));
+merged.forEach((a) => {
+  if (!("redrawOf" in a)) a.redrawOf = null;
+  const ref = a.redrawOf;
+  if (ref == null || String(ref).trim() === "") return;
+  if (Number(ref) === a.ID) {
+    console.warn(`Piece ${a.ID} is marked as a redraw of itself`);
+  } else if (!ids.has(Number(ref))) {
+    console.warn(`Piece ${a.ID} is a redraw of ${ref}, but there's no piece ${ref}`);
+  }
+});
 
 fs.writeFileSync(
   ARTWORK_JSON,

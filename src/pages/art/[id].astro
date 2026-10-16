@@ -1,0 +1,23 @@
+---
+import BaseLayout from "@layouts/base-layout.astro";
+import HeroCollage from "@components/hero-collage.astro";
+import AboutSection from "@components/about-section.astro";
+import Gallery from "@components/gallery.astro";
+import getAllArt, { type Artwork, type Artworks } from "@api/art";
+
+// A page per piece, so a shared link opens straight onto it and its preview shows it.
+// Underneath it is just the home page, with the piece already up in the lightbox.
+export async function getStaticPaths() {
+  const modules = import.meta.glob("../../assets/showcase/*.png", { eager: true });
+  const arts = getAllArt(Object.values(modules) as Artworks);
+  return arts.map((piece) => ({ params: { id: String(piece.id) }, props: { piece } }));
+}
+
+const { piece } = Astro.props as { piece: Artwork };
+---
+
+<BaseLayout piece={piece}>
+  <HeroCollage slot="banner" />
+  <AboutSection />
+  <Gallery openPiece={piece.id} />
+</BaseLayout>

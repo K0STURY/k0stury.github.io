@@ -1,0 +1,13 @@
+---
+// The dev log's front page, /blog, built as blog.html.
+// A route rather than a plain page so it can be left out entirely: while the blog is switched off
+// (blogLive in src/site.config.ts) it builds nothing. It also builds as blog/index.html: see blog/[slug].astro.
+import BlogIndex from "@components/blog-index.astro";
+import { blogEnabled } from "src/helpers/blog";
+
+export function getStaticPaths() {
+  return blogEnabled ? [{ params: { blog: "blog" } }] : [];
+}
+---
+
+<BlogIndex />

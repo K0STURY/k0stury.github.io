@@ -4,23 +4,56 @@ import Avatar from "@assets/logo/avatar.png";
 import { getImage } from "astro:assets";
 import sortByDesc from "src/helpers/utils";
 
+// Any other page with its own title and preview (the dev log and its posts)
+export interface PageMeta {
+  title: string;
+  description: string;
+  path: string; // e.g. "blog/ui-editor"
+  image?: ImageMetadata;
+  imageAlt?: string;
+  article?: boolean;
+}
+
+interface Props {
+  // Set on a piece's own page (/art/<id>), so a shared link previews that piece
+  piece?: Artwork;
+  page?: PageMeta;
+}
+
+const { piece, page } = Astro.props;
+
 // Link previews (Discord, socials) show the newest highlighted piece
 const arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
   getAllArt(data),
 );
 const cover = arts.sort(sortByDesc).find((art) => art.tags.includes("Highlights"));
 
-// PNG on purpose: not every service that builds previews reads WebP
+// Not WebP on purpose: not every service that builds previews reads it.
+// A piece's own preview is JPEG, since a PNG of every piece would bloat the site by hundreds of MB.
 const contentImg = await getImage({
-  src: (cover?.default ?? Avatar) as any,
+  src: (page?.image ?? (piece ?? cover)?.default ?? Avatar) as any,
   width: 1200,
-  format: "png",
+  format: piece || page?.image ? "jpg" : "png",
 });
 
 const siteUrl = (Astro.site ?? Astro.url).href;
+const pageUrl = page
+  ? new URL(page.path, siteUrl).href
+  : piece
+    ? new URL(`art/${piece.id}`, siteUrl).href
+    : siteUrl;
 const ogImageUrl = new URL(contentImg.src, siteUrl).href;
-const title = "Kostur's Art";
-const description = "Character art and doodles that bite back. The art portfolio of Kostur.";
+const pieceName = piece ? piece.title || `Piece #${piece.id}` : "";
+const title = page ? page.title : piece ? `${pieceName} · Kostur's Art` : "Kostur's Art";
+const defaultDescription = "Character art and doodles that bite back. The art portfolio of Kostur.";
+const description = page?.description || piece?.description || defaultDescription;
+const imageAlt = page
+  ? page.imageAlt || page.title
+  : piece
+    ? `${pieceName}, by Kostur`
+    : cover?.title
+      ? `${cover.title}, by Kostur`
+      : "Artwork by Kostur";
 ---
 
 <meta charset="UTF-8" />
@@ -40,14 +73,14 @@ const description = "Character art and doodles that bite back. The art portfolio
 
 <meta property="og:site_name" content={new URL(siteUrl).hostname} />
 <meta property="og:title" content={title} />
-<meta property="og:type" content="website" />
-<meta property="og:url" content={siteUrl} />
+<meta property="og:type" content={page?.article ? "article" : "website"} />
+<meta property="og:url" content={pageUrl} />
 <meta property="og:image" content={ogImageUrl} />
-<meta property="og:image:alt" content={cover?.title ? `${cover.title}, by Kostur` : "Artwork by Kostur"} />
+<meta property="og:image:alt" content={imageAlt} />
 <meta property="og:description" content={description} />
 
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:url" content={siteUrl} />
+<meta property="twitter:url" content={pageUrl} />
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={ogImageUrl} />

@@ -2,7 +2,15 @@
 import getAllArt, { type Artwork } from "@api/art";
 import sortByDesc from "src/helpers/utils";
 import { getArtImages, THUMB_WIDTH } from "src/helpers/art-images";
+import { getArtPanel } from "src/helpers/art-panel";
 import Lightbox from "./lightbox.svelte";
+
+interface Props {
+  // On a piece's own page (/art/<id>): the lightbox opens on it straight away
+  openPiece?: number;
+}
+
+const { openPiece } = Astro.props;
 
 const BATCH_SIZE = 30;
 
@@ -12,12 +20,17 @@ let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
 
 arts = arts.sort(sortByDesc);
 
+// Pieces in a redraw pair (either half): the then & now view lines these up
+const paired = new Set(arts.flatMap((art) => (art.redrawOf == null ? [] : [art.id, art.redrawOf])));
+
 // Thumbnail for the tile + capped full-res webp for the lightbox.
 // The lightbox shows the tile's own thumbnail (already downloaded) until the full-res arrives.
 const imageData = await Promise.all(
   arts.map(async (art) => {
     const { thumb, full } = await getArtImages(art.default as any);
+    const panel = paired.has(art.id) ? await getArtPanel(art.id) : null;
     return {
+      id: art.id,
       src: thumb,
       fullSrc: full,
       width: art.default.width,
@@ -26,9 +39,13 @@ const imageData = await Promise.all(
       title: art.title,
       description: art.description,
       date: art.date,
+      redrawOf: art.redrawOf,
+      panel,
     };
   }),
 );
+
+const openAt = openPiece == null ? -1 : arts.findIndex((art) => art.id === openPiece);
 
 // Collect unique categories from art tags
 const categorySet = new Set<string>();
@@ -125,6 +142,7 @@ const scatter = [
             <div class="sticker-frame" style={`--rotate:${s.rotate}deg; --y:${s.y}px;`}>
               <span class="pin" aria-hidden="true"></span>
               {newIds.has(art.id) && <span class="new-badge">NEW</span>}
+              {art.redrawOf != null && <span class="redraw-stamp">redraw</span>}
               <div class="sticker-clip">
                 {/* Lazy: only tiles near the screen download; filtered-out ones never do */}
                 <img
@@ -157,7 +175,14 @@ const scatter = [
   <div id="gallery-sentinel" class="h-1"></div>
 </section>
 
-<Lightbox images={imageData} client:idle />
+{/* A shared link is there for the one piece, so don't make it wait for idle */}
+{
+  openAt >= 0 ? (
+    <Lightbox images={imageData} openAt={openAt} client:load />
+  ) : (
+    <Lightbox images={imageData} client:idle />
+  )
+}
 
 <style>
   .gallery-scene {
@@ -393,6 +418,23 @@ const scatter = [
     letter-spacing: 0.05em;
     box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(231, 174, 58, 0.3);
     animation: badge-pulse 2s ease-in-out infinite;
+  }
+
+  /* Redraws get a small paper stamp; opening one lets you compare it with the original */
+  .redraw-stamp {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    z-index: 5;
+    padding: 3px 10px 1px;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+    box-shadow: 3px 3px 0 var(--edge-color);
+    transform: rotate(-6deg);
   }
 
   @keyframes badge-pulse {

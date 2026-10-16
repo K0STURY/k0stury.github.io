@@ -1,0 +1,804 @@
+---
+import BaseLayout from "@layouts/base-layout.astro";
+import { formatPostDate, readingMinutes, type Post } from "src/helpers/blog";
+
+// A dev log post, written straight onto the desk. Its page is src/pages/blog/[slug].astro.
+interface Props {
+  post: Post;
+  // The posts either side of it, for the "carry on reading" cards at the end
+  newer?: Post;
+  older?: Post;
+}
+
+const { post, newer, older } = Astro.props;
+const { Content, headings } = await post.render();
+const { title, description, date, cover, coverAlt, tags, links, draft } = post.data;
+
+// "In this post": the sections and the parts within them. Short posts don't need one.
+const contents = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const showContents = contents.filter((h) => h.depth === 2).length >= 3;
+const minutes = readingMinutes(post);
+---
+
+<BaseLayout
+  page={{
+    title: `${title} · Kostur's dev log`,
+    description,
+    path: `blog/${post.slug}`,
+    // Not shown on the page for now; only used when the link is shared
+    image: cover,
+    imageAlt: coverAlt ?? title,
+    article: true,
+  }}
+  tagline="that's all the code… for now."
+>
+  <article class="post">
+    <a href="/blog" class="post-back" data-astro-prefetch>All posts</a>
+
+    <header class="post-head">
+      <h1 class="post-title">{title}</h1>
+      <div class="post-meta">
+        <time datetime={date.toISOString()}>{formatPostDate(date)}</time>
+        <span>{minutes} min read</span>
+        {
+          tags.length > 0 && (
+            <ul class="post-tags" aria-label="Built with">
+              {tags.map((tag) => (
+                <li>{tag}</li>
+              ))}
+            </ul>
+          )
+        }
+        {draft && <span class="post-draft">draft: only visible while running the dev server</span>}
+      </div>
+      {
+        links.length > 0 && (
+          <ul class="post-links">
+            {links.map((link) => (
+              <li>
+                <a href={link.url} target="_blank" rel="noopener noreferrer">
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </header>
+
+    <div class="post-layout" class:list={{ "has-contents": showContents }}>
+      {
+        showContents && (
+          <nav class="post-contents" aria-label="In this post">
+            {/* A fold-out list on narrow screens; a sticky one beside the text on wide ones */}
+            <details class="contents-fold" open>
+              <summary class="contents-title">In this post</summary>
+              <ol class="contents-list">
+                {contents.map((h) => (
+                  <li class:list={["contents-item", `contents-item--${h.depth}`]}>
+                    <a href={`#${h.slug}`} data-section={h.slug}>
+                      {h.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          </nav>
+        )
+      }
+
+      <div class="post-body">
+        <Content />
+      </div>
+    </div>
+
+    {
+      (newer || older) && (
+        <nav class="post-next" aria-label="More posts">
+          {older && (
+            <a href={`/blog/${older.slug}`} class="next-card next-card--older" data-astro-prefetch>
+              <span class="next-label">Older post</span>
+              <span class="next-title">{older.data.title}</span>
+            </a>
+          )}
+          {newer && (
+            <a href={`/blog/${newer.slug}`} class="next-card next-card--newer" data-astro-prefetch>
+              <span class="next-label">Newer post</span>
+              <span class="next-title">{newer.data.title}</span>
+            </a>
+          )}
+        </nav>
+      )
+    }
+
+    <a href="/blog" class="post-back post-back--end" data-astro-prefetch>All posts</a>
+  </article>
+</BaseLayout>
+
+<script>
+  // Each code slip (built from the Markdown by src/plugins/remark-code-slips.mjs) gets a copy button
+  function addCopyButtons() {
+    document.querySelectorAll<HTMLElement>(".post-body .code-slip").forEach((slip) => {
+      const pre = slip.querySelector("pre");
+      if (!pre || slip.querySelector(".code-copy")) return;
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "code-copy";
+      copy.textContent = "Copy";
+      let reset: ReturnType<typeof setTimeout>;
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pre.innerText);
+        } catch {
+          return;
+        }
+        copy.textContent = "Copied";
+        clearTimeout(reset);
+        reset = setTimeout(() => (copy.textContent = "Copy"), 1600);
+      });
+      slip.append(copy);
+    });
+  }
+
+  document.addEventListener("astro:page-load", addCopyButtons);
+
+  import { smoothScrollTo } from "../scripts/smooth-scroll";
+
+  const NAV_CLEARANCE = 96; // a jump to a section stops this far down, below the fixed nav
+  const WIDE = window.matchMedia("(min-width: 1100px)");
+  let onScroll: (() => void) | null = null;
+
+  // "In this post": jump to a section, and keep the section you're reading highlighted
+  function setUpContents() {
+    if (onScroll) window.removeEventListener("scroll", onScroll);
+    onScroll = null;
+
+    const fold = document.querySelector<HTMLDetailsElement>(".contents-fold");
+    const links = [...document.querySelectorAll<HTMLAnchorElement>(".contents-list a[data-section]")];
+    if (!fold || links.length === 0) return;
+
+    // Beside the text it's always open; above it, on phones, it starts folded away
+    fold.open = WIDE.matches;
+    WIDE.onchange = () => (fold.open = WIDE.matches);
+    fold.addEventListener("toggle", () => {
+      if (WIDE.matches && !fold.open) fold.open = true;
+    });
+
+    const sections = links
+      .map((link) => document.getElementById(link.dataset.section ?? ""))
+      .filter((el): el is HTMLElement => el !== null);
+
+    links.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        const target = document.getElementById(link.dataset.section ?? "");
+        if (!target) return;
+        e.preventDefault();
+        smoothScrollTo(target, NAV_CLEARANCE);
+        history.replaceState(history.state, "", `#${target.id}`);
+        if (!WIDE.matches) fold.open = false;
+      });
+    });
+
+    // The current section is the last heading that has scrolled up past the nav
+    let frame = 0;
+    const highlight = () => {
+      frame = 0;
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= NAV_CLEARANCE + 24) current = section;
+        else break;
+      }
+      links.forEach((link) => link.classList.toggle("is-current", link.dataset.section === current?.id));
+    };
+    onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(highlight);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    highlight();
+  }
+
+  document.addEventListener("astro:page-load", setUpContents);
+  // Leaving the post: stop listening, so other pages don't pay for it
+  document.addEventListener("astro:before-swap", () => {
+    if (onScroll) window.removeEventListener("scroll", onScroll);
+    onScroll = null;
+  });
+</script>
+
+<style>
+  .post {
+    --body: rgba(244, 240, 232, 0.86);
+    --muted: rgba(244, 240, 232, 0.6);
+    --faint: rgba(244, 240, 232, 0.1);
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 7.5rem 1.5rem 2rem;
+  }
+
+  /* Back to the list: a paper label, like the nav's */
+  .post-back {
+    display: inline-block;
+    padding: 0.35rem 0.85rem 0.2rem;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transform: rotate(-2deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .post-back::before {
+    content: "‹ ";
+  }
+
+  .post-back:hover,
+  .post-back:focus-visible {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  .post-back:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  .post-back--end {
+    margin-top: 3.5rem;
+  }
+
+  /* --- "In this post" --- */
+  .post-contents {
+    margin-bottom: 2.75rem;
+  }
+
+  /* On phones and narrower windows: a fold-out panel above the text */
+  .contents-fold {
+    border: 1px solid rgba(244, 240, 232, 0.08);
+    border-radius: 8px;
+    background: var(--panel-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+  }
+
+  .contents-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1.1rem 0.7rem;
+    color: var(--text-color);
+    font-family: var(--font-accent);
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .contents-title::-webkit-details-marker {
+    display: none;
+  }
+
+  .contents-title::after {
+    content: "+";
+    color: var(--accent-color);
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .contents-fold[open] .contents-title::after {
+    content: "–";
+  }
+
+  .contents-list {
+    margin: 0 1.1rem 1rem;
+    padding: 0;
+    border-left: 2px solid var(--faint);
+    list-style: none;
+  }
+
+  .contents-item a {
+    display: block;
+    margin-left: -2px;
+    padding: 0.35rem 0 0.35rem 1rem;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .contents-item--3 a {
+    padding-left: 1.9rem;
+    font-size: 0.88rem;
+  }
+
+  .contents-item a:hover {
+    color: var(--text-color);
+  }
+
+  .contents-item a.is-current {
+    border-left-color: var(--accent-color);
+    color: var(--text-color);
+    font-weight: 600;
+  }
+
+  .contents-item a:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+  }
+
+  /* Wide screens: the contents sit beside the text and follow you down the page */
+  @media (min-width: 1100px) {
+    .post:has(.has-contents) {
+      max-width: 1120px;
+    }
+
+    .post-layout.has-contents {
+      display: grid;
+      /* The text's own width (68 characters at its size); 15rem for the contents */
+      grid-template-columns: minmax(0, 42rem) 15rem;
+      gap: 4.5rem;
+      align-items: start;
+    }
+
+    .post-layout.has-contents .post-body {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .post-contents {
+      position: sticky;
+      top: 6.5rem;
+      grid-column: 2;
+      grid-row: 1;
+      max-height: calc(100vh - 8rem);
+      margin: 0;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .contents-fold {
+      border: none;
+      background: none;
+      box-shadow: none;
+    }
+
+    /* Always open here, so the heading is just a heading */
+    .contents-title {
+      padding: 0 0 0.75rem;
+      pointer-events: none;
+    }
+
+    .contents-title::after {
+      display: none;
+    }
+
+    .contents-list {
+      margin: 0;
+    }
+
+    .contents-item a {
+      font-size: 0.9rem;
+    }
+
+    .contents-item--3 a {
+      font-size: 0.84rem;
+    }
+  }
+
+  /* --- Carry on to the next post --- */
+  .post-next {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 760px;
+    margin-top: 4.5rem;
+  }
+
+  .next-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1.1rem 1.3rem 1.2rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+    text-decoration: none;
+    transform: rotate(-0.8deg);
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+  }
+
+  .next-card--newer {
+    grid-column: 2;
+    align-items: flex-end;
+    text-align: right;
+    transform: rotate(0.8deg);
+  }
+
+  .next-card:hover,
+  .next-card:focus-visible {
+    transform: rotate(0deg) translateY(-3px);
+    box-shadow: 8px 8px 0 var(--accent-color);
+  }
+
+  .next-card:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  .next-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    opacity: 0.6;
+  }
+
+  .next-card--older .next-label::before {
+    content: "‹ ";
+  }
+
+  .next-card--newer .next-label::after {
+    content: " ›";
+  }
+
+  .next-title {
+    font-family: var(--font-accent);
+    font-size: 1.3rem;
+    line-height: 1.1;
+  }
+
+  /* --- Header: the title on an accent sticky note, like "Dev log" and the hero --- */
+  .post-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.1rem;
+    margin: 2.75rem 0 3rem;
+  }
+
+  .post-title {
+    position: relative;
+    max-width: 100%;
+    padding: 0.9rem 1.4rem 1.05rem;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: clamp(2.1rem, 6vw, 3.25rem);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+    transform: rotate(-1.5deg);
+  }
+
+  .post-title::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 44px;
+    height: 16px;
+    border-radius: 2px;
+    background: rgba(244, 240, 232, 0.35);
+    transform: translateX(-50%) rotate(-4deg);
+  }
+
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .post-tags,
+  .post-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+  }
+
+  .post-tags li {
+    padding: 0.05rem 0.65rem;
+    border: 1.5px solid rgba(244, 240, 232, 0.3);
+    border-radius: 9999px;
+    color: var(--text-color);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .post-draft {
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    font-size: 0.8rem;
+  }
+
+  .post-links a {
+    display: inline-block;
+    padding: 0.3rem 0.8rem 0.2rem;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+
+  .post-links a:hover {
+    background: var(--accent-color);
+  }
+
+  /* --- The writing (Markdown output, so it's styled through :global) --- */
+  .post-body {
+    max-width: 68ch;
+    color: var(--body);
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  .post-body > :global(* + *) {
+    margin-top: 1.2em;
+  }
+
+  .post-body :global(strong) {
+    color: var(--text-color);
+    font-weight: 700;
+  }
+
+  /* Sections: Luckiest Guy, with a strip of accent tape underneath */
+  .post-body :global(h2) {
+    position: relative;
+    margin-top: 2.8em;
+    padding-bottom: 0.45em;
+    color: var(--text-color);
+    font-family: var(--font-accent);
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+  }
+
+  .post-body :global(h2)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 3.25rem;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--accent-color);
+    transform: rotate(-1.5deg);
+  }
+
+  /* Jumping to a section stops below the fixed nav, not under it */
+  .post-body :global(:is(h2, h3, h4)) {
+    scroll-margin-top: 6rem;
+  }
+
+  .post-body :global(h3) {
+    margin-top: 2.2em;
+    color: var(--text-color);
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .post-body :global(h4) {
+    margin-top: 1.8em;
+    color: var(--text-color);
+    font-weight: 700;
+  }
+
+  .post-body :global(:is(h2, h3, h4) + *) {
+    margin-top: 0.75em;
+  }
+
+  .post-body :global(a) {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  .post-body :global(a:hover) {
+    color: var(--accent-color-hover);
+  }
+
+  .post-body :global(:is(ul, ol)) {
+    padding-left: 1.3em;
+  }
+
+  .post-body :global(li + li) {
+    margin-top: 0.4em;
+  }
+
+  .post-body :global(li::marker) {
+    color: var(--accent-color);
+  }
+
+  .post-body :global(blockquote) {
+    padding-left: 1em;
+    border-left: 4px solid var(--accent-color);
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .post-body :global(hr) {
+    height: 0;
+    margin: 3em 0;
+    border: none;
+    border-top: 2px dashed var(--faint);
+  }
+
+  .post-body :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+
+  /* A line that's only italic or bold (like "Code Example" above a snippet) reads as a caption */
+  .post-body :global(p:has(> :is(em, strong):only-child)) {
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+  }
+
+  .post-body :global(p:has(> :is(em, strong):only-child) + .code-slip) {
+    margin-top: 0.6em;
+  }
+
+  .post-body :global(:not(pre) > code) {
+    padding: 0.12em 0.4em;
+    border: 1px solid rgba(244, 240, 232, 0.14);
+    border-radius: 4px;
+    background: rgba(244, 240, 232, 0.07);
+    color: var(--text-color);
+    font-family: var(--mono);
+    font-size: 0.86em;
+  }
+
+  /* --- Code: a slip taped down on the desk, with a header strip for its language and the copy button --- */
+  .post-body :global(.code-slip) {
+    position: relative;
+    margin-top: 1.75em;
+    margin-bottom: 1.75em;
+    padding-top: 2.6rem;
+    border: 1px solid rgba(244, 240, 232, 0.08);
+    border-radius: 8px;
+    background: var(--panel-color);
+    box-shadow: 6px 6px 0 var(--edge-color);
+  }
+
+  /* Tape */
+  .post-body :global(.code-slip)::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 1.25rem;
+    z-index: 1;
+    width: 60px;
+    height: 18px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+    transform: rotate(-4deg);
+  }
+
+  /* The line under the header strip */
+  .post-body :global(.code-slip)::after {
+    content: "";
+    position: absolute;
+    top: 2.6rem;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(244, 240, 232, 0.08);
+  }
+
+  .post-body :global(.code-lang) {
+    position: absolute;
+    top: 0.8rem;
+    left: calc(1.25rem + 60px + 0.75rem);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .post-body :global(.code-copy) {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    padding: 0.2rem 0.65rem;
+    border: 1.5px solid rgba(244, 240, 232, 0.2);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .post-body :global(.code-copy:hover),
+  .post-body :global(.code-copy:focus-visible) {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  .post-body :global(pre) {
+    margin: 0;
+    padding: 1.1rem 1.35rem 1.3rem;
+    overflow-x: auto;
+    /* The highlighter brings its own background; the slip is the background instead */
+    background-color: transparent !important;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    line-height: 1.65;
+    tab-size: 4;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(244, 240, 232, 0.25) transparent;
+  }
+
+  .post-body :global(pre code) {
+    font-family: inherit;
+  }
+
+  .post-body :global(pre:focus-visible) {
+    outline: 3px solid var(--accent-color);
+    outline-offset: -3px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 640px) {
+    .post {
+      padding: 6rem 1.1rem 2rem;
+    }
+
+    .post-body {
+      font-size: 1.0625rem;
+    }
+
+    .post-body :global(h2) {
+      font-size: 1.65rem;
+    }
+
+    .post-body :global(pre) {
+      padding: 1rem 1rem 1.1rem;
+      font-size: 0.82rem;
+    }
+
+    .post-next {
+      grid-template-columns: 1fr;
+    }
+
+    .next-card--newer {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-back,
+    .next-card,
+    .contents-item a {
+      transition: none;
+    }
+  }
+</style>

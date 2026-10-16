@@ -1,0 +1,476 @@
+---
+import BaseLayout from "@layouts/base-layout.astro";
+import { getPosts, formatPostDate, readingMinutes } from "src/helpers/blog";
+
+// The dev log's front page: every post as a paper card on the desk, newest first.
+// The first one is the spotlight: bigger, with a peek at what's inside.
+// Rendered by both src/pages/blog/index.astro and src/pages/blog/index/index.astro (see there for why).
+const posts = await getPosts();
+
+const INSIDE_SHOWN = 5; // sections listed on the spotlight card before "and N more"
+const cards = await Promise.all(
+  posts.map(async (post) => {
+    const { headings } = await post.render();
+    const sections = headings.filter((h) => h.depth === 2).map((h) => h.text);
+    return { post, sections, minutes: readingMinutes(post) };
+  }),
+);
+
+// The tech filter: every tag in use, most-used first. Only worth showing once there's a choice of posts.
+const tagCounts = new Map<string, number>();
+posts.forEach((post) => post.data.tags.forEach((tag) => tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)));
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([tag]) => tag);
+const showFilters = posts.length > 1 && tags.length > 1;
+---
+
+<BaseLayout
+  page={{
+    title: "Dev log · Kostur",
+    description: "Programming projects by Kostur: games, tools and what building them taught me.",
+    path: "blog",
+  }}
+  tagline="that's all the code… for now."
+>
+  <section class="blog-desk">
+    <header class="blog-head">
+      <h1 class="blog-title">Dev log</h1>
+      <p class="blog-intro">
+        The other half of the desk: games, tools and other things I've programmed, and what building them
+        taught me.
+      </p>
+    </header>
+
+    {
+      showFilters && (
+        <div class="tag-filters" role="group" aria-label="Show posts built with">
+          <button type="button" class="tag-filter" data-tag="all" aria-pressed="true">
+            All
+          </button>
+          {tags.map((tag) => (
+            <button type="button" class="tag-filter" data-tag={tag} aria-pressed="false">
+              {tag}
+            </button>
+          ))}
+        </div>
+      )
+    }
+    <p class="sr-only" id="filter-status" aria-live="polite"></p>
+
+    {
+      posts.length === 0 ? (
+        <p class="blog-empty">Nothing pinned up yet. The first post is on its way.</p>
+      ) : (
+        <ol class="post-list">
+          {cards.map(({ post, sections, minutes }, i) => (
+            <li class:list={["post-item", { "is-featured": i === 0 }]} data-tags={JSON.stringify(post.data.tags)}>
+              <a href={`/blog/${post.slug}`} class="post-card" data-astro-prefetch>
+                <div class="post-main">
+                  <h2 class="post-title">{post.data.title}</h2>
+                  <p class="post-meta">
+                    <time datetime={post.data.date.toISOString()}>{formatPostDate(post.data.date)}</time>
+                    <span>{minutes} min read</span>
+                    {post.data.draft && <span class="post-draft">draft</span>}
+                  </p>
+                  <p class="post-description">{post.data.description}</p>
+                  {post.data.tags.length > 0 && (
+                    <ul class="post-tags" aria-label="Built with">
+                      {post.data.tags.map((tag) => (
+                        <li>{tag}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Only shown on the spotlight card */}
+                <div class="post-inside">
+                  {sections.length > 0 && (
+                    <>
+                      <p class="inside-title">Inside</p>
+                      <ol class="inside-list">
+                        {sections.slice(0, INSIDE_SHOWN).map((section) => (
+                          <li>{section}</li>
+                        ))}
+                      </ol>
+                      {sections.length > INSIDE_SHOWN && (
+                        <p class="inside-more">and {sections.length - INSIDE_SHOWN} more</p>
+                      )}
+                    </>
+                  )}
+                  <span class="post-read">Read the post</span>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )
+    }
+    <p class="blog-empty" id="filter-empty" hidden>No posts built with that yet.</p>
+  </section>
+</BaseLayout>
+
+<script>
+  // The tech filter: show only posts with that tag. The first post still showing becomes the spotlight.
+  function setUpFilters() {
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>(".tag-filter")];
+    const items = [...document.querySelectorAll<HTMLElement>(".post-item")];
+    const empty = document.getElementById("filter-empty");
+    const status = document.getElementById("filter-status");
+    if (buttons.length === 0) return;
+
+    const show = (tag: string) => {
+      let shown = 0;
+      items.forEach((item) => {
+        const tags: string[] = JSON.parse(item.dataset.tags ?? "[]");
+        const visible = tag === "all" || tags.includes(tag);
+        item.hidden = !visible;
+        item.classList.toggle("is-featured", visible && shown === 0);
+        if (visible) shown++;
+      });
+      buttons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.tag === tag)));
+      if (empty) empty.hidden = shown > 0;
+      if (status) status.textContent = `Showing ${shown} ${shown === 1 ? "post" : "posts"}`;
+    };
+
+    buttons.forEach((button) => button.addEventListener("click", () => show(button.dataset.tag ?? "all")));
+  }
+
+  document.addEventListener("astro:page-load", setUpFilters);
+</script>
+
+<style>
+  .blog-desk {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 8rem 1.5rem 3rem;
+  }
+
+  .blog-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem 2.5rem;
+    margin-bottom: 3rem;
+  }
+
+  /* Same accent sticky note as the title on the art desk */
+  .blog-title {
+    position: relative;
+    padding: 1rem 1.6rem 1.2rem;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: clamp(2.4rem, 7vw, 3.75rem);
+    font-weight: 400;
+    line-height: 0.95;
+    transform: rotate(-3deg);
+  }
+
+  .blog-title::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 44px;
+    height: 16px;
+    border-radius: 2px;
+    background: rgba(244, 240, 232, 0.35);
+    transform: translateX(-50%) rotate(-4deg);
+  }
+
+  .blog-intro {
+    flex: 1 1 18rem;
+    max-width: 36ch;
+    color: rgba(244, 240, 232, 0.7);
+    font-size: 1.05rem;
+  }
+
+  /* --- Tech filter: underline tabs, like the gallery's --- */
+  .tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .tag-filter {
+    padding: 0.3rem 0.1rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: rgba(244, 240, 232, 0.5);
+    font-family: var(--font-accent);
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .tag-filter:hover {
+    color: var(--text-color);
+  }
+
+  .tag-filter[aria-pressed="true"] {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  .tag-filter:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .blog-empty {
+    padding: 2rem;
+    border: 2px dashed rgba(244, 240, 232, 0.25);
+    border-radius: 8px;
+    color: rgba(244, 240, 232, 0.6);
+    text-align: center;
+  }
+
+  /* --- The posts --- */
+  .post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+    list-style: none;
+  }
+
+  /* Each post: a paper card pinned to the desk */
+  .post-card {
+    position: relative;
+    display: block;
+    padding: 1.6rem 1.75rem 1.5rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 6px 6px 0 var(--edge-color);
+    text-decoration: none;
+    transform: rotate(var(--tilt, -0.6deg));
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+  }
+
+  .post-item:nth-child(even) .post-card {
+    --tilt: 0.6deg;
+  }
+
+  .post-card:hover,
+  .post-card:focus-visible {
+    transform: rotate(0deg) translateY(-4px);
+    box-shadow: 10px 10px 0 var(--accent-color);
+  }
+
+  .post-card:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 4px;
+  }
+
+  /* Pinned at the top, like the gallery's prints */
+  .post-card::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%);
+  }
+
+  .post-main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .post-title {
+    font-family: var(--font-accent);
+    font-size: 1.75rem;
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+  }
+
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .post-meta > :not(.post-draft) {
+    opacity: 0.6;
+  }
+
+  .post-description {
+    max-width: 52ch;
+    line-height: 1.55;
+  }
+
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+    list-style: none;
+  }
+
+  .post-tags li {
+    padding: 0.1rem 0.6rem;
+    border: 1.5px solid var(--primary-color);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .post-draft {
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* Regular cards are just the post; the peek inside belongs to the spotlight */
+  .post-inside {
+    display: none;
+  }
+
+  /* --- The spotlight: the newest post (of those showing), bigger and with a peek inside --- */
+  .is-featured .post-card {
+    --tilt: -1deg;
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 2rem;
+    padding: 2.1rem 2.25rem 2rem;
+    box-shadow: 8px 8px 0 var(--edge-color);
+  }
+
+  .is-featured .post-card:hover,
+  .is-featured .post-card:focus-visible {
+    box-shadow: 12px 12px 0 var(--accent-color);
+  }
+
+  .is-featured .post-title {
+    font-size: clamp(2rem, 4.5vw, 2.6rem);
+  }
+
+  .is-featured .post-description {
+    font-size: 1.1rem;
+  }
+
+  .is-featured .post-inside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding-left: 1.75rem;
+    border-left: 2px dashed color-mix(in srgb, var(--primary-color) 22%, transparent);
+  }
+
+  .inside-title {
+    font-family: var(--font-accent);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+
+  .inside-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-left: 1.4em;
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+
+  .inside-list li::marker {
+    font-weight: 700;
+    color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+  }
+
+  .inside-more {
+    font-size: 0.85rem;
+    opacity: 0.6;
+  }
+
+  /* Reads like a label stuck on the card; the whole card is the link */
+  .post-read {
+    margin-top: auto;
+    padding: 0.35rem 0.85rem 0.2rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    transform: rotate(-2deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .post-card:hover .post-read {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  @media (max-width: 760px) {
+    .is-featured .post-card {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding: 1.6rem 1.4rem 1.5rem;
+    }
+
+    .is-featured .post-inside {
+      padding: 1.25rem 0 0;
+      border-left: none;
+      border-top: 2px dashed color-mix(in srgb, var(--primary-color) 22%, transparent);
+    }
+
+    .post-read {
+      margin-top: 0.6rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .blog-desk {
+      padding-top: 6.5rem;
+    }
+
+    .post-card {
+      padding: 1.3rem 1.2rem 1.2rem;
+    }
+
+    .post-title {
+      font-size: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-card,
+    .post-read {
+      transition: none;
+    }
+
+    .tag-filter[aria-pressed="true"] {
+      animation: none;
+    }
+  }
+</style>

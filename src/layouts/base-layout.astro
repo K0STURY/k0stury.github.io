@@ -1,17 +1,28 @@
 ---
 import "@styles/master.css";
 import "@fontsource/luckiest-guy";
+import "lenis/dist/lenis.css";
 import MetaTags from "@layouts/meta-tags.astro";
 import NavigationBar from "@components/navigation-bar.astro";
 import { ViewTransitions } from "astro:transitions";
 import { contacts } from "src/site.config";
+import type { Artwork } from "@api/art";
+import type { PageMeta } from "@layouts/meta-tags.astro";
 
+interface Props {
+  piece?: Artwork;
+  page?: PageMeta;
+  // The line under "Kostur." in the footer
+  tagline?: string;
+}
+
+const { piece, page, tagline = "that's all the art… for now." } = Astro.props;
 const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
 ---
 
 <html lang="en">
   <head>
-    <MetaTags />
+    <MetaTags piece={piece} page={page} />
     <ViewTransitions />
     <script is:inline>
       // Apply theme immediately (before paint) — must be is:inline for View Transitions
@@ -28,7 +39,7 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
     <footer class="site-footer relative z-10">
       <div class="footer-sendoff footer-fade">
         <h2 class="footer-word">Kos<span class="text-accent">tur.</span></h2>
-        <p class="footer-tagline">that's all the art&hellip; for now.</p>
+        <p class="footer-tagline">{tagline}</p>
         <div class="footer-ctas">
           <a href={discordLink} class="footer-cta footer-cta--solid" target="_blank" rel="noopener noreferrer">Say hi on Discord</a>
         </div>
@@ -76,10 +87,12 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
     </button>
 
     <script>
+      import { smoothScrollTo } from "../scripts/smooth-scroll";
+
       // Re-initialize on every page load (including View Transitions)
       function initPage() {
         document.getElementById("back-to-top")?.addEventListener("click", () => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          smoothScrollTo(0);
         });
 
         // Random footer message + secret click counter
@@ -187,7 +200,7 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
           });
 
           floatingBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            smoothScrollTo(0);
           });
 
           floatingBtn.addEventListener("mouseenter", () => {
@@ -198,10 +211,15 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
           });
         }
 
-        // Animated favicon: pulsing accent glow
+        // Animated favicon: pulsing accent glow.
+        // One loop of frames is drawn up front and then cycled, so the tab isn't encoding
+        // a fresh PNG every frame; they're only redrawn when a theme changes the accent.
         (() => {
           const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
           if (!favicon) return;
+
+          const FRAMES = 24;
+          const FRAME_MS = 140; // a full pulse every ~3.4s; tab icons don't redraw much faster anyway
 
           const img = new window.Image();
           img.crossOrigin = "anonymous";
@@ -214,22 +232,43 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
             const link = document.createElement("link");
             link.rel = "icon";
             link.type = "image/png";
+            document.head.appendChild(link);
 
-            let phase = 0;
-            function drawFrame() {
-              phase += 0.03;
-              const glow = 0.3 + Math.sin(phase) * 0.3;
-              ctx.clearRect(0, 0, 32, 32);
-              ctx.shadowColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-color").trim();
-              ctx.shadowBlur = 4 + glow * 8;
-              ctx.drawImage(img, 2, 2, 28, 28);
-              ctx.shadowBlur = 0;
-              ctx.drawImage(img, 2, 2, 28, 28);
-              link.href = canvas.toDataURL("image/png");
-              document.head.appendChild(link);
-              requestAnimationFrame(drawFrame);
+            let frames: string[] = [];
+            function drawFrames() {
+              const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent-color").trim();
+              frames = Array.from({ length: FRAMES }, (_, i) => {
+                const glow = 0.3 + Math.sin((i / FRAMES) * Math.PI * 2) * 0.3;
+                ctx.clearRect(0, 0, 32, 32);
+                ctx.shadowColor = accent;
+                ctx.shadowBlur = 4 + glow * 8;
+                ctx.drawImage(img, 2, 2, 28, 28);
+                ctx.shadowBlur = 0;
+                ctx.drawImage(img, 2, 2, 28, 28);
+                return canvas.toDataURL("image/png");
+              });
             }
-            requestAnimationFrame(drawFrame);
+
+            // Reduced motion: hold the glow at its brightest instead of pulsing
+            const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            const BRIGHTEST = FRAMES / 4;
+            let frame = 0;
+
+            drawFrames();
+            link.href = frames[still ? BRIGHTEST : 0];
+
+            // Switching theme changes the accent: redraw the frames in the new colour
+            new MutationObserver(() => {
+              drawFrames();
+              if (still) link.href = frames[BRIGHTEST];
+            }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+            if (still) return;
+            setInterval(() => {
+              if (document.hidden) return; // nobody's looking; same as before, when it ran on animation frames
+              frame = (frame + 1) % FRAMES;
+              link.href = frames[frame];
+            }, FRAME_MS);
           };
         })();
       }
