@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Shape carving, on a 7s loop: a basic circle, carved by a circle and then a block
+       into a horn, recoloured, its nodes shown. A stand-in until there's a recording. -->
+  <rect width="320" height="320" fill="#1a1820" />
+
+  <defs>
+    <mask id="carve" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="320">
+      <rect width="320" height="320" fill="#fff" />
+      <!-- Cut 1: a circle takes a bite out of it -->
+      <circle cx="205" cy="140" r="85" fill="#000" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.3;0.301;1" dur="7s" repeatCount="indefinite" />
+      </circle>
+      <!-- Cut 2: a block chops the bottom flat -->
+      <rect x="0" y="205" width="320" height="140" fill="#000" opacity="0">
+        <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.5;0.501;1" dur="7s" repeatCount="indefinite" />
+      </rect>
+    </mask>
+  </defs>
+
+  <g transform="translate(45 8)">
+    <!-- The shape being carved: white while it's raw, Quil's blue once it's done -->
+    <g mask="url(#carve)">
+      <circle cx="160" cy="170" r="0" fill="#f4f0e8">
+        <!-- Pops in a touch too big and settles, like the stickers do -->
+        <animate attributeName="r" values="0;104;95;95;0;0" keyTimes="0;0.07;0.11;0.9;0.97;1" calcMode="spline"
+          keySplines="0.2 0.8 0.4 1;0.4 0 0.6 1;0 0 1 1;0.5 0 0.75 0;0 0 1 1" dur="7s" repeatCount="indefinite" />
+        <animate attributeName="fill" values="#f4f0e8;#f4f0e8;#31c5d1;#31c5d1" keyTimes="0;0.56;0.62;1" dur="7s" repeatCount="indefinite" />
+      </circle>
+    </g>
+
+    <!-- The cutters, dashed like a selection: they slide in, cut, and go -->
+    <circle cx="345" cy="140" r="85" fill="none" stroke="#e7ae3a" stroke-width="3" stroke-dasharray="9 7" opacity="0">
+      <animate attributeName="cx" values="345;345;205;205" keyTimes="0;0.13;0.28;1" calcMode="spline"
+        keySplines="0 0 1 1;0.25 0.8 0.3 1;0 0 1 1" dur="7s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.12;0.15;0.3;0.36;1" dur="7s" repeatCount="indefinite" />
+    </circle>
+    <rect x="40" y="345" width="250" height="110" fill="none" stroke="#e7ae3a" stroke-width="3" stroke-dasharray="9 7" opacity="0">
+      <animate attributeName="y" values="345;345;205;205" keyTimes="0;0.34;0.48;1" calcMode="spline"
+        keySplines="0 0 1 1;0.25 0.8 0.3 1;0 0 1 1" dur="7s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.33;0.36;0.5;0.56;1" dur="7s" repeatCount="indefinite" />
+    </rect>
+
+    <!-- Its nodes, where the cuts meet: the corners you'd grab with the node tool -->
+    <g fill="#1a1820" stroke="#f4f0e8" stroke-width="2.5" opacity="0">
+      <rect x="66.7" y="200" width="10" height="10" />
+      <rect x="144.6" y="70.6" width="10" height="10" />
+      <rect x="145.2" y="200" width="10" height="10" />
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.64;0.68;0.84;0.88;1" dur="7s" repeatCount="indefinite" />
+    </g>
+  </g>
+</svg>

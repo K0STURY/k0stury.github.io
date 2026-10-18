@@ -11,6 +11,7 @@ const DEFAULT_ENTRY = (id) => ({
   date: "",
   tag: ["Characters"],
   redrawOf: null,
+  quirks: [],
 });
 
 // Load existing artwork.json
@@ -37,10 +38,11 @@ files.forEach((file) => {
 // Sort by ID ascending
 const merged = [...artworkById.values()].sort((a, b) => a.ID - b.ID);
 
-// Every entry carries the redraw line, blank unless it's filled in
+// Every entry carries the redraw and quirks lines, blank/empty unless they're filled in
 const ids = new Set(merged.map((a) => a.ID));
 merged.forEach((a) => {
   if (!("redrawOf" in a)) a.redrawOf = null;
+  if (!("quirks" in a)) a.quirks = [];
   const ref = a.redrawOf;
   if (ref == null || String(ref).trim() === "") return;
   if (Number(ref) === a.ID) {

@@ -4,6 +4,8 @@ import svelte from "@astrojs/svelte";
 
 import icon from "astro-icon";
 import remarkCodeSlips from "./src/plugins/remark-code-slips.mjs";
+import rehypeArtSections from "./src/plugins/rehype-art-sections.mjs";
+import rehypeCaptions from "./src/plugins/rehype-captions.mjs";
 
 // https://astro.build/config
 export default defineConfig({
@@ -18,6 +20,9 @@ export default defineConfig({
     shikiConfig: { theme: "vitesse-dark" },
     // Each code block becomes a "slip" labelled with its language (see the plugin)
     remarkPlugins: [remarkCodeSlips],
+    // Lines that are only italic/bold become captions; on standalone pages, a section with
+    // a line of images in it gets the images beside its text (see the plugins)
+    rehypePlugins: [rehypeCaptions, rehypeArtSections],
   },
   prefetch: {
     defaultStrategy: "viewport",

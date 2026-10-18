@@ -3,6 +3,8 @@ import getAllArt, { type Artwork } from "@api/art";
 import sortByDesc from "src/helpers/utils";
 import { getArtImages } from "src/helpers/art-images";
 import { contacts } from "src/site.config";
+import { quirkCounts, quirkStyle, pickQuirks } from "src/helpers/quirks";
+import "@styles/quirks.css";
 // Lines for the sticky note at the bottom of the desk: one is picked at random per visit
 import quotes from "@data/quotes.json";
 
@@ -18,7 +20,7 @@ arts = arts.sort(sortByDesc);
 const pool = await Promise.all(
   arts.map(async (art) => {
     const { thumb, full } = await getArtImages(art.default as any);
-    return { id: art.id, src: thumb, full, title: art.title || "Untitled" };
+    return { id: art.id, src: thumb, full, title: art.title || "Untitled", ...pickQuirks(art.quirks) };
   }),
 );
 
@@ -43,7 +45,7 @@ const layout = [
 
 ---
 
-<section class="hero-desk" id="hero">
+<section class="hero-desk" id="hero" style={quirkStyle}>
   <!-- Big faded copy of whichever sticker is hovered -->
   <div class="desk-backdrop" id="desk-backdrop" aria-hidden="true">
     <div class="desk-backdrop-art" id="desk-backdrop-art"></div>
@@ -74,15 +76,33 @@ const layout = [
           class="desk-item"
           style={`top:${pos.top}; left:${pos.left}; --delay:${100 + i * 90}ms;`}
         >
-          <div class="desk-parallax" style={`--depth:${pos.depth}px;`}>
+          {/* --rotate sits here so the sticker and its quirk pair (behind it) tilt as one */}
+          <div class="desk-parallax quirk-host" style={`--depth:${pos.depth}px; --rotate:${pos.rotate}deg;`}>
+            {/* Quirks for whichever piece lands here: the script below fills them in */}
+            <div
+              class="quirk-pair"
+              data-quirk={art.pair ?? undefined}
+              data-count={art.pair ? quirkCounts[art.pair] : undefined}
+              style={art.pair ? `--shape:var(--${art.pair}-0);` : undefined}
+              aria-hidden="true"
+            >
+              <span class="quirk-piece quirk-left"></span>
+              <span class="quirk-piece quirk-right"></span>
+            </div>
             <button
               type="button"
               class:list={["pinned-sketch", `pinned-sketch--${pos.size}`]}
-              style={`--rotate:${pos.rotate}deg;`}
               data-art-id={art.id}
               aria-label={`Open ${art.title}`}
             >
               <span class="pin" aria-hidden="true"></span>
+              <span
+                class="quirk-corner"
+                data-quirk={art.corner ?? undefined}
+                data-count={art.corner ? quirkCounts[art.corner] : undefined}
+                style={art.corner ? `--shape:var(--${art.corner}-0);` : undefined}
+                aria-hidden="true"
+              ></span>
               <span class="sketch-clip">
                 <img src={art.src} data-full={art.full} alt="" loading="eager" decoding="async" />
                 <span class="pin-title" aria-hidden="true">{art.title}</span>
@@ -117,7 +137,7 @@ const layout = [
 
 <!-- Inline on purpose: runs while the page is still parsing, so the random set and the
      random layout are what first drop in (a deferred script would show the defaults, then swap). -->
-<script is:inline define:vars={{ pool, quotes }}>
+<script is:inline define:vars={{ pool, quotes, quirkCounts }}>
   // A random quote on the sticky note. Done first: the scatter below measures the note
   // to keep stickers off it, and a different quote can make it a different size.
   const quoteNote = document.getElementById("hero-quote");
@@ -146,7 +166,26 @@ const layout = [
     if (title) title.textContent = art.title;
     slot.dataset.artId = String(art.id);
     slot.setAttribute("aria-label", `Open ${art.title}`);
+
+    // Its quirks: the pair behind the sticker, the corner piece on it (or none)
+    const host = slot.parentElement;
+    setQuirk(host?.querySelector(".quirk-pair"), art.pair);
+    setQuirk(slot.querySelector(".quirk-corner"), art.corner);
   });
+
+  function setQuirk(el, quirk) {
+    if (!el) return;
+    delete el.dataset.shown;
+    if (!quirk) {
+      delete el.dataset.quirk;
+      delete el.dataset.count;
+      el.style.removeProperty("--shape");
+      return;
+    }
+    el.dataset.quirk = quirk;
+    el.dataset.count = String(quirkCounts[quirk]);
+    el.style.setProperty("--shape", `var(--${quirk}-0)`);
+  }
 
   // Scatter the stickers too: a fresh spot, size and tilt on every visit.
   // Wide screens only; narrower ones line them up in a grid (see the mobile styles).
@@ -232,7 +271,7 @@ const layout = [
       item.style.top = `${((best.y / H) * 100).toFixed(2)}%`;
       slot.style.setProperty("--size", `${Math.round(best.w)}px`);
       const tilt = (2 + Math.random() * 8) * (Math.random() < 0.5 ? -1 : 1);
-      slot.style.setProperty("--rotate", `${tilt.toFixed(1)}deg`);
+      slot.parentElement?.style.setProperty("--rotate", `${tilt.toFixed(1)}deg`);
       // Bigger reads as closer to you, so it drifts further with the mouse
       const depth = Math.round(8 + ((best.w - 108) / 100) * 16);
       item.querySelector(".desk-parallax")?.style.setProperty("--depth", `${depth}px`);
@@ -404,6 +443,18 @@ const layout = [
     outline-offset: 4px;
   }
 
+  /* Quirks (see src/styles/quirks.css): the pair layer tilts and grows exactly like the
+     sticker, so the pair stays hidden behind the paper until a hover pushes it up */
+  .quirk-pair {
+    transform: rotate(var(--rotate, 0deg));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .quirk-host:hover .quirk-pair,
+  .quirk-host:has(:focus-visible) .quirk-pair {
+    transform: rotate(0deg) scale(1.05);
+  }
+
   /* Sizes the hand-placed layout starts from; the scatter script picks its own with --size */
   .pinned-sketch { width: var(--size); height: var(--size); }
   .pinned-sketch--lg { --size: 190px; }
@@ -551,6 +602,7 @@ const layout = [
 
 <script>
   import { smoothScrollTo } from "../scripts/smooth-scroll";
+  import { dealQuirksOnHover } from "../scripts/quirks";
 
   document.addEventListener("astro:page-load", () => {
     document.getElementById("hero-scroll-btn")?.addEventListener("click", () => {
@@ -573,6 +625,9 @@ const layout = [
       preloaded.set(full, img);
       img.src = full;
     };
+
+    // Quirks (horns, ears, witch hats, ...): a fresh shape on every hover
+    desk.querySelectorAll<HTMLElement>(".quirk-host").forEach(dealQuirksOnHover);
 
     desk.querySelectorAll<HTMLElement>(".pinned-sketch").forEach((sketch) => {
       sketch.addEventListener("pointerenter", () => preload(sketch));

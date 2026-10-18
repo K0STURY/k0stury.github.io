@@ -1,9 +1,11 @@
 ---
 import getAllArt, { type Artwork } from "@api/art";
 import sortByDesc from "src/helpers/utils";
-import { getArtImages, THUMB_WIDTH } from "src/helpers/art-images";
-import { getArtPanel } from "src/helpers/art-panel";
+import { THUMB_WIDTH } from "src/helpers/art-images";
+import { getLightboxImages } from "src/helpers/lightbox-images";
 import Lightbox from "./lightbox.svelte";
+import { quirkCounts, quirkStyle, pickQuirks } from "src/helpers/quirks";
+import "@styles/quirks.css";
 
 interface Props {
   // On a piece's own page (/art/<id>): the lightbox opens on it straight away
@@ -20,30 +22,8 @@ let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
 
 arts = arts.sort(sortByDesc);
 
-// Pieces in a redraw pair (either half): the then & now view lines these up
-const paired = new Set(arts.flatMap((art) => (art.redrawOf == null ? [] : [art.id, art.redrawOf])));
-
-// Thumbnail for the tile + capped full-res webp for the lightbox.
-// The lightbox shows the tile's own thumbnail (already downloaded) until the full-res arrives.
-const imageData = await Promise.all(
-  arts.map(async (art) => {
-    const { thumb, full } = await getArtImages(art.default as any);
-    const panel = paired.has(art.id) ? await getArtPanel(art.id) : null;
-    return {
-      id: art.id,
-      src: thumb,
-      fullSrc: full,
-      width: art.default.width,
-      height: art.default.height,
-      tags: art.tags,
-      title: art.title,
-      description: art.description,
-      date: art.date,
-      redrawOf: art.redrawOf,
-      panel,
-    };
-  }),
-);
+// Thumbnail for each tile, plus everything the lightbox shows
+const imageData = await getLightboxImages(arts);
 
 const openAt = openPiece == null ? -1 : arts.findIndex((art) => art.id === openPiece);
 
@@ -52,7 +32,11 @@ const categorySet = new Set<string>();
 arts.forEach((art) => art.tags.forEach((tag) => categorySet.add(tag)));
 // Separate Highlights from the rest, sorted alphabetically; All goes last
 categorySet.delete("Highlights");
-const otherCategories = [...categorySet].sort();
+// A category every piece is in would filter nothing (e.g. Characters, while that's all
+// there is): no tab for it. It gets one by itself once some piece isn't in it.
+const otherCategories = [...categorySet]
+  .filter((category) => arts.some((art) => !art.tags.includes(category)))
+  .sort();
 
 // Count how many items match "Highlights" for the initial counter
 const highlightsCount = arts.filter((a) => a.tags.includes("Highlights")).length;
@@ -73,9 +57,10 @@ const scatter = [
   { rotate: -2, y: 5 },
   { rotate: 3, y: -4 },
 ];
+
 ---
 
-<section class="gallery-scene" id="gallery-scene">
+<section class="gallery-scene" id="gallery-scene" style={quirkStyle}>
   <h2 class="gallery-heading">the whole <span class="text-accent">stash</span></h2>
 
   <!-- Stats -->
@@ -126,10 +111,12 @@ const scatter = [
     {
       arts.map((art, index) => {
         const s = scatter[index % scatter.length];
+        const { pair, corner } = pickQuirks(art.quirks);
         return (
           <button
             class:list={[
               "gallery-item",
+              "quirk-host",
               "opacity-0 translate-y-4",
               !art.tags.includes("Highlights") && "hidden",
             ]}
@@ -139,8 +126,30 @@ const scatter = [
             data-full-src={imageData[index].fullSrc}
             aria-label={art.title || "Untitled artwork"}
           >
+            {/* Tucked behind the frame, tilted with it; they peek out over the top on hover */}
+            {pair && (
+              <div
+                class="quirk-pair"
+                data-quirk={pair}
+                data-count={quirkCounts[pair]}
+                style={`--rotate:${s.rotate}deg; --y:${s.y}px; --shape:var(--${pair}-0);`}
+                aria-hidden="true"
+              >
+                <span class="quirk-piece quirk-left"></span>
+                <span class="quirk-piece quirk-right"></span>
+              </div>
+            )}
             <div class="sticker-frame" style={`--rotate:${s.rotate}deg; --y:${s.y}px;`}>
               <span class="pin" aria-hidden="true"></span>
+              {corner && (
+                <span
+                  class="quirk-corner"
+                  data-quirk={corner}
+                  data-count={quirkCounts[corner]}
+                  style={`--shape:var(--${corner}-0);`}
+                  aria-hidden="true"
+                ></span>
+              )}
               {newIds.has(art.id) && <span class="new-badge">NEW</span>}
               {art.redrawOf != null && <span class="redraw-stamp">redraw</span>}
               <div class="sticker-clip">
@@ -516,6 +525,18 @@ const scatter = [
     }
   }
 
+  /* Quirks (see src/styles/quirks.css): the pair layer tilts and lifts exactly like the
+     frame, so the pair stays hidden behind the paper until a hover pushes it up */
+  .quirk-pair {
+    transform: rotate(var(--rotate, 0deg)) translateY(var(--y, 0px));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .gallery-item:hover .quirk-pair,
+  .gallery-item:focus-visible .quirk-pair {
+    transform: rotate(0deg) translateY(calc(var(--y, 0px) - 6px)) scale(1.04);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .new-badge {
       animation: none;
@@ -524,6 +545,8 @@ const scatter = [
 </style>
 
 <script>
+import { dealQuirksOnHover } from "../scripts/quirks";
+
 document.addEventListener("astro:page-load", () => {
   const galleryEl = document.getElementById("gallery");
   if (!galleryEl) return; // Not on a page with the gallery
@@ -855,6 +878,11 @@ document.addEventListener("astro:page-load", () => {
   items.forEach((btn) => {
     btn.addEventListener("mouseenter", () => preloadOnInteract(btn), { once: true });
     btn.addEventListener("touchstart", () => preloadOnInteract(btn), { once: true, passive: true });
+  });
+
+  // Quirks (horns, ears, witch hats, ...): a fresh shape on every hover
+  items.forEach((tile) => {
+    if (tile.querySelector("[data-quirk]")) dealQuirksOnHover(tile);
   });
 
   // Click → open lightbox

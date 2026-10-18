@@ -28,6 +28,7 @@ const tagTilts = [-3, 2, -2, 3];
           <!-- Invisible full copy reserves the note's final size while the visible copy types in -->
           <p class="bio-ghost" aria-hidden="true"><Fragment set:html={details.aboutMe} /></p>
           <p class="bio-text" id="bio-text"><Fragment set:html={details.aboutMe} /></p>
+          <a href="/process" class="bio-more" data-astro-prefetch>how I make art</a>
         </div>
       </div>
 
@@ -127,6 +128,8 @@ const tagTilts = [-3, 2, -2, 3];
     position: relative;
     display: grid;
     max-width: 34rem;
+    /* Room underneath for the "how I make art" label hanging off its corner */
+    margin-bottom: 0.6rem;
     padding: 1.6rem 1.6rem 1.4rem;
     border-radius: 6px;
     background: var(--text-color);
@@ -176,6 +179,38 @@ const tagTilts = [-3, 2, -2, 3];
     font-weight: 400;
     letter-spacing: 0.05em;
     transform: rotate(-2deg);
+  }
+
+  /* To the process page: an accent label stuck over the note's bottom-right corner */
+  .bio-more {
+    position: absolute;
+    right: 1.2rem;
+    bottom: -0.95rem;
+    padding: 0.3rem 0.8rem 0.2rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    transform: rotate(-3deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .bio-more::after {
+    content: " ›";
+  }
+
+  .bio-more:hover,
+  .bio-more:focus-visible {
+    transform: rotate(0deg) scale(1.08);
+  }
+
+  .bio-more:focus-visible {
+    outline: 3px solid var(--text-color);
+    outline-offset: 3px;
   }
 
   .bio-note :global(.bio-cursor) {
@@ -261,6 +296,10 @@ const tagTilts = [-3, 2, -2, 3];
   @media (prefers-reduced-motion: reduce) {
     .about-desk.is-in .drop {
       animation: none;
+    }
+
+    .bio-more {
+      transition: none;
     }
   }
 </style>

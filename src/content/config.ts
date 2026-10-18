@@ -21,4 +21,15 @@ const blog = defineCollection({
     }),
 });
 
-export const collections = { blog };
+// Standalone written pages, one Markdown file each in src/content/pages/ (e.g. process.md
+// for /process). Each needs its own route in src/pages/. Images work like the blog's.
+const pages = defineCollection({
+  type: "content",
+  schema: z.object({
+    title: z.string(),
+    // One or two sentences: shown under the title and in link previews
+    description: z.string(),
+  }),
+});
+
+export const collections = { blog, pages };

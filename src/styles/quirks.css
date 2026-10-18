@@ -1,0 +1,106 @@
+/* Hover quirks (horns, ears, witch hats...) for the stickers in the gallery and on the
+   banner. Shapes come from src/assets/quirks, see src/helpers/quirks.ts.
+
+   .quirk-host    whatever is hovered/focused to show them
+   .quirk-pair    a layer just behind the sticker's paper, which the component tilts and
+                  lifts exactly like the sticker; the pair hides behind the paper until
+                  a hover pushes it up past the top edge
+   .quirk-corner  inside the sticker: one piece that drops onto its top-right corner
+
+   Each carries the quirk's name in data-quirk (without one, it shows nothing) and its
+   current shape in --shape. */
+
+.quirk-pair {
+  --lean: -14deg;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.quirk-pair:not([data-quirk]),
+.quirk-corner:not([data-quirk]) {
+  display: none;
+}
+
+/* The SVG's shape in the frame's own white, as if cut from the same paper. It's fit
+   into the box, standing on its bottom edge. */
+.quirk-piece,
+.quirk-corner {
+  background: var(--text-color);
+  -webkit-mask: var(--shape) bottom center / contain no-repeat;
+  mask: var(--shape) bottom center / contain no-repeat;
+}
+
+.quirk-piece {
+  position: absolute;
+  bottom: calc(100% - 10px);
+  width: clamp(18px, 7%, 26px);
+  aspect-ratio: 24 / 32;
+  transform-origin: 50% 100%;
+  transition: transform 0.2s ease-in;
+}
+
+/* Ears: wider, more upright, and less of them hidden behind the frame */
+.quirk-pair[data-quirk="ears"] {
+  --lean: -6deg;
+}
+
+.quirk-pair[data-quirk="ears"] .quirk-piece {
+  bottom: calc(100% - 7px);
+  width: clamp(22px, 9%, 32px);
+  aspect-ratio: 1;
+}
+
+/* Hidden: dropped by their own height, behind the frame. The right piece is the left
+   one mirrored, so the same lean tips each one outward */
+.quirk-left {
+  left: 24%;
+  transform: translate(-50%, 100%) rotate(var(--lean));
+}
+
+.quirk-right {
+  left: 76%;
+  transform: translate(-50%, 100%) scaleX(-1) rotate(var(--lean));
+}
+
+.quirk-host:is(:hover, :focus-visible, :has(:focus-visible)) .quirk-piece {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.quirk-host:is(:hover, :focus-visible, :has(:focus-visible)) .quirk-left {
+  transform: translate(-50%, 0) rotate(var(--lean));
+}
+
+.quirk-host:is(:hover, :focus-visible, :has(:focus-visible)) .quirk-right {
+  transform: translate(-50%, 0) scaleX(-1) rotate(var(--lean));
+  transition-delay: 60ms;
+}
+
+/* Corner: drops onto the frame's top-right corner and lands at a tilt */
+.quirk-corner {
+  position: absolute;
+  bottom: 100%;
+  right: -3%;
+  z-index: 6;
+  width: clamp(36px, 12%, 48px);
+  aspect-ratio: 48 / 40;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-18px) rotate(32deg);
+  transform-origin: 50% 90%;
+  transition: opacity 0.15s ease, transform 0.2s ease-in;
+}
+
+.quirk-host:is(:hover, :focus-visible, :has(:focus-visible)) .quirk-corner {
+  opacity: 1;
+  transform: translateY(0) rotate(14deg);
+  transition: opacity 0.15s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quirk-piece,
+  .quirk-corner,
+  .quirk-host:is(:hover, :focus-visible, :has(:focus-visible)) :is(.quirk-piece, .quirk-corner) {
+    transition: none;
+  }
+}

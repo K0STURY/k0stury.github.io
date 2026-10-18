@@ -1,0 +1,395 @@
+/* Written pages (dev log posts, the process page): the look of Markdown output.
+   Put class="prose" on whatever holds the rendered Markdown. */
+
+.prose {
+  --body: rgba(244, 240, 232, 0.86);
+  --muted: rgba(244, 240, 232, 0.6);
+  --faint: rgba(244, 240, 232, 0.1);
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  max-width: 68ch;
+  color: var(--body);
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.prose > * + * {
+  margin-top: 1.2em;
+}
+
+.prose strong {
+  color: var(--text-color);
+  font-weight: 700;
+}
+
+/* Sections: Luckiest Guy, with a strip of accent tape underneath */
+.prose h2 {
+  position: relative;
+  margin-top: 2.8em;
+  padding-bottom: 0.45em;
+  color: var(--text-color);
+  font-family: var(--font-accent);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.prose h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 3.25rem;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--accent-color);
+  transform: rotate(-1.5deg);
+}
+
+/* Jumping to a section stops below the fixed nav, not under it */
+.prose :is(h2, h3, h4) {
+  scroll-margin-top: 6rem;
+}
+
+.prose h3 {
+  margin-top: 2.2em;
+  color: var(--text-color);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.prose h4 {
+  margin-top: 1.8em;
+  color: var(--text-color);
+  font-weight: 700;
+}
+
+.prose :is(h2, h3, h4) + * {
+  margin-top: 0.75em;
+}
+
+.prose a {
+  color: var(--accent-color);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.prose a:hover {
+  color: var(--accent-color-hover);
+}
+
+.prose :is(ul, ol) {
+  padding-left: 1.3em;
+}
+
+.prose li + li {
+  margin-top: 0.4em;
+}
+
+.prose li::marker {
+  color: var(--accent-color);
+}
+
+.prose blockquote {
+  padding-left: 1em;
+  border-left: 4px solid var(--accent-color);
+  color: var(--muted);
+  font-style: italic;
+}
+
+.prose hr {
+  height: 0;
+  margin: 3em 0;
+  border: none;
+  border-top: 2px dashed var(--faint);
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* A colour chip, written in the Markdown as <span class="swatch" style="background: #31c5d1"></span> */
+.prose .swatch {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.35em;
+  border: 2px solid var(--text-color);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 var(--edge-color);
+  vertical-align: -0.12em;
+  transform: rotate(-6deg);
+}
+
+/* A line that's only italic or bold (like "Code Example" above a snippet) reads as a caption */
+.prose p.caption {
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.prose p.caption + .code-slip {
+  margin-top: 0.6em;
+}
+
+.prose :not(pre) > code {
+  padding: 0.12em 0.4em;
+  border: 1px solid rgba(244, 240, 232, 0.14);
+  border-radius: 4px;
+  background: rgba(244, 240, 232, 0.07);
+  color: var(--text-color);
+  font-family: var(--mono);
+  font-size: 0.86em;
+}
+
+/* --- Code: a slip taped down on the desk, with a header strip for its language and the copy button --- */
+.prose .code-slip {
+  position: relative;
+  margin-top: 1.75em;
+  margin-bottom: 1.75em;
+  padding-top: 2.6rem;
+  border: 1px solid rgba(244, 240, 232, 0.08);
+  border-radius: 8px;
+  background: var(--panel-color);
+  box-shadow: 6px 6px 0 var(--edge-color);
+}
+
+/* Tape */
+.prose .code-slip::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 1.25rem;
+  z-index: 1;
+  width: 60px;
+  height: 18px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+  transform: rotate(-4deg);
+}
+
+/* The line under the header strip */
+.prose .code-slip::after {
+  content: "";
+  position: absolute;
+  top: 2.6rem;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(244, 240, 232, 0.08);
+}
+
+.prose .code-lang {
+  position: absolute;
+  top: 0.8rem;
+  left: calc(1.25rem + 60px + 0.75rem);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.prose .code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  padding: 0.2rem 0.65rem;
+  border: 1.5px solid rgba(244, 240, 232, 0.2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.prose .code-copy:hover,
+.prose .code-copy:focus-visible {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.prose pre {
+  margin: 0;
+  padding: 1.1rem 1.35rem 1.3rem;
+  overflow-x: auto;
+  /* The highlighter brings its own background; the slip is the background instead */
+  background-color: transparent !important;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 240, 232, 0.25) transparent;
+}
+
+.prose pre code {
+  font-family: inherit;
+}
+
+.prose pre:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .prose {
+    font-size: 1.0625rem;
+  }
+
+  .prose h2 {
+    font-size: 1.65rem;
+  }
+
+  .prose pre {
+    padding: 1rem 1rem 1.1rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* --- Art beside the writing (sections built by src/plugins/rehype-art-sections.mjs) --- */
+.prose .art-text > * + * {
+  margin-top: 1.2em;
+}
+
+/* The section, not its heading, keeps the space above, so the art lines up with the heading */
+.prose > .art-section {
+  margin-top: 5.6rem;
+}
+
+.prose .art-text > h2:first-child {
+  margin-top: 0;
+}
+
+.prose .art-stack {
+  width: 100%;
+  max-width: 26rem;
+  margin: 2.5rem auto 0;
+}
+
+@media (min-width: 900px) {
+  .prose .art-section {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 3.5rem;
+    align-items: start;
+  }
+
+  .prose .art-stack {
+    margin: 0.5rem 0 0;
+  }
+}
+
+/* The images: stickers pinned at odd angles, overlapping a little */
+.prose .art-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 1rem;
+}
+
+.prose .art-row > :is(img, a) {
+  position: relative;
+  display: block;
+  align-self: start;
+  border: 4px solid var(--text-color);
+  border-radius: 8px;
+  background: var(--text-color);
+  box-shadow: 5px 5px 0 var(--edge-color);
+  transform: rotate(var(--tilt, -3deg));
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease;
+}
+
+.prose .art-row > :nth-child(even) {
+  --tilt: 4deg;
+}
+
+.prose .art-row img {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+}
+
+/* Just one: a smaller sticker, lined up with the right edge like the bigger stacks, tilting
+   the other way from one section to the next */
+.prose .art-row:has(> :only-child) {
+  max-width: 12.5rem;
+  margin-inline: auto;
+}
+
+.prose > .art-section:nth-of-type(even) .art-row > :only-child {
+  --tilt: 4deg;
+}
+
+@media (min-width: 900px) {
+  .prose .art-row:has(> :only-child),
+  .prose .art-row:has(> :only-child) + .art-caption {
+    max-width: 12.5rem;
+    margin-inline: auto 0;
+  }
+}
+
+/* Three of them: a loose triangle, two up top and the last one in front, lower down */
+.prose .art-row:has(> :nth-child(3):last-child) {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 0;
+  aspect-ratio: 1;
+}
+
+.prose .art-row:has(> :nth-child(3):last-child) > :nth-child(1) {
+  --tilt: -7deg;
+  grid-area: 1 / 1 / 7 / 7;
+}
+
+.prose .art-row:has(> :nth-child(3):last-child) > :nth-child(2) {
+  --tilt: 6deg;
+  grid-area: 2 / 6 / 9 / 13;
+}
+
+.prose .art-row:has(> :nth-child(3):last-child) > :nth-child(3) {
+  --tilt: -2deg;
+  z-index: 1;
+  grid-area: 6 / 3 / 13 / 10;
+}
+
+/* Pointed at, any of them comes to the front and straightens up */
+.prose .art-row > :is(img, a):hover,
+.prose .art-row > a:focus-visible {
+  z-index: 2;
+  transform: rotate(0deg) scale(1.06);
+  box-shadow: 8px 8px 0 var(--accent-color);
+}
+
+.prose .art-row > a:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 4px;
+}
+
+.prose .art-caption {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .prose > .art-section {
+    margin-top: 4.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose .art-row > :is(img, a) {
+    transition: none;
+  }
+}
