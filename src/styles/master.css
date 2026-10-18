@@ -100,6 +100,59 @@ body::after {
   animation: gelatine 0.375s infinite;
 }
 
+/* Page changes: the whole view turns over at once (the nav is its own still layer, see
+   navigation-bar.astro). Going on, the page slides off the desk and the next one drops in
+   from above with the stickers' bounce; going back, the other way round.
+   Astro turns these off for anyone who prefers reduced motion. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  animation: 200ms ease-in both pageLeaveDown;
+}
+
+::view-transition-new(root) {
+  animation: 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 90ms both pageDropIn;
+}
+
+html[data-astro-transition="back"]::view-transition-old(root) {
+  animation-name: pageLeaveUp;
+}
+
+html[data-astro-transition="back"]::view-transition-new(root) {
+  animation-name: pageRiseIn;
+}
+
+@keyframes pageLeaveDown {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+}
+
+@keyframes pageLeaveUp {
+  to {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.985);
+  }
+}
+
+@keyframes pageDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) rotate(-0.8deg) scale(0.985);
+  }
+}
+
+@keyframes pageRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(0.8deg) scale(0.985);
+  }
+}
+
 /* Reduce GPU load on mobile */
 @media (max-width: 768px) {
   body::after {

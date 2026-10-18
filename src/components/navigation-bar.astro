@@ -5,9 +5,12 @@ import { blogEnabled } from "src/helpers/blog";
 const onBlog = Astro.url.pathname.startsWith("/blog");
 ---
 
+<!-- Its own layer in page changes, held still while the page underneath turns over -->
 <nav
   class="fixed items-center flex justify-between w-full z-50 group px-5 py-4 md:px-8"
   data-inview="false"
+  transition:name="site-nav"
+  transition:animate="none"
 >
   <h1
     class="group-data-[inview='false']:text-3xl md:group-data-[inview='false']:text-4xl font-accent tracking-tighter transition-[font-size,transform] duration-300 ease-out hover:animate-gelatine-in-out"

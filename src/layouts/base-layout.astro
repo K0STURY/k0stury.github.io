@@ -33,7 +33,8 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
     <div id="scroll-progress" style="position:fixed;top:0;left:0;height:3px;width:0%;background:var(--accent-color);z-index:9998;pointer-events:none;transition:width 0.1s linear;"></div>
     <NavigationBar />
     <slot name="banner" />
-    <main class="flex flex-col gap-8 relative z-10" transition:animate="fade">
+    <!-- Page changes animate the whole view at once (see "Page changes" in master.css) -->
+    <main class="flex flex-col gap-8 relative z-10">
       <slot />
     </main>
     <footer class="site-footer relative z-10">

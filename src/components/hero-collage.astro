@@ -138,143 +138,191 @@ const layout = [
 <!-- Inline on purpose: runs while the page is still parsing, so the random set and the
      random layout are what first drop in (a deferred script would show the defaults, then swap). -->
 <script is:inline define:vars={{ pool, quotes, quirkCounts }}>
-  // A random quote on the sticky note. Done first: the scatter below measures the note
-  // to keep stickers off it, and a different quote can make it a different size.
-  const quoteNote = document.getElementById("hero-quote");
-  const quote = quotes[Math.floor(Math.random() * quotes.length)];
-  if (quoteNote && quote) {
-    quoteNote.replaceChildren(
-      ...quote.flatMap((line, i) => (i > 0 ? [document.createElement("br"), line] : [line])),
-    );
-  }
+  // Deals the desk. Astro skips re-running an inline script when the page you came from had
+  // the very same one (the home page again, or a piece's own page), so besides running here
+  // it's hooked onto every page change that lands on a desk. Dealing twice is harmless:
+  // the second time just puts back what the first one dealt.
+  window.__dealHeroDesk = function () {
+    // Coming back during the same visit (the site's own page changes keep this window; a
+    // reload or a new visit doesn't): the same desk as before, already in place, instead of a
+    // new shuffle dropping in. What was dealt is remembered in window.__heroDesk.
+    const hero = document.getElementById("hero");
+    const saved = window.__heroDesk;
+    if (saved && hero) hero.classList.add("is-returning");
 
-  const slots = [...document.querySelectorAll("#hero .pinned-sketch")];
-  const picks = pool.slice();
-  for (let i = picks.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [picks[i], picks[j]] = [picks[j], picks[i]];
-  }
-  slots.forEach((slot, i) => {
-    const art = picks[i];
-    if (!art) return;
-    const img = slot.querySelector("img");
-    const title = slot.querySelector(".pin-title");
-    if (img) {
-      img.src = art.src;
-      img.dataset.full = art.full;
-    }
-    if (title) title.textContent = art.title;
-    slot.dataset.artId = String(art.id);
-    slot.setAttribute("aria-label", `Open ${art.title}`);
-
-    // Its quirks: the pair behind the sticker, the corner piece on it (or none)
-    const host = slot.parentElement;
-    setQuirk(host?.querySelector(".quirk-pair"), art.pair);
-    setQuirk(slot.querySelector(".quirk-corner"), art.corner);
-  });
-
-  function setQuirk(el, quirk) {
-    if (!el) return;
-    delete el.dataset.shown;
-    if (!quirk) {
-      delete el.dataset.quirk;
-      delete el.dataset.count;
-      el.style.removeProperty("--shape");
-      return;
-    }
-    el.dataset.quirk = quirk;
-    el.dataset.count = String(quirkCounts[quirk]);
-    el.style.setProperty("--shape", `var(--${quirk}-0)`);
-  }
-
-  // Scatter the stickers too: a fresh spot, size and tilt on every visit.
-  // Wide screens only; narrower ones line them up in a grid (see the mobile styles).
-  const hero = document.getElementById("hero");
-  if (hero && !window.matchMedia("(max-width: 900px)").matches) {
-    const W = hero.offsetWidth;
-    const H = hero.offsetHeight;
-
-    // Stay off the notes, with room to spare: the title can grow a little once its font loads
-    const PAD = 28;
-    const keepOut = [...hero.querySelectorAll(".desk-item--title, .desk-item--tag, .desk-item--joke")].map(
-      (el) => ({
-        x: el.offsetLeft - PAD,
-        y: el.offsetTop - PAD,
-        w: el.offsetWidth * 1.15 + PAD * 2,
-        h: el.offsetHeight + PAD * 2,
-      }),
-    );
-    keepOut.push({ x: W / 2 - 70, y: H - 120, w: 140, h: 120 }); // the scroll-down button
-
-    const nav = document.querySelector("nav");
-    const top = (nav ? nav.offsetHeight : 80) + 16;
-    const EDGE = 24;
-    const TUCK = 18; // how far stickers may tuck under each other, like on a real desk
-
-    const CANDIDATES = 10; // free spots tried per sticker; the roomiest wins, so they spread out instead of clumping
-
-    const overlaps = (a, b, gap) =>
-      a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
-
-    const gapBetween = (a, b) =>
-      Math.hypot(
-        Math.max(0, a.x - (b.x + b.w), b.x - (a.x + a.w)),
-        Math.max(0, a.y - (b.y + b.h), b.y - (a.y + a.h)),
+    // A random quote on the sticky note. Done first: the scatter below measures the note
+    // to keep stickers off it, and a different quote can make it a different size.
+    const quoteNote = document.getElementById("hero-quote");
+    const quoteIndex = saved?.quote ?? Math.floor(Math.random() * quotes.length);
+    const quote = quotes[quoteIndex];
+    if (quoteNote && quote) {
+      quoteNote.replaceChildren(
+        ...quote.flatMap((line, i) => (i > 0 ? [document.createElement("br"), line] : [line])),
       );
+    }
 
-    // How much clear space a spot has: to the nearest sticker, note or edge of the desk
-    const room = (box) =>
-      Math.min(
-        box.x - EDGE,
-        W - EDGE - (box.x + box.w),
-        box.y - top,
-        H - EDGE - (box.y + box.h),
-        ...placed.map((p) => gapBetween(box, p)),
-        ...keepOut.map((k) => gapBetween(box, k)),
-      );
-
-    // One big centrepiece, the rest mixed; biggest placed first so they find room
-    const sizes = slots
-      .map((_, i) => (i === 0 ? 180 + Math.random() * 30 : 108 + Math.random() * 72))
-      .sort((a, b) => b - a);
-
-    const placed = [];
-    slots.forEach((slot, i) => {
-      const item = slot.closest(".desk-item");
-      let size = sizes[i];
-      let best = null;
-      let bestRoom = -Infinity;
-      let found = 0;
-
-      for (let attempt = 0; attempt < 400 && found < CANDIDATES; attempt++) {
-        if (attempt > 0 && attempt % 100 === 0 && !best) size *= 0.88; // crowded: try it a little smaller
-        const box = {
-          x: EDGE + Math.random() * (W - size - EDGE * 2),
-          y: top + Math.random() * (H - top - size - EDGE),
-          w: size,
-          h: size,
-        };
-        if (keepOut.some((k) => overlaps(box, k, 0)) || placed.some((p) => overlaps(box, p, -TUCK))) continue;
-        found++;
-        const space = room(box);
-        if (space > bestRoom) {
-          best = box;
-          bestRoom = space;
-        }
+    const slots = [...document.querySelectorAll("#hero .pinned-sketch")];
+    let order = saved?.picks;
+    if (!order) {
+      order = pool.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
       }
+    }
+    const picks = order.map((i) => pool[i]);
+    slots.forEach((slot, i) => {
+      const art = picks[i];
+      if (!art) return;
+      const img = slot.querySelector("img");
+      const title = slot.querySelector(".pin-title");
+      if (img) {
+        img.src = art.src;
+        img.dataset.full = art.full;
+      }
+      if (title) title.textContent = art.title;
+      slot.dataset.artId = String(art.id);
+      slot.setAttribute("aria-label", `Open ${art.title}`);
 
-      // No room found (a very small window): it keeps its hand-placed spot
-      if (!best) return;
+      // Its quirks: the pair behind the sticker, the corner piece on it (or none)
+      const host = slot.parentElement;
+      setQuirk(host?.querySelector(".quirk-pair"), art.pair);
+      setQuirk(slot.querySelector(".quirk-corner"), art.corner);
+    });
 
-      placed.push(best);
-      item.style.left = `${((best.x / W) * 100).toFixed(2)}%`;
-      item.style.top = `${((best.y / H) * 100).toFixed(2)}%`;
-      slot.style.setProperty("--size", `${Math.round(best.w)}px`);
-      const tilt = (2 + Math.random() * 8) * (Math.random() < 0.5 ? -1 : 1);
-      slot.parentElement?.style.setProperty("--rotate", `${tilt.toFixed(1)}deg`);
-      // Bigger reads as closer to you, so it drifts further with the mouse
-      const depth = Math.round(8 + ((best.w - 108) / 100) * 16);
-      item.querySelector(".desk-parallax")?.style.setProperty("--depth", `${depth}px`);
+    function setQuirk(el, quirk) {
+      if (!el) return;
+      delete el.dataset.shown;
+      if (!quirk) {
+        delete el.dataset.quirk;
+        delete el.dataset.count;
+        el.style.removeProperty("--shape");
+        return;
+      }
+      el.dataset.quirk = quirk;
+      el.dataset.count = String(quirkCounts[quirk]);
+      el.style.setProperty("--shape", `var(--${quirk}-0)`);
+    }
+
+    // Puts a sticker on its spot: where it sits, how big, its tilt and parallax depth
+    function place(slot, spot) {
+      const item = slot.closest(".desk-item");
+      item.style.left = spot.left;
+      item.style.top = spot.top;
+      slot.style.setProperty("--size", spot.size);
+      slot.parentElement?.style.setProperty("--rotate", spot.rotate);
+      item.querySelector(".desk-parallax")?.style.setProperty("--depth", spot.depth);
+    }
+
+    // Scatter the stickers too: a fresh spot, size and tilt on every visit.
+    // Wide screens only; narrower ones line them up in a grid (see the mobile styles).
+    let W = 0;
+    let H = 0;
+    let spots = null;
+    if (hero && !window.matchMedia("(max-width: 900px)").matches) {
+      W = hero.offsetWidth;
+      H = hero.offsetHeight;
+    }
+    // Back on the same desk at the same size: the spots from last time
+    if (W && saved?.spots && saved.W === W && saved.H === H) {
+      spots = saved.spots;
+      spots.forEach((spot, i) => spot && slots[i] && place(slots[i], spot));
+    } else if (W) {
+      spots = [];
+
+      // Stay off the notes, with room to spare: the title can grow a little once its font loads
+      const PAD = 28;
+      const keepOut = [...hero.querySelectorAll(".desk-item--title, .desk-item--tag, .desk-item--joke")].map(
+        (el) => ({
+          x: el.offsetLeft - PAD,
+          y: el.offsetTop - PAD,
+          w: el.offsetWidth * 1.15 + PAD * 2,
+          h: el.offsetHeight + PAD * 2,
+        }),
+      );
+      keepOut.push({ x: W / 2 - 70, y: H - 120, w: 140, h: 120 }); // the scroll-down button
+
+      const nav = document.querySelector("nav");
+      const top = (nav ? nav.offsetHeight : 80) + 16;
+      const EDGE = 24;
+      const TUCK = 18; // how far stickers may tuck under each other, like on a real desk
+
+      const CANDIDATES = 10; // free spots tried per sticker; the roomiest wins, so they spread out instead of clumping
+
+      const overlaps = (a, b, gap) =>
+        a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+
+      const gapBetween = (a, b) =>
+        Math.hypot(
+          Math.max(0, a.x - (b.x + b.w), b.x - (a.x + a.w)),
+          Math.max(0, a.y - (b.y + b.h), b.y - (a.y + a.h)),
+        );
+
+      // How much clear space a spot has: to the nearest sticker, note or edge of the desk
+      const room = (box) =>
+        Math.min(
+          box.x - EDGE,
+          W - EDGE - (box.x + box.w),
+          box.y - top,
+          H - EDGE - (box.y + box.h),
+          ...placed.map((p) => gapBetween(box, p)),
+          ...keepOut.map((k) => gapBetween(box, k)),
+        );
+
+      // One big centrepiece, the rest mixed; biggest placed first so they find room
+      const sizes = slots
+        .map((_, i) => (i === 0 ? 180 + Math.random() * 30 : 108 + Math.random() * 72))
+        .sort((a, b) => b - a);
+
+      const placed = [];
+      slots.forEach((slot, i) => {
+        let size = sizes[i];
+        let best = null;
+        let bestRoom = -Infinity;
+        let found = 0;
+
+        for (let attempt = 0; attempt < 400 && found < CANDIDATES; attempt++) {
+          if (attempt > 0 && attempt % 100 === 0 && !best) size *= 0.88; // crowded: try it a little smaller
+          const box = {
+            x: EDGE + Math.random() * (W - size - EDGE * 2),
+            y: top + Math.random() * (H - top - size - EDGE),
+            w: size,
+            h: size,
+          };
+          if (keepOut.some((k) => overlaps(box, k, 0)) || placed.some((p) => overlaps(box, p, -TUCK))) continue;
+          found++;
+          const space = room(box);
+          if (space > bestRoom) {
+            best = box;
+            bestRoom = space;
+          }
+        }
+
+        // No room found (a very small window): it keeps its hand-placed spot
+        if (!best) return;
+
+        placed.push(best);
+        const tilt = (2 + Math.random() * 8) * (Math.random() < 0.5 ? -1 : 1);
+        // Bigger reads as closer to you, so it drifts further with the mouse
+        const depth = Math.round(8 + ((best.w - 108) / 100) * 16);
+        spots[i] = {
+          left: `${((best.x / W) * 100).toFixed(2)}%`,
+          top: `${((best.y / H) * 100).toFixed(2)}%`,
+          size: `${Math.round(best.w)}px`,
+          rotate: `${tilt.toFixed(1)}deg`,
+          depth: `${depth}px`,
+        };
+        place(slot, spots[i]);
+      });
+    }
+
+    window.__heroDesk = { quote: quoteIndex, picks: order, W, H, spots };
+  };
+  window.__dealHeroDesk();
+  if (!window.__heroDeskHooked) {
+    window.__heroDeskHooked = true;
+    document.addEventListener("astro:after-swap", () => {
+      if (document.getElementById("hero")) window.__dealHeroDesk();
     });
   }
 </script>
@@ -316,6 +364,12 @@ const layout = [
     opacity: 0;
     animation: desk-drop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     animation-delay: var(--delay);
+  }
+
+  /* Back on the desk during the same visit: everything's already where it was */
+  .hero-desk.is-returning .desk-item {
+    opacity: 1;
+    animation: none;
   }
 
   @keyframes desk-drop {

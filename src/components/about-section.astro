@@ -310,8 +310,11 @@ const tagTilts = [-3, 2, -2, 3];
     const bioEl = document.getElementById("bio-text");
     if (!section || !bioEl) return;
 
-    // Reduced motion: leave everything in place, fully visible, with the bio already written
+    // Reduced motion: leave everything in place, fully visible, with the bio already written.
+    // Same when coming back to the page during this visit (the hero remembers): it's been
+    // written once already.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (document.getElementById("hero")?.classList.contains("is-returning")) return;
 
     const cursorHtml = '<span class="bio-cursor">|</span>';
     const fullHtml = bioEl.innerHTML.trim();
