@@ -8,18 +8,14 @@
 # in the viewer right here: [![What it shows](./process/piece-57.png)](/art/57)
 # A line that's only *italic*, right under the images, is their caption.
 title: How I make art
-description: Vector art, drawn with a mouse. How I carve shapes, pick colours, finish a piece, and why I keep redrawing old ones.
+description: Everything I make is vector art. Here's how I carve shapes, pick colours, finish a piece, and why I keep redrawing old ones.
 ---
-
-Everything I make is vector art, and nearly all of it is drawn with a mouse. Here's how a piece usually comes together.
 
 ## Tools
 
-I've been drawing in **Affinity Designer** since 2019. I started on a trial, saved up to buy the original, and switched to **V2** when it came out. I'm still on it, and haven't moved to the newest version yet. Years later I also picked up Serif's whole creative suite bundle, with all three apps.
+I draw everything in **Affinity Designer**.
 
-Most of the time it's just me and a mouse. Every so often I'll use the trackpad on my laptop, or the touchscreen on my iPad.
-
-![The Affinity Designer 2 app icon](./process/affinity-designer.png)
+![The Affinity Designer app icon](./process/affinity-designer.png)
 
 ## Carving shapes
 
@@ -40,16 +36,16 @@ I used to draw from the small details out. Now I start from the silhouettes and 
 
 I switch between two distinct styles:
 
-- **Flat**, with straight lines and hard angles.
-- **Curves**, with curves and soft, smooth edges.
+- **Flat lines**, with straight lines and hard angles.
+- **Smooth lines**, with soft curves and rounded edges.
 
-**Flats** are my favourite to make. I love seeing how far I can push them while keeping them minimal. I haven't seen the style around, so it feels personal, like something I developed just for myself.
+**Flat lines** are my favourite to make. I love seeing how far I can push them while keeping them minimal. I haven't seen the style around, so it feels personal, like something I developed just for myself.
 
-**Curves** were always there, and they're easier for me to make. I do find them fun, and it's nice seeing something playful and soft come together, but they can't replace flats in my heart.
+**Smooth lines** were always there, and they're easier for me to make. I do find them fun, and it's nice seeing something playful and soft come together, but they can't replace flat lines in my heart.
 
-[![Battle Witch, a flat piece: a witch with a scythe, all straight lines and hard angles](./process/piece-172.png)](/art/172) [![Magic Huntress, a piece in curves: a blue-haired witch in a wide black hat](./process/piece-169.png)](/art/169)
+[![Battle Witch, in flat lines: a witch with a scythe, all straight lines and hard angles](./process/piece-172.png)](/art/172) [![Magic Huntress, in smooth lines: a blue-haired witch in a wide black hat](./process/piece-169.png)](/art/169)
 
-*Flat on the left (Battle Witch), curves on the right (Magic Huntress).*
+*Flat lines on the left (Battle Witch), smooth lines on the right (Magic Huntress).*
 
 ## Finishing touches
 
@@ -70,7 +66,7 @@ Designer didn't start out as an art tool for me. I first got it for work, design
 
 My early pieces were all over the place: I drew whatever I could imagine, always focusing on the colours. Most of it was bust-up characters or just heads, along with creatures and all sorts of other things.
 
-I started out with curves and smooth shapes. Flats came naturally as I drew more and tried more stuff, since I've always been drawn to simplicity. Over time I also moved over to drawing female characters, because I found drawing their hair and outfits so much fun.
+I started out with smooth lines. Flat lines came naturally as I drew more and tried more stuff, since I've always been drawn to simplicity. Over time I also moved over to drawing female characters, because I found drawing their hair and outfits so much fun.
 
 [![A sword wrapped in teal and orange, on orange](./process/piece-3.png)](/art/3) [![A horned demon skull, on red](./process/piece-5.png)](/art/5) [![A pink horned demon in flames](./process/piece-10.png)](/art/10)
 

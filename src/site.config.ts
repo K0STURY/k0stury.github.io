@@ -32,7 +32,7 @@ export const details = {
 };
 
 // Shown in the about section's "tools I use" row; add software or hardware here
-export const tools: string[] = ["Affinity Designer V2", "Mouse :)"];
+export const tools: string[] = ["Affinity Designer V2"];
 
 export const globals = {
   imageQuality: "max", // low, mid, high or max
