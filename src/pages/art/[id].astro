@@ -1,12 +1,13 @@
 ---
-import BaseLayout from "@layouts/base-layout.astro";
-import HeroCollage from "@components/hero-collage.astro";
-import AboutSection from "@components/about-section.astro";
-import Gallery from "@components/gallery.astro";
+import MetaTags from "@layouts/meta-tags.astro";
 import getAllArt, { type Artwork, type Artworks } from "@api/art";
+import { getArtImages } from "src/helpers/art-images";
 
-// A page per piece, so a shared link opens straight onto it and its preview shows it.
-// Underneath it is just the home page, with the piece already up in the lightbox.
+// A page per piece, so a shared link previews that piece (Discord and friends read the
+// tags in the head and never run scripts). It is only a signpost: visitors are sent
+// straight on to the home page with the piece open (/?art=<id>), and the viewer puts
+// /art/<id> back in the address bar. Rendering the whole home page here instead made
+// every piece page a full copy of it, which grew the site with every new piece.
 export async function getStaticPaths() {
   const modules = import.meta.glob("../../assets/showcase/*.png", { eager: true });
   const arts = getAllArt(Object.values(modules) as Artworks);
@@ -14,10 +15,57 @@ export async function getStaticPaths() {
 }
 
 const { piece } = Astro.props as { piece: Artwork };
+const { thumb } = await getArtImages(piece.default as any);
+const title = piece.title || "Untitled";
+const target = `/?art=${piece.id}`;
 ---
 
-<BaseLayout piece={piece}>
-  <HeroCollage slot="banner" />
-  <AboutSection />
-  <Gallery openPiece={piece.id} />
-</BaseLayout>
+<html lang="en">
+  <head>
+    <MetaTags piece={piece} />
+    <!-- Off to the real page before anything is drawn; replace() keeps this signpost
+         out of history, so Back returns to wherever the link was clicked -->
+    <script is:inline define:vars={{ target }}>
+      location.replace(target);
+    </script>
+    <!-- Only ever seen without JavaScript -->
+    <style is:inline>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #1a1820;
+        color: #f4f0e8;
+        font-family: system-ui, sans-serif;
+        text-align: center;
+      }
+      img {
+        display: block;
+        width: min(22rem, 80vw);
+        height: auto;
+        margin: 0 auto 1.25rem;
+        border: 8px solid #f4f0e8;
+        border-radius: 6px;
+        box-shadow: 8px 8px 0 #0c0b0e;
+        transform: rotate(-1.5deg);
+      }
+      /* "main" so the site-wide CSS reset, which also loads here, doesn't win */
+      main h1 {
+        margin: 0 0 0.5rem;
+        font-size: 1.75rem;
+      }
+      main a {
+        color: #e7ae3a;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src={thumb} alt={title} width="640" height="640" />
+      <h1>{title}</h1>
+      <p><a href="/">See the whole stash</a></p>
+    </main>
+  </body>
+</html>

@@ -7,13 +7,6 @@ import Lightbox from "./lightbox.svelte";
 import { quirkCounts, quirkStyle, pickQuirks } from "src/helpers/quirks";
 import "@styles/quirks.css";
 
-interface Props {
-  // On a piece's own page (/art/<id>): the lightbox opens on it straight away
-  openPiece?: number;
-}
-
-const { openPiece } = Astro.props;
-
 const BATCH_SIZE = 30;
 
 let arts = await Astro.glob<Artwork>("../assets/showcase/*.png").then((data) =>
@@ -24,8 +17,6 @@ arts = arts.sort(sortByDesc);
 
 // Thumbnail for each tile, plus everything the lightbox shows
 const imageData = await getLightboxImages(arts);
-
-const openAt = openPiece == null ? -1 : arts.findIndex((art) => art.id === openPiece);
 
 // Collect unique categories from art tags
 const categorySet = new Set<string>();
@@ -184,14 +175,9 @@ const scatter = [
   <div id="gallery-sentinel" class="h-1"></div>
 </section>
 
-{/* A shared link is there for the one piece, so don't make it wait for idle */}
-{
-  openAt >= 0 ? (
-    <Lightbox images={imageData} openAt={openAt} client:load />
-  ) : (
-    <Lightbox images={imageData} client:idle />
-  )
-}
+{/* client:load, not idle: a shared link (/?art=<id>) is there for one piece, so it
+    shouldn't wait. Closed, the viewer draws nothing, so loading it early is cheap. */}
+<Lightbox images={imageData} client:load />
 
 <style>
   .gallery-scene {

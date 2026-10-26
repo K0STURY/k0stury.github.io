@@ -15,8 +15,6 @@
     // Set when the art is a panel inset on a plain canvas (fractions of the image)
     panel: { x: number; y: number; w: number; h: number } | null;
   }> = [];
-  // Set on a piece's own page: open on this image as soon as the viewer mounts
-  export let openAt: number | null = null;
 
   // Track which full-res images have loaded (by original image index)
   let loadedFullRes = new Set<number>();
@@ -142,6 +140,14 @@
   $: currentIsRedraw = partner != null && currentImage?.redrawOf === partner.id;
   $: thenOrig = currentIsRedraw ? partnerOrig : currentOrig;
   $: nowOrig = currentIsRedraw ? currentOrig : partnerOrig;
+
+  // Many pieces are still undocumented ("TBA"), so a date only counts if it has a year,
+  // and the tabs only show dates when both halves have one
+  const hasDate = (date: string | undefined) => /\d{4}/.test(date ?? "");
+  $: compareDates =
+    partner && hasDate(images[thenOrig]?.date) && hasDate(images[nowOrig]?.date)
+      ? { then: images[thenOrig].date, now: images[nowOrig].date }
+      : null;
 
   let comparing = false;
   let split = 50; // where the divider is, 0 (all "now") to 100 (all "then"); left of it shows "then"
@@ -713,7 +719,18 @@
     };
     document.addEventListener("lightbox:open", handleLightboxOpen);
 
-    if (openAt != null) open(openAt);
+    // A shared link: /art/<id> sends visitors here as /?art=<id>. Put the piece's own
+    // address back in the bar (closing then leaves you on the home page) and open it.
+    const shared = new URLSearchParams(location.search).get("art");
+    if (shared != null) {
+      const sharedIndex = origById.get(Number(shared));
+      if (sharedIndex != null) {
+        history.replaceState(history.state, "", pieceUrl(Number(shared)));
+        open(sharedIndex);
+      } else {
+        history.replaceState(history.state, "", location.pathname + location.hash);
+      }
+    }
 
     return () => {
       clearTimeout(copiedTimer);
@@ -822,12 +839,14 @@
                 <div class="sheet">
                   <img
                     src={loadedFullRes.has(thenOrig) ? images[thenOrig].fullSrc : images[thenOrig].src}
-                    alt={`Then: ${images[thenOrig].title || "the original"}`}
+                    alt={`Then: ${images[thenOrig].title || "the original"}${compareDates ? `, ${compareDates.then}` : ""}`}
                     class="sheet-img"
                     style={coverStyle(thenOrig, art.w, art.h, zoom)}
                     draggable="false"
                   />
-                  <span class="compare-tab compare-tab--then" aria-hidden="true">then</span>
+                  <span class="compare-tab compare-tab--then" aria-hidden="true"
+                    >then{#if compareDates}<span class="compare-date">{compareDates.then}</span>{/if}</span
+                  >
                 </div>
 
                 <!-- On top: the redraw, cut away left of the divider -->
@@ -837,12 +856,14 @@
                 >
                   <img
                     src={loadedFullRes.has(nowOrig) ? images[nowOrig].fullSrc : images[nowOrig].src}
-                    alt={`Now: ${images[nowOrig].title || "the redraw"}`}
+                    alt={`Now: ${images[nowOrig].title || "the redraw"}${compareDates ? `, ${compareDates.now}` : ""}`}
                     class="sheet-img"
                     style={coverStyle(nowOrig, art.w, art.h, zoom)}
                     draggable="false"
                   />
-                  <span class="compare-tab compare-tab--now" aria-hidden="true">now</span>
+                  <span class="compare-tab compare-tab--now" aria-hidden="true"
+                    >now{#if compareDates}<span class="compare-date">{compareDates.now}</span>{/if}</span
+                  >
                 </div>
 
                 <!-- The divider: a line along the cut, long enough to cross the frame at its slant -->
@@ -1202,6 +1223,20 @@
     transition:
       translate 0.25s ease-in,
       opacity 0.2s ease-in;
+  }
+
+  /* The date each half was made, tucked under its label */
+  .compare-date {
+    display: block;
+    margin-top: 0.05rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .compare-tab--now .compare-date {
+    text-align: right;
   }
 
   .compare-tab--then {

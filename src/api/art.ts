@@ -45,6 +45,9 @@ const ArtworkSchema = ArtworksSchema.element;
 export type Artworks = z.infer<typeof ArtworksSchema>;
 export type Artwork = z.infer<typeof ArtworkSchema> & {
   id: number;
+  // The source image's size. Read these, never art.default.width/height (see getAllArt)
+  width: number;
+  height: number;
   title: string;
   description: string;
   date: string;
@@ -82,7 +85,12 @@ function warnOnce(message: string) {
 
 export default function getAllArt(artworks: Artworks): Artwork[] {
   const arts = artworks.map((art) => {
-    const src = art.default.src;
+    // Read the image's details off a copy. Reading any of them off the import itself
+    // tells Astro the full-size original is used on the page, so it ships all of them
+    // (~9MB each) with the site. Passing art.default to getImage is fine: it copies too.
+    const image: { src: string; width: number; height: number } =
+      (art.default as any).clone ?? art.default;
+    const src = image.src;
 
     const regex = import.meta.env.PROD
       ? /\/(\d+)-[^\/]+\.\w+$/
@@ -96,6 +104,8 @@ export default function getAllArt(artworks: Artworks): Artwork[] {
     return {
       ...art,
       id,
+      width: image.width,
+      height: image.height,
       title: realText(meta?.name, PLACEHOLDER_TITLE),
       description: realText(meta?.description, PLACEHOLDER_DESCRIPTION),
       date: meta?.date ?? "",
