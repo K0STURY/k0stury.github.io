@@ -73,6 +73,8 @@ const scatter = [
     </div>
   </div>
 
+  <a href="/100-days" class="challenge-link" data-astro-prefetch>the 100-day challenge</a>
+
   <!-- Filter tabs + shuffle -->
   <div class="flex flex-wrap items-center justify-center gap-3 px-4 mt-2" id="gallery-controls">
     <div class="flex flex-wrap gap-2 justify-center" id="gallery-filters">
@@ -191,6 +193,37 @@ const scatter = [
     font-size: clamp(1.8rem, 4vw, 2.5rem);
     padding-top: 6rem;
     color: var(--text-color);
+  }
+
+  /* To /100-days: an accent label tucked under the stats card */
+  .challenge-link {
+    display: table;
+    margin: 0.4rem auto 0.9rem;
+    padding: 0.3rem 0.8rem 0.15rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transform: rotate(2deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .challenge-link::after {
+    content: " ›";
+  }
+
+  .challenge-link:hover,
+  .challenge-link:focus-visible {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  .challenge-link:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
   }
 
   /* Stats: a small pinned card */

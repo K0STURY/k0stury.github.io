@@ -68,9 +68,11 @@ My early pieces were all over the place: I drew whatever I could imagine, always
 
 I started out with smooth lines. Flat lines came naturally as I drew more and tried more stuff, since I've always been drawn to simplicity. Over time I also moved over to drawing female characters, because I found drawing their hair and outfits so much fun.
 
-[![A sword wrapped in teal and orange, on orange](./process/piece-3.png)](/art/3) [![A horned demon skull, on red](./process/piece-5.png)](/art/5) [![A pink horned demon in flames](./process/piece-10.png)](/art/10)
+[![A sword wrapped in teal and orange, on orange](./process/piece-25.png)](/art/25) [![A horned demon skull, on red](./process/piece-18.png)](/art/18) [![A pink horned demon in flames](./process/piece-10.png)](/art/10)
 
 *Some of my early pieces.*
+
+Later on I took on a 100-day challenge: one piece a day, for 100 days. [Every one of them is pinned up here](/100-days).
 
 ## Growing with Quil
 

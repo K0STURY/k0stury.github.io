@@ -8,6 +8,9 @@
     width: number;
     height: number;
     tags: string[];
+    // Its own address, when it isn't a gallery piece with a page at /art/<id>
+    // (the 100-day challenge's pieces point at their day on /100-days)
+    page?: string;
     title: string;
     description: string;
     date: string;
@@ -328,7 +331,7 @@
   function tileFor(origIdx: number) {
     if (source && source.orig === origIdx && source.el.isConnected) return source.el;
     return document.querySelector<HTMLElement>(
-      `.gallery-item[data-lightbox-index="${origIdx}"]:not(.hidden)`,
+      `[data-lightbox-index="${origIdx}"]:not(.hidden)`,
     );
   }
 
@@ -352,7 +355,8 @@
     return {
       cx: r.left + r.width / 2,
       cy: r.top + r.height / 2,
-      size: frameEl.offsetWidth * Math.hypot(m.a, m.b),
+      w: frameEl.offsetWidth * Math.hypot(m.a, m.b),
+      h: frameEl.offsetHeight * Math.hypot(m.a, m.b),
       rot: (Math.atan2(m.b, m.a) * 180) / Math.PI,
     };
   }
@@ -362,7 +366,8 @@
     const m = moverEl.getBoundingClientRect();
     const dx = geo.cx - (m.left + m.width / 2);
     const dy = geo.cy - (m.top + m.height / 2);
-    const scale = geo.size / Math.min(m.width, m.height); // tiles crop to a square
+    // Covers the tile: a square gallery tile crops the art, a wall print matches its shape
+    const scale = Math.max(geo.w / m.width, geo.h / m.height);
     return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) rotate(${(geo.rot - tilt).toFixed(2)}deg) scale(${scale.toFixed(4)})`;
   }
 
@@ -372,6 +377,14 @@
     stageW = stageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     stageH = stageEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     narrow = window.innerWidth <= 768;
+  }
+
+  // The viewer is mounted inside <main>, which is its own layer (z-10) with the footer as a
+  // sibling layer after it, so the footer would draw over even a full-screen viewer.
+  // Living directly on <body> while open puts it above everything.
+  function toBody(node: HTMLElement) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
   }
 
   function watchStage(node: HTMLElement) {
@@ -397,19 +410,21 @@
   let urlBeforeOpen = "";
 
   const pieceUrl = (id: number) => new URL(`/art/${id}`, location.origin).href;
+  const urlFor = (img: (typeof images)[number]) =>
+    img.page ? new URL(img.page, location.origin).href : pieceUrl(img.id);
 
   function setUrl(url: string) {
     if (url && url !== location.href) history.replaceState(history.state, "", url);
   }
 
-  $: if (isOpen && !closing && currentImage) setUrl(pieceUrl(currentImage.id));
+  $: if (isOpen && !closing && currentImage) setUrl(urlFor(currentImage));
 
   let copied = false;
   let copiedTimer: ReturnType<typeof setTimeout>;
 
   async function sharePiece() {
     if (!currentImage) return;
-    const url = pieceUrl(currentImage.id);
+    const url = urlFor(currentImage);
 
     // Phones get the system share sheet; on desktop that sheet is clunky, so just copy
     if (navigator.share && matchMedia("(pointer: coarse)").matches) {
@@ -748,6 +763,7 @@
 
 {#if isOpen}
   <div
+    use:toBody
     bind:this={dialogEl}
     class="lb"
     class:is-ready={ready}

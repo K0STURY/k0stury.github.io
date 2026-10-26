@@ -1,0 +1,716 @@
+---
+// The 100-day challenge: every piece pinned up on one wall, in day order.
+// The intro lives in src/content/pages/100-days.md; the pieces in src/assets/challenge.
+import { getEntry } from "astro:content";
+import BaseLayout from "@layouts/base-layout.astro";
+import Lightbox from "@components/lightbox.svelte";
+import { getChallenge } from "src/helpers/challenge";
+
+const entry = await getEntry("pages", "100-days");
+if (!entry) throw new Error("src/content/pages/100-days.md is missing");
+const { Content } = await entry.render();
+const { title, description } = entry.data;
+
+const { days, images, pieceCount, cover } = await getChallenge();
+const extraDays = days.filter((d) => d.pieces.length > 1).length;
+
+// Hand-placed feel without randomness: small tilts and drops cycled by position,
+// and every third print taped instead of pinned
+const tilts = [-3, 2, -1.5, 3.5, -2.5, 1, -4, 2.5];
+const drops = [0, 10, -6, 14, 4, -10, 8, -2];
+
+// Ten chapters of ten days: landmarks for the long scroll, and what the tracker jumps between
+const chapters = Array.from({ length: 10 }, (_, k) => {
+  const from = k * 10 + 1;
+  const to = from + 9;
+  const inRange = days.filter((d) => d.day >= from && d.day <= to);
+  return { from, to, days: inRange, pieces: inRange.reduce((sum, d) => sum + d.pieces.length, 0) };
+});
+
+const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "made it!" };
+---
+
+<BaseLayout
+  page={{ title: `${title} · Kostur`, description, path: "100-days", image: cover, imageAlt: "Day 100 of the challenge" }}
+  tagline="day 101: still drawing."
+>
+  <article class="challenge">
+    <a href="/" class="challenge-back" data-astro-prefetch>The gallery</a>
+
+    <header class="challenge-head">
+      <h1 class="challenge-title">{title}</h1>
+      <div class="challenge-intro">
+        <Content />
+      </div>
+      <p class="challenge-tally" aria-label={`${days.length} days, ${pieceCount} pieces, ${extraDays} days with more than one`}>
+        <span><strong>{days.length}</strong> days</span>
+        <span><strong>{pieceCount}</strong> pieces</span>
+        <span><strong>{extraDays}</strong> overachiever days</span>
+      </p>
+    </header>
+
+    <div class="chapters" id="chapters">
+      {
+        chapters.map((chapter, c) => (
+          <section class="chapter" id={`days-${chapter.from}`} aria-label={`Days ${chapter.from} to ${chapter.to}`}>
+            <div class="chapter-head">
+              <h2 class:list={["chapter-note", c % 2 === 1 && "chapter-note--paper"]}>
+                days {chapter.from}–{chapter.to}
+              </h2>
+              <span class="chapter-count">{chapter.pieces} pieces</span>
+              <span class="chapter-line" aria-hidden="true" />
+            </div>
+            <ol class="wall">
+      {
+        chapter.days.map(({ day, pieces }) => (
+          <li class="day" id={`day-${day}`} data-day={day} style={`--drop:${drops[day % drops.length]}px;`}>
+            {stamps[day] && <span class="stamp">{stamps[day]}</span>}
+            <span class="day-tag">
+              day {day}
+              {pieces.length > 1 && <span class="day-count">×{pieces.length}</span>}
+            </span>
+            <div class="day-prints">
+              {pieces.map((p, k) => (
+                <button
+                  class:list={["print", p.featured && "is-featured"]}
+                  data-lightbox-index={p.index}
+                  style={`--tilt:${tilts[(day + k * 3) % tilts.length]}deg; --ratio:${(p.width / p.height).toFixed(3)};`}
+                  aria-label={p.label}
+                >
+                  {(day + k) % 3 === 0 ? (
+                    <span class="tape" aria-hidden="true" />
+                  ) : (
+                    <span class="pin" aria-hidden="true" />
+                  )}
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={p.thumb}
+                    alt=""
+                    width={p.width}
+                    height={p.height}
+                    draggable="false"
+                  />
+                </button>
+              ))}
+            </div>
+          </li>
+        ))
+      }
+            </ol>
+          </section>
+        ))
+      }
+    </div>
+
+    <!-- Where you are in the 100 days; the ticks jump between chapters -->
+    <nav class="tracker" id="tracker" aria-label="Jump to a chapter">
+      <p class="tracker-day">day <strong id="tracker-day">1</strong><span class="tracker-of">/ 100</span></p>
+      <ol class="tracker-ticks">
+        {
+          chapters.map((chapter) => (
+            <li>
+              <a
+                href={`#days-${chapter.from}`}
+                data-from={chapter.from}
+                aria-label={`Days ${chapter.from} to ${chapter.to}`}
+              />
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+
+    <a href="/#gallery-scene" class="challenge-end" data-astro-prefetch>See the whole stash</a>
+  </article>
+
+  <Lightbox images={images} client:idle />
+</BaseLayout>
+
+<script>
+  // A print opens in the big view, flying out of its spot on the wall
+  let trackerObservers: IntersectionObserver[] = [];
+
+  document.addEventListener("astro:page-load", () => {
+    trackerObservers.forEach((o) => o.disconnect());
+    trackerObservers = [];
+    setUpTracker();
+
+    document.querySelectorAll<HTMLButtonElement>(".wall .print").forEach((print) => {
+      print.addEventListener("click", () => {
+        const index = Number(print.dataset.lightboxIndex);
+        document.dispatchEvent(new CustomEvent("lightbox:open", { detail: { index, filter: "all", source: print } }));
+      });
+    });
+  });
+
+  // The tracker shows while the wall is on screen, counts the day in the middle of the
+  // screen, and fills its ticks up to the current chapter
+  function setUpTracker() {
+    const tracker = document.getElementById("tracker");
+    const chapters = document.getElementById("chapters");
+    const dayEl = document.getElementById("tracker-day");
+    if (!tracker || !chapters || !dayEl) return;
+    const ticks = [...tracker.querySelectorAll<HTMLAnchorElement>("a[data-from]")];
+
+    const show = new IntersectionObserver(([entry]) => tracker.classList.toggle("is-on", entry.isIntersecting));
+    show.observe(chapters);
+
+    const inBand = new Set<number>();
+    const update = () => {
+      if (!inBand.size) return;
+      const day = Math.min(...inBand);
+      dayEl.textContent = String(day);
+      const chapter = Math.ceil(day / 10);
+      ticks.forEach((tick, i) => {
+        tick.classList.toggle("is-done", i < chapter - 1);
+        tick.classList.toggle("is-here", i === chapter - 1);
+      });
+    };
+    // A thin band across the middle of the screen: whatever day crosses it is "now"
+    const days = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const day = Number((e.target as HTMLElement).dataset.day);
+          if (e.isIntersecting) inBand.add(day);
+          else inBand.delete(day);
+        }
+        update();
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    document.querySelectorAll<HTMLElement>(".wall .day").forEach((d) => days.observe(d));
+    trackerObservers.push(show, days);
+
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ticks.forEach((tick) => {
+      tick.addEventListener("click", (e) => {
+        const target = document.getElementById(`days-${tick.dataset.from}`);
+        if (!target) return;
+        e.preventDefault();
+        if (window.lenis && smooth) window.lenis.scrollTo(target, { offset: -90 });
+        else target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+      });
+    });
+  }
+</script>
+
+<style>
+  .challenge {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 7.5rem 1.5rem 2rem;
+  }
+
+  /* Paper labels, like the process page's */
+  .challenge-back,
+  .challenge-end {
+    display: inline-block;
+    padding: 0.35rem 0.85rem 0.2rem;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transform: rotate(-2deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .challenge-back::before {
+    content: "‹ ";
+  }
+
+  .challenge-end {
+    display: table;
+    margin: 4rem auto 0;
+    padding: 0.55rem 1.2rem 0.4rem;
+    background: var(--accent-color);
+    font-size: 1.2rem;
+    transform: rotate(1.5deg);
+  }
+
+  .challenge-end::after {
+    content: " ›";
+  }
+
+  .challenge-back:hover,
+  .challenge-back:focus-visible,
+  .challenge-end:hover,
+  .challenge-end:focus-visible {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  .challenge-back:focus-visible,
+  .challenge-end:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* Title on an accent sticky note, intro beside it, the tally on a paper slip */
+  .challenge-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin: 2.75rem 0 3.5rem;
+  }
+
+  .challenge-title {
+    position: relative;
+    padding: 0.9rem 1.4rem 1.05rem;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: clamp(2.1rem, 6vw, 3.25rem);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    transform: rotate(-1.5deg);
+  }
+
+  .challenge-title::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 44px;
+    height: 16px;
+    border-radius: 2px;
+    background: rgba(244, 240, 232, 0.35);
+    transform: translateX(-50%) rotate(-4deg);
+  }
+
+  .challenge-intro {
+    max-width: 60ch;
+    color: rgba(244, 240, 232, 0.75);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.55;
+  }
+
+  .challenge-intro :global(p + p) {
+    margin-top: 0.6em;
+  }
+
+  .challenge-tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    padding: 0.6rem 1.1rem 0.45rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: rgba(26, 24, 32, 0.75);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    font-weight: 700;
+    transform: rotate(1deg);
+  }
+
+  .challenge-tally strong {
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    font-size: 1.35rem;
+    font-weight: 400;
+  }
+
+  /* Chapters: a label and a dashed rule across the board every ten days */
+  .chapters {
+    --h: 190px;
+  }
+
+  .chapter + .chapter {
+    margin-top: 4.5rem;
+  }
+
+  .chapter {
+    scroll-margin-top: 6rem;
+  }
+
+  .chapter-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2.4rem;
+  }
+
+  .chapter-note {
+    flex-shrink: 0;
+    padding: 0.35rem 0.95rem 0.2rem;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    transform: rotate(-2deg);
+  }
+
+  .chapter-note--paper {
+    background: var(--text-color);
+    transform: rotate(1.5deg);
+  }
+
+  .chapter-count {
+    flex-shrink: 0;
+    color: rgba(244, 240, 232, 0.55);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .chapter-line {
+    flex: 1;
+    border-top: 2px dashed rgba(244, 240, 232, 0.16);
+  }
+
+  /* The wall: days flow left to right in order, each print at its own shape */
+  .wall {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 2.6rem 2rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    transform: translateY(var(--drop));
+    scroll-margin-top: 7rem;
+  }
+
+  .day-tag {
+    position: relative;
+    z-index: 3;
+    margin-left: 0.4rem;
+    padding: 0.15rem 0.55rem 0.05rem;
+    border-radius: 3px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 2px 2px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+    transform: rotate(-3deg);
+  }
+
+  .day-count {
+    margin-left: 0.3rem;
+    color: var(--accent-color);
+    -webkit-text-stroke: 0.4px var(--primary-color);
+  }
+
+  .day-prints {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: 100%;
+  }
+
+  .day {
+    max-width: 100%;
+  }
+
+  /* A day's extra pieces overlap a little, like a loose fan: never more than a sliver,
+     so every piece and its pin stays in view */
+  .print + .print {
+    margin-left: max(-20px, calc(var(--h) * -0.1));
+    margin-top: 0.9rem;
+  }
+
+  /* Milestone stickers on day 1, 50 and 100 */
+  .stamp {
+    position: absolute;
+    top: -1.1rem;
+    right: -0.8rem;
+    z-index: 6;
+    padding: 0.3rem 0.7rem 0.15rem;
+    border-radius: 999px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    transform: rotate(8deg);
+    pointer-events: none;
+  }
+
+  .print {
+    position: relative;
+    display: block;
+    /* Its own shape at the wall's height (bigger for featured days), never wider than the screen */
+    width: min(calc(var(--h) * var(--scale, 1) * var(--ratio)), calc(100vw - 2.5rem));
+    aspect-ratio: var(--ratio);
+    flex-shrink: 0;
+    padding: 0;
+    border: 5px solid var(--text-color);
+    border-radius: 4px;
+    background: var(--text-color);
+    box-shadow: 5px 5px 0 var(--edge-color);
+    cursor: pointer;
+    transform: rotate(var(--tilt));
+    transition:
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+  }
+
+  /* Days that also made the gallery are pinned up bigger, so the wall has peaks */
+  .print.is-featured {
+    --scale: 1.32;
+
+    border-width: 6px;
+  }
+
+  .print:hover,
+  .print:focus-visible {
+    z-index: 5;
+    transform: rotate(0deg) translateY(-6px) scale(1.05);
+    box-shadow: 9px 9px 0 var(--accent-color);
+  }
+
+  .print:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 4px;
+  }
+
+  .print img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .pin {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    z-index: 2;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%);
+  }
+
+  .tape {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    z-index: 2;
+    width: 56px;
+    height: 18px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+    transform: translateX(-50%) rotate(-4deg);
+  }
+
+  /* The tracker: a paper slip in the corner while you browse the wall */
+  .tracker {
+    position: fixed;
+    left: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.55rem 0.8rem 0.6rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px) rotate(-2deg);
+    transition:
+      opacity 0.25s ease,
+      transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .tracker.is-on {
+    opacity: 1;
+    pointer-events: auto;
+    transform: rotate(-2deg);
+  }
+
+  .tracker-day {
+    font-family: var(--font-accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .tracker-day strong {
+    display: inline-block;
+    min-width: 2.2ch;
+    margin-left: 0.2rem;
+    font-size: 1.5rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tracker-of {
+    margin-left: 0.15rem;
+    opacity: 0.55;
+  }
+
+  .tracker-ticks {
+    display: flex;
+    gap: 3px;
+    list-style: none;
+    padding: 0;
+  }
+
+  .tracker-ticks a {
+    display: block;
+    width: 12px;
+    height: 16px;
+    border-radius: 2px;
+    background: rgba(26, 24, 32, 0.14);
+    transition: background-color 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .tracker-ticks a.is-done {
+    background: rgba(26, 24, 32, 0.45);
+  }
+
+  .tracker-ticks a.is-here {
+    background: var(--accent-color);
+    transform: scaleY(1.25);
+  }
+
+  .tracker-ticks a:hover,
+  .tracker-ticks a:focus-visible {
+    background: var(--accent-color);
+    transform: scaleY(1.4);
+  }
+
+  .tracker-ticks a:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  /* Wide screens: a slim ruler down the left margin, clear of the art */
+  @media (min-width: 901px) {
+    .tracker {
+      top: 50%;
+      bottom: auto;
+      left: 1rem;
+      align-items: center;
+      padding: 0.6rem 0.45rem 0.55rem;
+      transform: translate(-12px, -50%) rotate(-2deg);
+    }
+
+    .tracker.is-on {
+      transform: translateY(-50%) rotate(-2deg);
+    }
+
+    .tracker-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .tracker-day strong {
+      min-width: 0;
+      margin-left: 0;
+      font-size: 1.35rem;
+    }
+
+    .tracker-of {
+      margin-left: 0;
+      font-size: 0.7rem;
+    }
+
+    .tracker-ticks {
+      flex-direction: column;
+    }
+
+    .tracker-ticks a {
+      width: 18px;
+      height: 9px;
+    }
+
+    .tracker-ticks a.is-here {
+      transform: scaleX(1.3);
+    }
+
+    .tracker-ticks a:hover,
+    .tracker-ticks a:focus-visible {
+      transform: scaleX(1.4);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .chapters {
+      --h: 140px;
+    }
+
+    .wall {
+      gap: 2.2rem 1.4rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .challenge {
+      padding: 6rem 1rem 2rem;
+    }
+
+    .chapters {
+      --h: 104px;
+    }
+
+    .wall {
+      gap: 1.8rem 1rem;
+    }
+
+    .chapter-head {
+      gap: 0.7rem;
+    }
+
+    .chapter-note {
+      font-size: 1.15rem;
+    }
+
+    .tracker {
+      left: 0.8rem;
+      bottom: 0.8rem;
+      padding: 0.45rem 0.65rem 0.5rem;
+    }
+
+    .tracker-ticks a {
+      width: 9px;
+      height: 13px;
+    }
+
+    .print {
+      border-width: 4px;
+      box-shadow: 4px 4px 0 var(--edge-color);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .challenge-back,
+    .challenge-end,
+    .print,
+    .tracker,
+    .tracker-ticks a {
+      transition: none;
+    }
+  }
+</style>
