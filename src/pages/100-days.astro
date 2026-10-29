@@ -5,6 +5,7 @@ import { getEntry } from "astro:content";
 import BaseLayout from "@layouts/base-layout.astro";
 import Lightbox from "@components/lightbox.svelte";
 import { getChallenge } from "src/helpers/challenge";
+import { getMascotFrames } from "src/helpers/mascot";
 
 const entry = await getEntry("pages", "100-days");
 if (!entry) throw new Error("src/content/pages/100-days.md is missing");
@@ -28,6 +29,13 @@ const chapters = Array.from({ length: 10 }, (_, k) => {
 });
 
 const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "made it!" };
+
+// The flipbook: every piece in day order
+const flipFrames = days.flatMap((d) => d.pieces.map((p) => ({ src: p.thumb, day: d.day })));
+
+// The mascot naps beside day 100 and wakes up when you get there (no frames = no cameo)
+const [zzz, wake, idle] = await Promise.all([getMascotFrames("zzz"), getMascotFrames("click"), getMascotFrames("idle")]);
+const cameo = { sleep: zzz.length ? zzz : idle, wake, idle: idle.length ? idle : zzz };
 ---
 
 <BaseLayout
@@ -47,6 +55,7 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
         <span><strong>{pieceCount}</strong> pieces</span>
         <span><strong>{extraDays}</strong> overachiever days</span>
       </p>
+      <button class="flip-open" id="flip-open" type="button">flip through all 100 days</button>
     </header>
 
     <div class="chapters" id="chapters">
@@ -65,6 +74,19 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
         chapter.days.map(({ day, pieces }) => (
           <li class="day" id={`day-${day}`} data-day={day} style={`--drop:${drops[day % drops.length]}px;`}>
             {stamps[day] && <span class="stamp">{stamps[day]}</span>}
+            {day === 100 && cameo.sleep.length > 0 && (
+              <span class="cameo" id="cameo" aria-hidden="true">
+                {cameo.sleep.map((f, i) => (
+                  <img src={f.src} alt="" data-anim="sleep" data-ms={f.ms} hidden={i > 0} draggable="false" />
+                ))}
+                {cameo.wake.map((f) => (
+                  <img src={f.src} alt="" data-anim="wake" data-ms={f.ms} hidden draggable="false" />
+                ))}
+                {cameo.idle.map((f) => (
+                  <img src={f.src} alt="" data-anim="idle" data-ms={f.ms} hidden draggable="false" />
+                ))}
+              </span>
+            )}
             <span class="day-tag">
               day {day}
               {pieces.length > 1 && <span class="day-count">×{pieces.length}</span>}
@@ -122,6 +144,27 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
     </nav>
 
     <a href="/#gallery-scene" class="challenge-end" data-astro-prefetch>See the whole stash</a>
+
+    <!-- The flipbook: all the pieces flicked through in one spot -->
+    <div
+      class="flipbook"
+      id="flipbook"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Flip through all 100 days"
+      data-frames={JSON.stringify(flipFrames)}
+      hidden
+    >
+      <div class="flip-stage">
+        <div class="flip-card" id="flip-card"></div>
+        <div class="flip-progress" aria-hidden="true"><span id="flip-bar"></span></div>
+        <p class="flip-day">day <strong id="flip-day">1</strong><span>/ 100</span></p>
+        <div class="flip-buttons">
+          <button class="flip-btn" id="flip-again" type="button" hidden>again!</button>
+          <button class="flip-btn flip-btn--close" id="flip-close" type="button">close</button>
+        </div>
+      </div>
+    </div>
   </article>
 
   <Lightbox images={images} client:idle />
@@ -130,11 +173,19 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
 <script>
   // A print opens in the big view, flying out of its spot on the wall
   let trackerObservers: IntersectionObserver[] = [];
+  let pageListeners = new AbortController(); // document-level listeners, dropped on the next page
+  let cameoTimer: ReturnType<typeof setTimeout>;
+  const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   document.addEventListener("astro:page-load", () => {
     trackerObservers.forEach((o) => o.disconnect());
     trackerObservers = [];
+    pageListeners.abort();
+    pageListeners = new AbortController();
+    clearTimeout(cameoTimer);
     setUpTracker();
+    setUpFlipbook();
+    setUpCameo();
 
     document.querySelectorAll<HTMLButtonElement>(".wall .print").forEach((print) => {
       print.addEventListener("click", () => {
@@ -143,6 +194,129 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
       });
     });
   });
+
+  // The flipbook: preloads every piece (from the first hover on its button), then flicks
+  // through them in order with a little jitter, like thumbing a stack of pages
+  function setUpFlipbook() {
+    const openBtn = document.getElementById("flip-open");
+    const book = document.getElementById("flipbook");
+    const card = document.getElementById("flip-card");
+    const dayEl = document.getElementById("flip-day");
+    const bar = document.getElementById("flip-bar");
+    const again = document.getElementById("flip-again");
+    const closeBtn = document.getElementById("flip-close");
+    if (!openBtn || !book || !card || !dayEl || !bar || !again || !closeBtn) return;
+    const frames: { src: string; day: number }[] = JSON.parse(book.dataset.frames ?? "[]");
+    if (!frames.length) return;
+    // Out of the page's stacking, so it covers the nav and the desk mascot (like the lightbox)
+    document.body.appendChild(book);
+
+    let images: HTMLImageElement[] | undefined;
+    let timer: ReturnType<typeof setTimeout>;
+    const load = () =>
+      (images ??= frames.map((f) => {
+        const img = new Image();
+        img.src = f.src;
+        img.alt = "";
+        img.draggable = false;
+        return img;
+      }));
+
+    const show = (i: number) => {
+      card.replaceChildren(load()[i]);
+      dayEl.textContent = String(frames[i].day);
+      bar.style.width = `${((i + 1) / frames.length) * 100}%`;
+      card.style.setProperty("--jitter", `${(Math.random() * 5 - 2.5).toFixed(1)}deg`);
+    };
+
+    const play = async () => {
+      clearTimeout(timer);
+      again.hidden = true;
+      show(0);
+      await Promise.all(load().map((img) => img.decode().catch(() => {})));
+      if (book.hidden) return;
+      // About 12 seconds for the lot; slow and calm with reduced motion
+      const frameMs = reduceMotion() ? 450 : Math.max(80, Math.round(12000 / frames.length));
+      let i = 0;
+      const tick = () => {
+        show(i);
+        if (++i < frames.length) timer = setTimeout(tick, frameMs);
+        else again.hidden = false;
+      };
+      tick();
+    };
+
+    const close = () => {
+      clearTimeout(timer);
+      book.hidden = true;
+      document.body.style.overflow = "";
+      window.lenis?.start();
+      openBtn.focus();
+    };
+
+    openBtn.addEventListener("pointerenter", load, { once: true });
+    openBtn.addEventListener("click", () => {
+      book.hidden = false;
+      document.body.style.overflow = "hidden";
+      window.lenis?.stop();
+      closeBtn.focus();
+      play();
+    });
+    again.addEventListener("click", play);
+    closeBtn.addEventListener("click", close);
+    book.addEventListener("click", (e) => e.target === book && close());
+    document.addEventListener("keydown", (e) => e.key === "Escape" && !book.hidden && close(), {
+      signal: pageListeners.signal,
+    });
+  }
+
+  // The mascot naps beside day 100. Scrolling to it wakes it up (wake once, then idle) and
+  // sends the corner mascot away so there's only one of it; scrolling off, it dozes off again.
+  function setUpCameo() {
+    const cameo = document.getElementById("cameo");
+    const dayEl = cameo?.closest<HTMLElement>(".day");
+    if (!cameo || !dayEl) return;
+    const frames = (anim: string) => [...cameo.querySelectorAll<HTMLImageElement>(`[data-anim="${anim}"]`)];
+    const sleep = frames("sleep");
+    const wake = frames("wake");
+    const idle = frames("idle");
+    const still = reduceMotion();
+
+    let loop = sleep;
+    let shown = sleep[0];
+    let queue: HTMLImageElement[] = [];
+    let at = 0;
+    const showFrame = (frame: HTMLImageElement) => {
+      shown.hidden = true;
+      frame.hidden = false;
+      shown = frame;
+    };
+    const step = () => {
+      const next = queue.shift();
+      const frame = next ?? loop[++at % loop.length];
+      showFrame(frame);
+      cameoTimer = setTimeout(step, Number(frame.dataset.ms));
+    };
+    if (!still) cameoTimer = setTimeout(step, Number(shown.dataset.ms));
+
+    const corner = document.getElementById("mascot");
+    const watch = new IntersectionObserver(
+      ([e]) => {
+        corner?.classList.toggle("is-away", e.isIntersecting);
+        const next = e.isIntersecting ? idle : sleep;
+        if (next === loop) return;
+        loop = next;
+        at = -1;
+        if (still) return showFrame(loop[0]);
+        queue = e.isIntersecting ? [...wake] : [];
+        clearTimeout(cameoTimer);
+        step();
+      },
+      { threshold: 0.6 },
+    );
+    watch.observe(dayEl);
+    trackerObservers.push(watch);
+  }
 
   // The tracker shows while the wall is on screen, counts the day in the middle of the
   // screen, and fills its ticks up to the current chapter
@@ -704,7 +878,168 @@ const stamps: Record<number, string> = { 1: "day one!", 50: "halfway!", 100: "ma
     }
   }
 
+  /* The flipbook button: an accent label under the tally */
+  .flip-open {
+    padding: 0.5rem 1.1rem 0.35rem;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transform: rotate(-1.5deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .flip-open::after {
+    content: " \203A";
+  }
+
+  .flip-open:hover,
+  .flip-open:focus-visible {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  .flip-open:focus-visible,
+  .flip-btn:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* The flipbook overlay: one paper card in the middle, the day under it */
+  .flipbook {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgba(14, 13, 18, 0.88);
+  }
+
+  .flipbook[hidden] {
+    display: none;
+  }
+
+  .flip-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    width: min(72vmin, 460px);
+  }
+
+  .flip-card {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 6px;
+    border-radius: 6px;
+    background: var(--text-color);
+    box-shadow: 8px 8px 0 var(--edge-color);
+    transform: rotate(var(--jitter, 0deg));
+  }
+
+  .flip-card :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .flip-progress {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(244, 240, 232, 0.15);
+    overflow: hidden;
+  }
+
+  .flip-progress span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--accent-color);
+  }
+
+  .flip-day {
+    color: var(--text-color);
+    font-family: var(--font-accent);
+    font-size: 1.3rem;
+    letter-spacing: 0.02em;
+  }
+
+  .flip-day strong {
+    display: inline-block;
+    min-width: 2.2ch;
+    margin-left: 0.3rem;
+    color: var(--accent-color);
+    font-size: 2.2rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flip-day span {
+    margin-left: 0.2rem;
+    opacity: 0.5;
+  }
+
+  .flip-buttons {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .flip-btn {
+    padding: 0.35rem 0.9rem 0.2rem;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transform: rotate(-2deg);
+  }
+
+  .flip-btn--close {
+    background: var(--text-color);
+    transform: rotate(1.5deg);
+  }
+
+  /* The day-100 nap: the mascot sticker leaning on the card's bottom-right corner */
+  .cameo {
+    position: absolute;
+    right: -34px;
+    bottom: -22px;
+    z-index: 7;
+    display: grid;
+    width: 120px;
+    filter: drop-shadow(2px 0 0 var(--text-color)) drop-shadow(-2px 0 0 var(--text-color))
+      drop-shadow(0 2px 0 var(--text-color)) drop-shadow(0 -2px 0 var(--text-color))
+      drop-shadow(3px 3px 0 var(--edge-color));
+    pointer-events: none;
+  }
+
+  .cameo img {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 560px) {
+    .cameo {
+      right: -14px;
+      bottom: -14px;
+      width: 84px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .flip-open,
     .challenge-back,
     .challenge-end,
     .print,

@@ -17,6 +17,9 @@ html {
   background-size: 22px 22px;
   color: var(--text-color);
   height: 100%;
+  /* Keep the scrollbar's space even when the lightbox locks scrolling (overflow: hidden),
+     so the page behind doesn't jump sideways */
+  scrollbar-gutter: stable;
   transition: background-color 0.4s ease, color 0.4s ease;
 }
 

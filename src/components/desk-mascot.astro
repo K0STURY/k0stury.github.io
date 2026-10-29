@@ -1,0 +1,268 @@
+---
+// The desk mascot: pops up from the bottom edge. It sleeps (zzz) until clicked; hovered while
+// asleep it stirs (pop_up, once) and sleeps on. A click wakes it up (click), it stays
+// awake (idle) while hovered, and dozes off again a second after the pointer leaves. Frames live
+// in src/assets/mascot/zzz, /pop_up, /idle and /click (see the README there).
+// A missing zzz or idle uses the other; neither = the first loose image, still; nothing = no mascot.
+import quotes from "@data/quotes.json";
+import { getMascotFrames } from "src/helpers/mascot";
+
+const sleepFrames = await getMascotFrames("zzz");
+const idle = await getMascotFrames("idle");
+const idleFrames = idle.length || sleepFrames.length ? idle : await getMascotFrames("still");
+const clickFrames = await getMascotFrames("click");
+const popUpFrames = await getMascotFrames("pop_up");
+const lines = quotes.map((q) => q.join(" "));
+---
+
+{
+  (sleepFrames.length > 0 || idleFrames.length > 0) && (
+    <button class="mascot" id="mascot" aria-label="Say hi to the mascot" data-lines={JSON.stringify(lines)}>
+      <span class="mascot-bubble" id="mascot-bubble" aria-live="polite" />
+      <span class="mascot-art">
+        {sleepFrames.map((f, i) => (
+          <img src={f.src} alt="" data-anim="sleep" data-ms={f.ms} hidden={i > 0} draggable="false" />
+        ))}
+        {idleFrames.map((f, i) => (
+          <img
+            src={f.src}
+            alt=""
+            data-anim="idle"
+            data-ms={f.ms}
+            hidden={sleepFrames.length > 0 || i > 0}
+            draggable="false"
+          />
+        ))}
+        {clickFrames.map((f) => (
+          <img src={f.src} alt="" data-anim="click" data-ms={f.ms} hidden draggable="false" />
+        ))}
+        {popUpFrames.map((f) => (
+          <img src={f.src} alt="" data-anim="pop_up" data-ms={f.ms} hidden draggable="false" />
+        ))}
+      </span>
+    </button>
+  )
+}
+
+<style>
+  .mascot {
+    position: fixed;
+    /* Pops up from the bottom edge, just left of the back-to-top button */
+    right: 6.5rem;
+    bottom: 0;
+    z-index: 30;
+    width: 160px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    /* Mostly below the screen edge, just the head peeking; pops all the way up on hover */
+    transform: translateY(58%) rotate(-3deg);
+    transform-origin: bottom center;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mascot:hover,
+  .mascot:focus-visible {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  /* Scrolling fast, or napping on a page of its own (100-days): hides (after the hover
+     rule, so this wins) */
+  .mascot.is-ducking,
+  .mascot.is-away {
+    transform: translateY(105%) rotate(-3deg);
+    transition-duration: 0.18s;
+  }
+
+  .mascot:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 4px;
+  }
+
+  /* Frames stack in one cell; only the current one is not hidden */
+  .mascot-art {
+    display: grid;
+    /* A die-cut paper outline, like the gallery stickers, then the hard desk shadow */
+    filter: drop-shadow(2px 0 0 var(--text-color)) drop-shadow(-2px 0 0 var(--text-color))
+      drop-shadow(0 2px 0 var(--text-color)) drop-shadow(0 -2px 0 var(--text-color))
+      drop-shadow(4px 4px 0 var(--edge-color));
+    animation: mascot-bob 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .mascot-art img {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: auto;
+  }
+
+  @keyframes mascot-bob {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -5px; }
+  }
+
+  /* Speech bubble: a paper note above the mascot's head */
+  .mascot-bubble {
+    position: absolute;
+    right: 45%;
+    bottom: calc(100% - 0.5rem);
+    z-index: 2;
+    width: max-content;
+    max-width: 13rem;
+    padding: 0.45rem 0.75rem 0.3rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-align: left;
+    opacity: 0;
+    transform: translateY(6px) scale(0.9) rotate(4deg);
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+
+  .mascot-bubble.is-on {
+    opacity: 1;
+    transform: rotate(4deg);
+  }
+
+  /* Bubble switched off for now; delete this rule to bring it back */
+  .mascot-bubble {
+    display: none;
+  }
+
+  @media (max-width: 560px) {
+    .mascot {
+      width: 104px;
+      right: 4.6rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mascot,
+    .mascot-bubble {
+      transition: none;
+    }
+
+    .mascot-art {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // How long each frame shows, in ms
+
+  let cleanup = () => {};
+
+  document.addEventListener("astro:page-load", () => {
+    cleanup();
+    const mascot = document.getElementById("mascot");
+    const bubble = document.getElementById("mascot-bubble");
+    if (!mascot || !bubble) return;
+    const lines: string[] = JSON.parse(mascot.dataset.lines ?? "[]");
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Frames: asleep it loops sleep, awake it loops
+    // idle; click and pop_up are queued to play once
+    const frames = (anim: string) => [...mascot.querySelectorAll<HTMLImageElement>(`[data-anim="${anim}"]`)];
+    // Hidden frames are downloaded but not decoded until first shown, which flashes a blank
+    // frame on the first hover or click: decode them all up front
+    mascot.querySelectorAll("img").forEach((img) => img.decode().catch(() => {}));
+    let idle = frames("idle");
+    let sleep = frames("sleep");
+    if (!sleep.length) sleep = idle;
+    if (!idle.length) idle = sleep;
+    const clickFrames = frames("click");
+    const popUp = frames("pop_up");
+    let awake = false;
+    let shown = sleep[0];
+    let queue: HTMLImageElement[] = [];
+    let loopAt = 0;
+    let frameTimer: ReturnType<typeof setTimeout>;
+    const step = () => {
+      const next = queue.shift();
+      const loop = awake ? idle : sleep;
+      const frame = next ?? loop[++loopAt % loop.length];
+      shown.hidden = true;
+      frame.hidden = false;
+      shown = frame;
+      frameTimer = setTimeout(step, Number(frame.dataset.ms));
+    };
+    if (!still) frameTimer = setTimeout(step, Number(sleep[0].dataset.ms));
+
+    // Fast scroll: duck, then peek back once things calm down
+    let lastY = scrollY;
+    let lastT = performance.now();
+    let duckTimer: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      const now = performance.now();
+      const speed = Math.abs(scrollY - lastY) / Math.max(now - lastT, 1); // px per ms
+      lastY = scrollY;
+      lastT = now;
+      if (speed > 3) {
+        mascot.classList.add("is-ducking");
+        clearTimeout(duckTimer);
+        duckTimer = setTimeout(() => mascot.classList.remove("is-ducking"), 700);
+      }
+    };
+    addEventListener("scroll", onScroll, { passive: true });
+
+    // Plays a one-off animation right away; the loop carries on after it
+    const play = (anim: HTMLImageElement[]) => {
+      if (still) return;
+      queue = [...anim];
+      loopAt = -1; // the loop restarts from frame 1 afterwards
+      clearTimeout(frameTimer);
+      step();
+    };
+
+    // Click: wake up (play the click frames) and say something
+    let bubbleTimer: ReturnType<typeof setTimeout>;
+    let napTimer: ReturnType<typeof setTimeout> | undefined;
+    let last = -1;
+    const onClick = () => {
+      awake = true;
+      clearTimeout(napTimer);
+      loopAt = -1;
+      if (clickFrames.length) play(clickFrames);
+      if (!lines.length) return;
+      let i = last;
+      while (lines.length > 1 && i === last) i = Math.floor(Math.random() * lines.length);
+      last = i;
+      bubble.textContent = lines[i];
+      bubble.classList.add("is-on");
+      clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => bubble.classList.remove("is-on"), 3200);
+    };
+    mascot.addEventListener("click", onClick);
+    // Pointer leaves: the bubble fades right away (the timer still covers taps on phones), and
+    // a second later, once it has sunk back down, it falls asleep again. Coming back cancels that.
+    mascot.addEventListener("mouseleave", () => {
+      bubble.classList.remove("is-on");
+      clearTimeout(napTimer);
+      napTimer = setTimeout(() => {
+        awake = false;
+        loopAt = -1;
+      }, 1000);
+    });
+    // Pointer arrives: stay awake if it was; asleep, it stirs as it pops up (pop_up, once),
+    // then sleeps on until clicked
+    mascot.addEventListener("mouseenter", () => {
+      clearTimeout(napTimer);
+      if (!awake && popUp.length) play(popUp);
+    });
+
+    cleanup = () => {
+      removeEventListener("scroll", onScroll);
+      clearTimeout(duckTimer);
+      clearTimeout(bubbleTimer);
+      clearTimeout(frameTimer);
+      clearTimeout(napTimer);
+    };
+  });
+</script>

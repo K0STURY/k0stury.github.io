@@ -4,6 +4,7 @@ import "@fontsource/luckiest-guy";
 import "lenis/dist/lenis.css";
 import MetaTags from "@layouts/meta-tags.astro";
 import NavigationBar from "@components/navigation-bar.astro";
+import DeskMascot from "@components/desk-mascot.astro";
 import { ViewTransitions } from "astro:transitions";
 import { contacts } from "src/site.config";
 import type { Artwork } from "@api/art";
@@ -71,6 +72,7 @@ const discordLink = contacts.find((c) => c.name === "Discord")?.link ?? "#";
         </p>
       </div>
     </footer>
+    <DeskMascot />
     <!-- Floating back-to-top button -->
     <button
       id="floating-top"

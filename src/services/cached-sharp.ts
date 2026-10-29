@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { statSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LocalImageService } from "astro";
@@ -17,6 +18,19 @@ const inFlight = new Map<string, ReturnType<LocalImageService["transform"]>>();
 
 const service: LocalImageService = {
   ...sharpService,
+  // Dev image URLs are built from the file name and cached by the browser for a year, so a
+  // renamed/replaced file kept showing the old picture. Stamp them with the file's version.
+  getURL(options, imageConfig) {
+    const url = sharpService.getURL(options, imageConfig) as string;
+    if (!import.meta.env.DEV || typeof options.src !== "object") return url;
+    try {
+      const file = decodeURIComponent(options.src.src.replace(/^\/@fs\/?/, "").replace(/\?.*$/, ""));
+      const { mtimeMs, size } = statSync(path.isAbsolute(file) ? file : `/${file}`);
+      return `${url}&v=${Math.round(mtimeMs)}-${size}`;
+    } catch {
+      return url;
+    }
+  },
   async transform(inputBuffer, transformOptions, imageConfig) {
     if (!import.meta.env.DEV) {
       return sharpService.transform(inputBuffer, transformOptions, imageConfig);

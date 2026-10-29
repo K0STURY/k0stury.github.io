@@ -143,7 +143,7 @@ const scatter = [
                   aria-hidden="true"
                 ></span>
               )}
-              {newIds.has(art.id) && <span class="new-badge">NEW</span>}
+              {newIds.has(art.id) && <span class="new-badge">new</span>}
               {art.redrawOf != null && <span class="redraw-stamp">redraw</span>}
               <div class="sticker-clip">
                 {/* Lazy: only tiles near the screen download; filtered-out ones never do */}
@@ -432,42 +432,32 @@ const scatter = [
     opacity: 0;
   }
 
-  .new-badge {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 5;
-    padding: 4px 14px;
-    border-radius: 8px;
-    background: var(--accent-color);
-    color: var(--primary-color);
-    font-family: var(--font-accent);
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-    box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(231, 174, 58, 0.3);
-    animation: badge-pulse 2s ease-in-out infinite;
-  }
-
-  /* Redraws get a small paper stamp; opening one lets you compare it with the original */
+  /* Small stamps on the corners: "new" (accent, top right) and "redraw" (paper, top left;
+     opening one lets you compare it with the original) */
+  .new-badge,
   .redraw-stamp {
     position: absolute;
     top: 14px;
-    left: 12px;
     z-index: 5;
     padding: 3px 10px 1px;
     border-radius: 4px;
-    background: var(--text-color);
     color: var(--primary-color);
     font-family: var(--font-accent);
     font-size: 0.8rem;
     letter-spacing: 0.03em;
     box-shadow: 3px 3px 0 var(--edge-color);
-    transform: rotate(-6deg);
   }
 
-  @keyframes badge-pulse {
-    0%, 100% { box-shadow: 0 0 6px var(--accent-color), 0 0 12px rgba(231, 174, 58, 0.2); }
-    50% { box-shadow: 0 0 12px var(--accent-color), 0 0 24px rgba(231, 174, 58, 0.4); }
+  .new-badge {
+    right: 12px;
+    background: var(--accent-color);
+    transform: rotate(6deg);
+  }
+
+  .redraw-stamp {
+    left: 12px;
+    background: var(--text-color);
+    transform: rotate(-6deg);
   }
 
   .hover-overlay {
@@ -556,11 +546,6 @@ const scatter = [
     transform: rotate(0deg) translateY(calc(var(--y, 0px) - 6px)) scale(1.04);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .new-badge {
-      animation: none;
-    }
-  }
 </style>
 
 <script>
@@ -794,13 +779,17 @@ document.addEventListener("astro:page-load", () => {
     setTimeout(showFace, 260); // swap the face mid-spin, while it is a blur
   }
 
-  // Where the deck gathers: the middle of whatever part of the grid is on screen
-  function pileCenter() {
+  // The deck sits off to the right of the grid (inside the screen), halfway down whatever
+  // part of the grid is on screen
+  const DECK_SCALE = 0.5;
+  function deckSpot(cardWidth: number) {
     const g = galleryEl!.getBoundingClientRect();
+    const half = (cardWidth * DECK_SCALE) / 2 + 12; // + room for the tilt and the hard shadow
     const top = Math.max(g.top, 0);
     const bottom = Math.min(g.bottom, window.innerHeight);
     return {
-      x: g.left + g.width / 2,
+      // clientWidth: the page width without the scrollbar; - 40: room for the riffle's spread
+      x: Math.min(g.right + half + 24, document.documentElement.clientWidth - half - 40),
       y: bottom > top ? (top + bottom) / 2 : g.top + Math.min(g.height / 2, 200),
     };
   }
@@ -823,63 +812,97 @@ document.addEventListener("astro:page-load", () => {
       item.style.transform = "none";
     });
 
-    const spin = () => (Math.random() * 40 - 20).toFixed(1);
-    const toPile = (item: HTMLElement, c: { x: number; y: number }) => {
+    // The new order, decided up front so the deck can be stacked with the first card on top
+    const order = [...visible];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const n = order.length;
+
+    // Each card's pose in the deck: a slight tilt, and a little height for the cards below it
+    const poses = new Map(
+      order.map((item, i) => [item, { tilt: Math.random() * 10 - 5, lift: Math.min(n - 1 - i, 12) * 0.8 }]),
+    );
+    const inDeck = (item: HTMLElement, deck: { x: number; y: number }, extraLift = 0, extraTilt = 0) => {
       const r = item.getBoundingClientRect();
-      const dx = c.x - (r.left + r.width / 2);
-      const dy = c.y - (r.top + r.height / 2);
-      return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+      const { tilt, lift } = poses.get(item)!;
+      const dx = deck.x - (r.left + r.width / 2);
+      const dy = deck.y - lift - extraLift - (r.top + r.height / 2);
+      return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) rotate(${(tilt + extraTilt).toFixed(1)}deg)`;
     };
 
     try {
-      if (!reduceMotion.matches) {
-        // 1. Gather every tile into a pile, with a last little riffle
-        const c = pileCenter();
-        const moves = visible.map((item) => toPile(item, c));
-        const gather = visible.map((item, i) =>
-          item.animate(
-            [
-              { transform: "none" },
-              { transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)`, offset: 0.7 },
-              { transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)` },
-            ],
-            { duration: 560, delay: Math.min(i, 14) * 14, easing: "cubic-bezier(0.5, 0, 0.3, 1)", fill: "forwards" },
-          ),
-        );
-        await Promise.all(gather.map((a) => a.finished));
-        if (run !== shuffleRun) return;
-        gather.forEach((a) => a.cancel());
-      }
-
-      // 2. Reorder. Hidden tiles keep their original order after the visible ones,
-      //    so pieces revealed later by infinite scroll still arrive at the end.
-      for (let i = visible.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [visible[i], visible[j]] = [visible[j], visible[i]];
-      }
-      const hidden = originalOrder.filter((item) => item.classList.contains("hidden"));
-      [...visible, ...hidden].forEach((item) => galleryEl!.appendChild(item));
-      orderDirty = true;
-
       if (reduceMotion.matches) {
+        order.forEach((item) => galleryEl!.appendChild(item));
+        originalOrder.filter((item) => item.classList.contains("hidden")).forEach((item) => galleryEl!.appendChild(item));
+        orderDirty = true;
         visible.forEach((item) => item.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 }));
         return;
       }
 
-      // 3. Deal them back out from the pile into their new places
-      const c = pileCenter();
-      const moves = visible.map((item) => toPile(item, c));
-      const deal = visible.map((item, i) =>
+      const deck = deckSpot(visible[0].getBoundingClientRect().width);
+
+      // 1. Collect every tile into the deck at the side. The card dealt last lands first, so the
+      //    first card to deal ends up on top.
+      const gather = [...order].reverse().map((item, rank) => {
+        item.style.zIndex = String(10 + rank);
+        return item.animate(
+          [{ transform: "none" }, { transform: `${inDeck(item, deck)} scale(${DECK_SCALE})` }],
+          { duration: 460, delay: (rank / n) * 420, easing: "cubic-bezier(0.5, 0, 0.3, 1)", fill: "forwards" },
+        );
+      });
+      await Promise.all(gather.map((a) => a.finished));
+      if (run !== shuffleRun) return;
+
+      // 2. A quick riffle: the deck's two halves slide apart and snap back together, twice
+      const riffle = order.map((item, i) =>
         item.animate(
-          [{ transform: `${moves[i]} rotate(${spin()}deg) scale(0.5)` }, { transform: "none" }],
-          { duration: 520, delay: Math.min(i, 24) * 26, easing: "cubic-bezier(0.34, 1.3, 0.64, 1)", fill: "backwards" },
+          [{ transform: "translateX(0)" }, { transform: `translateX(${i % 2 ? 44 : -44}px)` }, { transform: "translateX(0)" }],
+          { duration: 240, iterations: 2, easing: "ease-in-out", composite: "add" },
         ),
       );
+      await Promise.all(riffle.map((a) => a.finished));
+      if (run !== shuffleRun) return;
+
+      // 3. Reorder. Hidden tiles keep their original order after the visible ones,
+      //    so pieces revealed later by infinite scroll still arrive at the end.
+      const hidden = originalOrder.filter((item) => item.classList.contains("hidden"));
+      [...order, ...hidden].forEach((item) => galleryEl!.appendChild(item));
+      orderDirty = true;
+      gather.forEach((a) => a.cancel());
+
+      // 4. Deal from the top, one card at a time: each is picked up off the deck and flicked
+      //    to its new place. Cards that land below the screen go out in a quick burst at the end.
+      const onScreen = order.filter((item) => item.getBoundingClientRect().top < window.innerHeight);
+      const gap = Math.min(70, 1400 / Math.max(onScreen.length, 1));
+      let late = 0;
+      const deal = order.map((item, i) => {
+        const delay = onScreen.includes(item) ? onScreen.indexOf(item) * gap : onScreen.length * gap + late++ * 12;
+        const flick = Math.random() < 0.5 ? -14 : 14;
+        const a = item.animate(
+          [
+            { transform: `${inDeck(item, deck)} scale(${DECK_SCALE})`, easing: "ease-out" },
+            {
+              transform: `${inDeck(item, deck, 14, flick)} scale(${DECK_SCALE * 1.12})`,
+              offset: 0.16,
+              easing: "cubic-bezier(0.3, 1.25, 0.5, 1)",
+            },
+            { transform: "none" },
+          ],
+          { duration: 480, delay, fill: "backwards" },
+        );
+        // Once it lands it drops back into the grid's stacking, under the cards still flying
+        item.style.zIndex = String(10 + n - i);
+        a.finished.then(() => (item.style.zIndex = ""), () => {});
+        return a;
+      });
       await Promise.all(deal.map((a) => a.finished));
     } catch {
       // Animations were cancelled by a filter change; nothing to clean up
     } finally {
       if (run === shuffleRun) shuffling = false;
+      visible.forEach((item) => (item.style.zIndex = ""));
     }
   }
 

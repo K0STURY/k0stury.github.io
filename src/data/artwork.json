@@ -2,7 +2,7 @@
   {
     "ID": 1,
     "name": "Abandoned Soldier",
-    "description": "In progress",
+    "description": "",
     "date": "13 OCT 2021",
     "tag": [
       "Characters"
@@ -15,7 +15,7 @@
   {
     "ID": 2,
     "name": "Oni Remake Box",
-    "description": "In progress",
+    "description": "",
     "date": "23 OCT 2021",
     "tag": [
       "Characters"
@@ -28,7 +28,7 @@
   {
     "ID": 3,
     "name": "Proto",
-    "description": "In progress",
+    "description": "",
     "date": "30 OCT 2021",
     "tag": [
       "Characters"
@@ -39,7 +39,7 @@
   {
     "ID": 4,
     "name": "Mecha",
-    "description": "In progress",
+    "description": "",
     "date": "17 FEB 2022",
     "tag": [
       "Characters"
@@ -50,7 +50,7 @@
   {
     "ID": 5,
     "name": "Surpass",
-    "description": "In progress",
+    "description": "",
     "date": "19 MAR 2022",
     "tag": [
       "Characters"
@@ -63,7 +63,7 @@
   {
     "ID": 6,
     "name": "Ghost",
-    "description": "In progress",
+    "description": "",
     "date": "25 MAR 2022",
     "tag": [
       "Characters"
@@ -74,7 +74,7 @@
   {
     "ID": 7,
     "name": "Something",
-    "description": "In progress",
+    "description": "",
     "date": "1 APR 2022",
     "tag": [
       "Characters"
@@ -85,7 +85,7 @@
   {
     "ID": 8,
     "name": "Portrait Cube",
-    "description": "In progress",
+    "description": "",
     "date": "8 APR 2022",
     "tag": [
       "Characters"
@@ -96,7 +96,7 @@
   {
     "ID": 9,
     "name": "Skull Vibe",
-    "description": "In progress",
+    "description": "",
     "date": "15 APR 2022",
     "tag": [
       "Characters"
@@ -109,7 +109,7 @@
   {
     "ID": 10,
     "name": "Pink Demon",
-    "description": "In progress",
+    "description": "",
     "date": "12 MAY 2022",
     "tag": [
       "Characters"
@@ -122,7 +122,7 @@
   {
     "ID": 11,
     "name": "Shadow Practice",
-    "description": "In progress",
+    "description": "",
     "date": "30 MAY 2022",
     "tag": [
       "Characters"
@@ -135,7 +135,7 @@
   {
     "ID": 12,
     "name": "Vibe",
-    "description": "In progress",
+    "description": "",
     "date": "4 JUN 2022",
     "tag": [
       "Characters"
@@ -148,7 +148,7 @@
   {
     "ID": 13,
     "name": "Skull",
-    "description": "In progress",
+    "description": "",
     "date": "19 JUN 2022",
     "tag": [
       "Characters"
@@ -159,7 +159,7 @@
   {
     "ID": 14,
     "name": "Death Angel",
-    "description": "In progress",
+    "description": "",
     "date": "1 JUL 2022",
     "tag": [
       "Characters"
@@ -170,7 +170,7 @@
   {
     "ID": 15,
     "name": "Robot",
-    "description": "In progress",
+    "description": "",
     "date": "28 JUL 2022",
     "tag": [
       "Characters"
@@ -183,7 +183,7 @@
   {
     "ID": 16,
     "name": "Vector Sketching",
-    "description": "In progress",
+    "description": "",
     "date": "5 OCT 2022",
     "tag": [
       "Characters"
@@ -196,7 +196,7 @@
   {
     "ID": 17,
     "name": "Quick Skull",
-    "description": "In progress",
+    "description": "",
     "date": "6 OCT 2022",
     "tag": [
       "Characters"
@@ -207,7 +207,7 @@
   {
     "ID": 18,
     "name": "Demon Skull",
-    "description": "In progress",
+    "description": "",
     "date": "21 OCT 2022",
     "tag": [
       "Characters"
@@ -220,7 +220,7 @@
   {
     "ID": 19,
     "name": "S22 Ultra",
-    "description": "In progress",
+    "description": "",
     "date": "22 OCT 2022",
     "tag": [
       "Characters"
@@ -233,7 +233,7 @@
   {
     "ID": 20,
     "name": "Ghost Rider",
-    "description": "In progress",
+    "description": "",
     "date": "4 NOV 2022",
     "tag": [
       "Characters",
@@ -245,7 +245,7 @@
   {
     "ID": 21,
     "name": "Red Demon",
-    "description": "In progress",
+    "description": "",
     "date": "15 NOV 2022",
     "tag": [
       "Characters"
@@ -258,7 +258,7 @@
   {
     "ID": 22,
     "name": "Bull",
-    "description": "In progress",
+    "description": "",
     "date": "11 MAR 2023",
     "tag": [
       "Characters"
@@ -269,7 +269,7 @@
   {
     "ID": 23,
     "name": "Trace Edit",
-    "description": "In progress",
+    "description": "",
     "date": "12 MAR 2023",
     "tag": [
       "Characters"
@@ -280,7 +280,7 @@
   {
     "ID": 24,
     "name": "Sword Spooky",
-    "description": "In progress",
+    "description": "",
     "date": "13 MAR 2023",
     "tag": [
       "Characters"
@@ -291,7 +291,7 @@
   {
     "ID": 25,
     "name": "Color Training",
-    "description": "In progress",
+    "description": "",
     "date": "14 MAR 2023",
     "tag": [
       "Characters"
@@ -302,7 +302,7 @@
   {
     "ID": 26,
     "name": "Shadow Figure",
-    "description": "In progress",
+    "description": "",
     "date": "18 MAR 2023",
     "tag": [
       "Characters"
@@ -315,7 +315,7 @@
   {
     "ID": 27,
     "name": "Retro Skull",
-    "description": "In progress",
+    "description": "",
     "date": "25 APR 2023",
     "tag": [
       "Characters"
@@ -326,7 +326,7 @@
   {
     "ID": 28,
     "name": "Orc",
-    "description": "In progress",
+    "description": "",
     "date": "26 APR 2023",
     "tag": [
       "Characters"
@@ -339,7 +339,7 @@
   {
     "ID": 29,
     "name": "Merchant",
-    "description": "In progress",
+    "description": "",
     "date": "28 APR 2023",
     "tag": [
       "Characters"
@@ -350,7 +350,7 @@
   {
     "ID": 30,
     "name": "Illustration",
-    "description": "In progress",
+    "description": "",
     "date": "29 APR 2023",
     "tag": [
       "Characters"
@@ -361,7 +361,7 @@
   {
     "ID": 31,
     "name": "Gear Lord",
-    "description": "In progress",
+    "description": "",
     "date": "28 MAY 2023",
     "tag": [
       "Characters"
@@ -372,7 +372,7 @@
   {
     "ID": 32,
     "name": "Angel",
-    "description": "In progress",
+    "description": "",
     "date": "10 JUL 2023",
     "tag": [
       "Characters"
@@ -383,7 +383,7 @@
   {
     "ID": 33,
     "name": "Mob Psycho",
-    "description": "In progress",
+    "description": "",
     "date": "16 JUL 2023",
     "tag": [
       "Characters",
@@ -395,7 +395,7 @@
   {
     "ID": 34,
     "name": "Feathers",
-    "description": "In progress",
+    "description": "",
     "date": "28 JUL 2023",
     "tag": [
       "Characters"
@@ -408,7 +408,7 @@
   {
     "ID": 35,
     "name": "Miles",
-    "description": "In progress",
+    "description": "",
     "date": "10 AUG 2023",
     "tag": [
       "Characters",
@@ -420,7 +420,7 @@
   {
     "ID": 36,
     "name": "Spacial",
-    "description": "In progress",
+    "description": "",
     "date": "18 OCT 2023",
     "tag": [
       "Characters"
@@ -431,7 +431,7 @@
   {
     "ID": 37,
     "name": "Pink Girl",
-    "description": "In progress",
+    "description": "",
     "date": "1 NOV 2023",
     "tag": [
       "Characters"
@@ -442,7 +442,7 @@
   {
     "ID": 38,
     "name": "Moonborn",
-    "description": "In progress",
+    "description": "",
     "date": "1 NOV 2023",
     "tag": [
       "Characters",
@@ -454,7 +454,7 @@
   {
     "ID": 39,
     "name": "Frozen",
-    "description": "In progress",
+    "description": "",
     "date": "4 NOV 2023",
     "tag": [
       "Characters"
@@ -465,7 +465,7 @@
   {
     "ID": 40,
     "name": "Punk",
-    "description": "In progress",
+    "description": "",
     "date": "19 NOV 2023",
     "tag": [
       "Characters"
@@ -476,7 +476,7 @@
   {
     "ID": 41,
     "name": "Arms",
-    "description": "In progress",
+    "description": "",
     "date": "19 NOV 2023",
     "tag": [
       "Characters"
@@ -489,7 +489,7 @@
   {
     "ID": 42,
     "name": "Demonic Hand",
-    "description": "In progress",
+    "description": "",
     "date": "21 NOV 2023",
     "tag": [
       "Characters"
@@ -500,7 +500,7 @@
   {
     "ID": 43,
     "name": "Shadow Warrior",
-    "description": "In progress",
+    "description": "",
     "date": "22 NOV 2023",
     "tag": [
       "Characters"
@@ -513,7 +513,7 @@
   {
     "ID": 44,
     "name": "Happy Woman",
-    "description": "In progress",
+    "description": "",
     "date": "12 DEC 2023",
     "tag": [
       "Characters"
@@ -524,7 +524,7 @@
   {
     "ID": 45,
     "name": "Hood For Alda",
-    "description": "In progress",
+    "description": "",
     "date": "14 DEC 2023",
     "tag": [
       "Characters"
@@ -535,7 +535,7 @@
   {
     "ID": 46,
     "name": "Skateboard Design",
-    "description": "In progress",
+    "description": "",
     "date": "15 DEC 2023",
     "tag": [
       "Characters"
@@ -546,7 +546,7 @@
   {
     "ID": 47,
     "name": "Alita Battle Angel Fan Art",
-    "description": "In progress",
+    "description": "",
     "date": "20 DEC 2023",
     "tag": [
       "Characters",
@@ -558,7 +558,7 @@
   {
     "ID": 48,
     "name": "Peak Mind",
-    "description": "In progress",
+    "description": "",
     "date": "21 DEC 2023",
     "tag": [
       "Characters"
@@ -571,7 +571,7 @@
   {
     "ID": 49,
     "name": "Monk",
-    "description": "In progress",
+    "description": "",
     "date": "22 DEC 2023",
     "tag": [
       "Characters"
@@ -582,7 +582,7 @@
   {
     "ID": 50,
     "name": "Full Body",
-    "description": "In progress",
+    "description": "",
     "date": "23 DEC 2023",
     "tag": [
       "Characters"
@@ -593,7 +593,7 @@
   {
     "ID": 51,
     "name": "Purple Palette Remake",
-    "description": "In progress",
+    "description": "",
     "date": "13 JAN 2024",
     "tag": [
       "Characters"
@@ -604,7 +604,7 @@
   {
     "ID": 52,
     "name": "Self Portrait",
-    "description": "In progress",
+    "description": "",
     "date": "15 JAN 2024",
     "tag": [
       "Characters"
@@ -615,7 +615,7 @@
   {
     "ID": 53,
     "name": "Drip",
-    "description": "In progress",
+    "description": "",
     "date": "19 FEB 2024",
     "tag": [
       "Characters"
@@ -626,7 +626,7 @@
   {
     "ID": 54,
     "name": "Perspective",
-    "description": "In progress",
+    "description": "",
     "date": "23 FEB 2024",
     "tag": [
       "Characters"
@@ -637,7 +637,7 @@
   {
     "ID": 55,
     "name": "Reference",
-    "description": "In progress",
+    "description": "",
     "date": "25 FEB 2024",
     "tag": [
       "Characters"
@@ -648,7 +648,7 @@
   {
     "ID": 56,
     "name": "KryX Fanart",
-    "description": "In progress",
+    "description": "",
     "date": "1 MAR 2024",
     "tag": [
       "Characters",
@@ -660,7 +660,7 @@
   {
     "ID": 57,
     "name": "4 Color Limit",
-    "description": "In progress",
+    "description": "",
     "date": "19 MAR 2024",
     "tag": [
       "Characters",
@@ -674,7 +674,7 @@
   {
     "ID": 58,
     "name": "Quick Limited Perspective",
-    "description": "In progress",
+    "description": "",
     "date": "19 MAR 2024",
     "tag": [
       "Characters",
@@ -688,7 +688,7 @@
   {
     "ID": 59,
     "name": "Quick Side Boy",
-    "description": "In progress",
+    "description": "",
     "date": "25 MAR 2024",
     "tag": [
       "Characters"
@@ -701,7 +701,7 @@
   {
     "ID": 60,
     "name": "Witch",
-    "description": "In progress",
+    "description": "",
     "date": "1 APR 2024",
     "tag": [
       "Characters",
@@ -715,7 +715,7 @@
   {
     "ID": 61,
     "name": "Cyber Angel",
-    "description": "In progress",
+    "description": "",
     "date": "1 APR 2024",
     "tag": [
       "Characters"
@@ -726,7 +726,7 @@
   {
     "ID": 62,
     "name": "Doodling W Neiz",
-    "description": "In progress",
+    "description": "",
     "date": "6 APR 2024",
     "tag": [
       "Characters"
@@ -737,7 +737,7 @@
   {
     "ID": 63,
     "name": "Daikei Inspired",
-    "description": "In progress",
+    "description": "",
     "date": "15 APR 2024",
     "tag": [
       "Characters",
@@ -752,7 +752,7 @@
   {
     "ID": 64,
     "name": "Burning Red",
-    "description": "In progress",
+    "description": "",
     "date": "3 MAY 2024",
     "tag": [
       "Characters"
@@ -765,7 +765,7 @@
   {
     "ID": 65,
     "name": "Spatial Remake",
-    "description": "In progress",
+    "description": "",
     "date": "4 MAY 2024",
     "tag": [
       "Characters"
@@ -776,7 +776,7 @@
   {
     "ID": 66,
     "name": "Green Elf",
-    "description": "In progress",
+    "description": "",
     "date": "4 MAY 2024",
     "tag": [
       "Characters"
@@ -787,7 +787,7 @@
   {
     "ID": 67,
     "name": "New Angle",
-    "description": "In progress",
+    "description": "",
     "date": "8 MAY 2024",
     "tag": [
       "Characters"
@@ -798,7 +798,7 @@
   {
     "ID": 68,
     "name": "Melinoe",
-    "description": "In progress",
+    "description": "",
     "date": "8 MAY 2024",
     "tag": [
       "Characters",
@@ -813,7 +813,7 @@
   {
     "ID": 69,
     "name": "Spider Gwen Drip",
-    "description": "In progress",
+    "description": "",
     "date": "9 MAY 2024",
     "tag": [
       "Characters",
@@ -825,7 +825,7 @@
   {
     "ID": 70,
     "name": "Doodling W Angles",
-    "description": "In progress",
+    "description": "",
     "date": "12 MAY 2024",
     "tag": [
       "Characters"
@@ -838,7 +838,7 @@
   {
     "ID": 71,
     "name": "Full Body Witch",
-    "description": "In progress",
+    "description": "",
     "date": "18 MAY 2024",
     "tag": [
       "Characters",
@@ -852,7 +852,7 @@
   {
     "ID": 72,
     "name": "Alita Remake",
-    "description": "In progress",
+    "description": "",
     "date": "26 MAY 2024",
     "tag": [
       "Characters",
@@ -864,7 +864,7 @@
   {
     "ID": 73,
     "name": "Speed Lag Inspired",
-    "description": "In progress",
+    "description": "",
     "date": "4 JUN 2024",
     "tag": [
       "Characters"
@@ -875,7 +875,7 @@
   {
     "ID": 74,
     "name": "Yukata",
-    "description": "In progress",
+    "description": "",
     "date": "7 JUN 2024",
     "tag": [
       "Characters"
@@ -886,7 +886,7 @@
   {
     "ID": 75,
     "name": "Bored Sketch",
-    "description": "In progress",
+    "description": "",
     "date": "8 JUN 2024",
     "tag": [
       "Characters",
@@ -898,7 +898,7 @@
   {
     "ID": 76,
     "name": "Face",
-    "description": "In progress",
+    "description": "",
     "date": "10 JUN 2024",
     "tag": [
       "Characters"
@@ -909,7 +909,7 @@
   {
     "ID": 77,
     "name": "Experiment",
-    "description": "In progress",
+    "description": "",
     "date": "21 JUN 2024",
     "tag": [
       "Characters"
@@ -920,7 +920,7 @@
   {
     "ID": 78,
     "name": "Back",
-    "description": "In progress",
+    "description": "",
     "date": "22 JUN 2024",
     "tag": [
       "Characters"
@@ -931,7 +931,7 @@
   {
     "ID": 79,
     "name": "Empty Stare",
-    "description": "In progress",
+    "description": "",
     "date": "28 JUN 2024",
     "tag": [
       "Characters"
@@ -942,7 +942,7 @@
   {
     "ID": 80,
     "name": "Angry Stare",
-    "description": "In progress",
+    "description": "",
     "date": "29 JUN 2024",
     "tag": [
       "Characters"
@@ -953,7 +953,7 @@
   {
     "ID": 81,
     "name": "Laughing Stare",
-    "description": "In progress",
+    "description": "",
     "date": "29 JUN 2024",
     "tag": [
       "Characters"
@@ -964,7 +964,7 @@
   {
     "ID": 82,
     "name": "Huntress",
-    "description": "In progress",
+    "description": "",
     "date": "5 JUL 2024",
     "tag": [
       "Characters"
@@ -975,7 +975,7 @@
   {
     "ID": 83,
     "name": "Portrait Pose",
-    "description": "In progress",
+    "description": "",
     "date": "16 JUL 2024",
     "tag": [
       "Characters"
@@ -986,7 +986,7 @@
   {
     "ID": 84,
     "name": "Jett",
-    "description": "In progress",
+    "description": "",
     "date": "26 SEP 2024",
     "tag": [
       "Characters",
@@ -998,7 +998,7 @@
   {
     "ID": 85,
     "name": "Engineer",
-    "description": "In progress",
+    "description": "",
     "date": "2 OCT 2024",
     "tag": [
       "Characters"
@@ -1011,7 +1011,7 @@
   {
     "ID": 86,
     "name": "Limit",
-    "description": "In progress",
+    "description": "",
     "date": "5 OCT 2024",
     "tag": [
       "Characters"
@@ -1024,7 +1024,7 @@
   {
     "ID": 87,
     "name": "Aldadadan",
-    "description": "In progress",
+    "description": "",
     "date": "6 OCT 2024",
     "tag": [
       "Characters",
@@ -1036,7 +1036,7 @@
   {
     "ID": 88,
     "name": "Hoodie",
-    "description": "In progress",
+    "description": "",
     "date": "7 OCT 2024",
     "tag": [
       "Characters"
@@ -1049,7 +1049,7 @@
   {
     "ID": 89,
     "name": "Another Spider-Gwen",
-    "description": "In progress",
+    "description": "",
     "date": "9 OCT 2024",
     "tag": [
       "Characters",
@@ -1061,7 +1061,7 @@
   {
     "ID": 90,
     "name": "Melinoe : Hades II",
-    "description": "In progress",
+    "description": "",
     "date": "18 OCT 2024",
     "tag": [
       "Characters",
@@ -1076,7 +1076,7 @@
   {
     "ID": 91,
     "name": "Smoking Witch",
-    "description": "In progress",
+    "description": "",
     "date": "27 OCT 2024",
     "tag": [
       "Characters",
@@ -1101,7 +1101,7 @@
   {
     "ID": 93,
     "name": "Rish Glare",
-    "description": "In progress",
+    "description": "",
     "date": "10 NOV 2024",
     "tag": [
       "Characters"
@@ -1112,7 +1112,7 @@
   {
     "ID": 94,
     "name": "Playful Smile",
-    "description": "In progress",
+    "description": "",
     "date": "16 NOV 2024",
     "tag": [
       "Characters"
@@ -1125,7 +1125,7 @@
   {
     "ID": 95,
     "name": "Jinx : Arcane",
-    "description": "In progress",
+    "description": "",
     "date": "16 NOV 2024",
     "tag": [
       "Characters",
@@ -1137,7 +1137,7 @@
   {
     "ID": 96,
     "name": "Zombie Vibes",
-    "description": "In progress",
+    "description": "",
     "date": "20 NOV 2024",
     "tag": [
       "Characters"
@@ -1148,7 +1148,7 @@
   {
     "ID": 97,
     "name": "Baggy",
-    "description": "In progress",
+    "description": "",
     "date": "30 NOV 2024",
     "tag": [
       "Characters"
@@ -1159,7 +1159,7 @@
   {
     "ID": 98,
     "name": "Violent Pink",
-    "description": "In progress",
+    "description": "",
     "date": "1 DEC 2024",
     "tag": [
       "Characters"
@@ -1172,7 +1172,7 @@
   {
     "ID": 99,
     "name": "Sword Warrior",
-    "description": "In progress",
+    "description": "",
     "date": "11 DEC 2024",
     "tag": [
       "Characters"
@@ -1183,7 +1183,7 @@
   {
     "ID": 100,
     "name": "Red Glare",
-    "description": "In progress",
+    "description": "",
     "date": "17 DEC 2024",
     "tag": [
       "Characters"
@@ -1392,7 +1392,7 @@
     "tag": [
       "Characters"
     ],
-    "redrawOf": null,
+    "redrawOf": 96,
     "quirks": []
   },
   {
@@ -1427,7 +1427,7 @@
   {
     "ID": 119,
     "name": "Full Body Improvement",
-    "description": "In progress",
+    "description": "",
     "date": "13 FEB 2025",
     "tag": [
       "Characters",

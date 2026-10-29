@@ -4,22 +4,29 @@ import { Image } from "astro:assets";
 import { details, contacts, tools } from "src/site.config";
 import ContactDetailCard from "./contact-detail-card.svelte";
 import { Icon } from "astro-icon/components";
+import { getMascotFrames } from "src/helpers/mascot";
 
 const tagTilts = [-3, 2, -2, 3];
+// The mascot's idle animation; the drawn portrait until there are frames
+const avatarFrames = await getMascotFrames("idle");
 ---
 
 <section class="about-desk" id="about">
   <div class="about-inner">
     <div class="drop" style="--i:0;">
-      <div class="avatar-sticker">
-        <Image
-          src={Avatar}
-          alt="Portrait of Kostur's character"
-          format="webp"
-          width={320}
-          class="avatar-img"
-        />
-      </div>
+      {
+        avatarFrames.length ? (
+          <div class="avatar-sticker avatar-sticker--frames" role="img" aria-label="Kostur's character">
+            {avatarFrames.map((f, i) => (
+              <img src={f.src} alt="" class="avatar-img avatar-frame" data-ms={f.ms} hidden={i > 0} draggable="false" />
+            ))}
+          </div>
+        ) : (
+          <div class="avatar-sticker">
+            <Image src={Avatar} alt="Portrait of Kostur's character" format="webp" width={320} class="avatar-img" />
+          </div>
+        )
+      }
     </div>
 
     <div class="about-side">
@@ -121,6 +128,23 @@ const tagTilts = [-3, 2, -2, 3];
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+
+  /* Animated: the frames stack in one cell on the old portrait's teal; only one isn't hidden */
+  .avatar-sticker--frames {
+    display: grid;
+    background: #31c5d1;
+  }
+
+  /* A thin paper outline (like the desk mascot's) so the character reads on any background */
+  .avatar-frame {
+    grid-area: 1 / 1;
+    filter: drop-shadow(1.5px 0 0 var(--text-color)) drop-shadow(-1.5px 0 0 var(--text-color))
+      drop-shadow(0 1.5px 0 var(--text-color)) drop-shadow(0 -1.5px 0 var(--text-color));
+  }
+
+  .avatar-frame[hidden] {
+    display: none;
   }
 
   /* Bio: sticky note with a strip of tape */
@@ -305,7 +329,27 @@ const tagTilts = [-3, 2, -2, 3];
 </style>
 
 <script>
+  let avatarTimer: ReturnType<typeof setTimeout>;
+
   document.addEventListener("astro:page-load", () => {
+    // Avatar: loop the mascot's idle frames, each for its own time (idle/timing.json)
+    clearTimeout(avatarTimer);
+    const frames = [...document.querySelectorAll<HTMLImageElement>(".avatar-frame")];
+    // Decode the hidden frames up front, so the first loop doesn't flash blank (see desk-mascot)
+    frames.forEach((img) => img.decode().catch(() => {}));
+    if (frames.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let at = 0;
+      const next = () => {
+        avatarTimer = setTimeout(() => {
+          frames[at].hidden = true;
+          at = (at + 1) % frames.length;
+          frames[at].hidden = false;
+          next();
+        }, Number(frames[at].dataset.ms));
+      };
+      next();
+    }
+
     const section = document.getElementById("about");
     const bioEl = document.getElementById("bio-text");
     if (!section || !bioEl) return;

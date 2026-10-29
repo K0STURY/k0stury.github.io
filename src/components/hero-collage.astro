@@ -642,6 +642,42 @@ const layout = [
     }
   }
 
+  /* Phones: only three stickers, so they can be big. One large one on top, with two
+     smaller ones tucked under its bottom edge */
+  @media (max-width: 560px) {
+    .desk-pins {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      justify-items: center;
+      gap: 0 0.5rem;
+      width: 100%;
+    }
+
+    .desk-pins .desk-item:first-child {
+      position: relative;
+      z-index: 1;
+      grid-column: 1 / -1;
+    }
+
+    .desk-pins .desk-item:nth-child(n + 2) {
+      margin-top: -1.5rem;
+    }
+
+    .desk-pins .desk-item:nth-child(n + 4) {
+      display: none;
+    }
+
+    .desk-pins .pinned-sketch {
+      width: min(40vw, 180px);
+      height: min(40vw, 180px);
+    }
+
+    .desk-pins .desk-item:first-child .pinned-sketch {
+      width: min(60vw, 270px);
+      height: min(60vw, 270px);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .desk-item, .hero-more {
       animation: none;
