@@ -1,0 +1,1789 @@
+---
+// The workshop: for now, the Chibi Quil maker. Drop a new file in a part's folder under
+// src/assets/chibi and it becomes a choice here (see src/helpers/chibi.ts).
+import BaseLayout from "@layouts/base-layout.astro";
+import { CANVAS, getChibiParts } from "src/helpers/chibi";
+
+const parts = await getChibiParts();
+
+// Parts you can take off, and what recolours what
+const OPTIONAL = ["horns", "earrings", "halo", "iris", "face-accessories"];
+const STARTS_OFF = ["iris", "face-accessories"]; // as drawn: eyes closed, nothing on the face
+
+// The Advanced section's sliders, each driving one CSS variable on the card. The tops of Head bob
+// and Hair sway are what the art allows: any higher and the background shows beside the chin.
+const ANIMATION = [
+  { id: "speed", label: "Speed", min: 0.4, max: 2.5, step: 0.1, value: 1 },
+  { id: "bob", label: "Head bob", min: 0, max: 1.2, step: 0.1, value: 1.2 },
+  { id: "sway", label: "Hair sway", min: 0, max: 1.2, step: 0.1, value: 1 },
+  { id: "accessory-sway", label: "Accessory sway", min: 0, max: 3, step: 0.1, value: 1, needs: ["face-accessories"] },
+  { id: "tilt", label: "Horn tilt", min: 0, max: 3, step: 0.1, value: 0.5, needs: ["horns"] },
+  { id: "breathe", label: "Breathing", min: 0, max: 2.5, step: 0.1, value: 1 },
+];
+// start: for art drawn white to take colour, what it wears until someone picks one
+const COLORS: { id: string; label: string; parts: string[]; start?: string }[] = [
+  { id: "lashes", label: "Lashes", parts: ["eyes"], start: "#1a1820" },
+  { id: "eyes", label: "Iris", parts: ["iris"] },
+  { id: "skin", label: "Skin", parts: ["ears", "head", "neck"] },
+  { id: "hair", label: "Hair", parts: ["hair-back", "hair-front"], start: "#1a1820" },
+  { id: "outfit", label: "Outfit", parts: ["body"] },
+  { id: "horns", label: "Horns", parts: ["horns"] },
+  { id: "accessories", label: "Accessories", parts: ["face-accessories"] },
+].filter((color) => color.parts.some((part) => parts.some((p) => p.name === part)));
+
+// The neck and body stay planted; what's behind and in front of them rides along with the head
+const isPlanted = (part: { name: string }) => part.name === "neck" || part.name === "body";
+const firstPlanted = parts.findIndex(isPlanted);
+const lastPlanted = parts.findLastIndex(isPlanted);
+const planted = parts.filter(isPlanted);
+const behindBody = parts.slice(0, Math.max(firstPlanted, 0));
+const inFront = parts.slice(lastPlanted + 1);
+
+// The picker's paints: skin gets its own tones, everything else shares the main set
+const SWATCHES = {
+  skin: ["#ffffff", "#fbe6d8", "#f4cdb0", "#e3ab82", "#bd7f55", "#8d5c3c", "#5e3b27", "#cfeada", "#c9daf6", "#e6caf3", "#f8c7d4", "#a0dad1"],
+  paint: ["#e5233f", "#f0803a", "#e7ae3a", "#f7e26b", "#7bc950", "#1f9e6b", "#31c5d1", "#2f6fde", "#6a4cd6", "#c04bd8", "#f582ae", "#881144", "#f4f0e8", "#a4a7a9", "#4a4453", "#1a1820"],
+};
+
+// A chip or slider only shows while something it affects is on. Starts right, before the script runs.
+const startsOff = (names: string[]) => names.filter((name) => parts.some((p) => p.name === name)).every((name) => STARTS_OFF.includes(name));
+
+// Parts you can position yourself in Advanced. Add a folder name here to give another part these.
+// x and y are on the 5000 canvas, size is a percentage, tilt is in degrees.
+const ADJUSTABLE = ["face-accessories"].filter((name) => parts.some((p) => p.name === name));
+const ADJUSTMENTS = [
+  { id: "x", label: "Left / right", min: -700, max: 700, step: 5, value: 0 },
+  { id: "y", label: "Up / down", min: -700, max: 700, step: 5, value: 0 },
+  { id: "size", label: "Size", min: 40, max: 200, step: 1, value: 100 },
+  { id: "tilt", label: "Tilt", min: -45, max: 45, step: 1, value: 0 },
+];
+
+// The export choices. Outline widths are on the 5000 canvas, so they scale with the picture.
+const EXPORT_SIZES = [128, 256, 512, 1024].map((size) => ({ value: String(size), label: `${size}px` }));
+const OUTLINES = [
+  { value: "0", label: "None" },
+  { value: "30", label: "Thin" },
+  { value: "55", label: "Medium" },
+  { value: "90", label: "Thick" },
+];
+const DROPDOWNS = [
+  { id: "size", label: "Size", options: EXPORT_SIZES, value: "512" },
+  { id: "outline", label: "Outline", options: OUTLINES, value: "0" },
+];
+
+const swappable = parts.filter((part) => part.variants.length > 1 || OPTIONAL.includes(part.name));
+const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF, colors: COLORS };
+---
+
+<BaseLayout
+  page={{
+    title: "The workshop · Kostur",
+    description: "Make your own Chibi Quil: swap the parts, pick the colours and take it home.",
+    path: "workshop",
+  }}
+  tagline="mind the glue."
+>
+  <article class="shop" id="chibi-maker" data-maker={JSON.stringify(data)}>
+    <header class="shop-head">
+      <a href="/" class="shop-back" data-astro-prefetch>The gallery</a>
+      <h1 class="shop-title">The workshop</h1>
+    </header>
+
+    <div class="shop-bench">
+      <div class="shop-stage">
+        <div class="shop-card" role="img" aria-label="Your Chibi Quil">
+          <!-- One canvas per part, so each can move. The groups ride along with the head: what's
+               behind the body, then the body itself, then what's in front. -->
+          <div class="chibi-figure">
+          <div class="chibi-group">
+            {behindBody.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
+          </div>
+          {planted.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
+          <div class="chibi-group">
+            {inFront.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
+          </div>
+          </div>
+        </div>
+
+        <div class="shop-actions">
+          <button type="button" class="shop-btn" id="chibi-random">Surprise me</button>
+          <button type="button" class="shop-btn" id="chibi-reset">Start over</button>
+          <button type="button" class="shop-btn shop-btn--main" id="chibi-download">Take it home</button>
+          <button type="button" class="shop-btn shop-btn--main" id="chibi-gif">Animated GIF</button>
+          <div class="shop-export">
+            {
+              DROPDOWNS.map((dropdown) => (
+                <div class="shop-select" data-select={dropdown.id} data-value={dropdown.value}>
+                  <span class="shop-select-label" id={`select-${dropdown.id}`}>{dropdown.label}</span>
+                  <button type="button" class="shop-select-button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby={`select-${dropdown.id}`}>
+                    <span class="shop-select-value">{dropdown.options.find((o) => o.value === dropdown.value)?.label}</span>
+                  </button>
+                  <ul class="shop-select-list" role="listbox" aria-labelledby={`select-${dropdown.id}`} tabindex="-1" hidden>
+                    {dropdown.options.map((option) => (
+                      <li class="shop-select-option" role="option" data-value={option.value} aria-selected={option.value === dropdown.value ? "true" : "false"}>
+                        {option.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            }
+          <label class="shop-toggle">
+            <input type="checkbox" id="chibi-transparent" />
+            <span class="shop-toggle-box" aria-hidden="true"></span>
+            Transparent background
+          </label>
+          </div>
+          <p class="shop-toggle-note">The background stays here for contrast. GIFs get crisper edges.</p>
+        </div>
+      </div>
+
+      <aside class="shop-note shop-note--parts">
+        <!-- Scrolls by itself if it runs long, so the character never leaves the screen -->
+        <div class="shop-scroll" data-lenis-prevent>
+          <h2 class="shop-heading">Parts</h2>
+
+          {
+            swappable.length > 0 && (
+              <div class="shop-parts">
+                {swappable.map((part) => (
+                  <div class="shop-part">
+                    <span class="shop-part-name">{part.name.replaceAll("-", " ")}</span>
+                    <button type="button" class="shop-step" data-step={part.name} data-by="-1" aria-label={`Previous ${part.name}`}>
+                      ‹
+                    </button>
+                    <output class="shop-choice" data-choice={part.name}>1</output>
+                    <button type="button" class="shop-step" data-step={part.name} data-by="1" aria-label={`Next ${part.name}`}>
+                      ›
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
+          }
+
+          <details class="shop-advanced">
+            <summary>Advanced</summary>
+
+            <h3 class="shop-advanced-title">Animation</h3>
+            {
+              ANIMATION.map((slider) => (
+                <label class="shop-slider" data-needs={slider.needs?.join(",")} hidden={slider.needs ? startsOff(slider.needs) : false}>
+                  {slider.label}
+                  <input type="range" data-animation={slider.id} min={slider.min} max={slider.max} step={slider.step} value={slider.value} />
+                </label>
+              ))
+            }
+
+            {
+              ADJUSTABLE.map((part) => (
+                <div data-needs={part} hidden={startsOff([part])}>
+                  <h3 class="shop-advanced-title">{part.replaceAll("-", " ")}</h3>
+                  {ADJUSTMENTS.map((slider) => (
+                    <label class="shop-slider">
+                      {slider.label}
+                      <input type="range" data-adjust={slider.id} data-part={part} min={slider.min} max={slider.max} step={slider.step} value={slider.value} />
+                    </label>
+                  ))}
+                </div>
+              ))
+            }
+          </details>
+        </div>
+      </aside>
+
+      <aside class="shop-note shop-note--colors">
+        <div class="shop-scroll" data-lenis-prevent>
+          <h2 class="shop-heading">Colours</h2>
+
+          <div class="shop-colors">
+            {
+              COLORS.map((color) => (
+                <button type="button" class="shop-color" data-open={color.id} data-label={color.label} aria-expanded="false" aria-controls="chibi-picker" hidden={startsOff(color.parts)}>
+                  <span class="shop-chip" aria-hidden="true" />
+                  {color.label}
+                  <input type="hidden" data-color={color.id} />
+                </button>
+              ))
+            }
+            <button type="button" class="shop-color" data-open="background" data-label="Background" aria-expanded="false" aria-controls="chibi-picker">
+              <span class="shop-chip" aria-hidden="true" />
+              Background
+              <input type="hidden" id="chibi-background" value="#31c5d1" />
+            </button>
+            <button type="button" class="shop-color" data-open="outline" data-label="Outline" aria-expanded="false" aria-controls="chibi-picker" hidden>
+              <span class="shop-chip" aria-hidden="true" />
+              Outline
+              <input type="hidden" data-color="outline" />
+            </button>
+          </div>
+
+          <div class="shop-picker" id="chibi-picker" role="group" aria-labelledby="picker-title" hidden>
+            <p class="shop-picker-title" id="picker-title"></p>
+
+            {
+              Object.entries(SWATCHES).map(([set, colors]) => (
+                <div class="shop-swatches" data-swatches={set} hidden>
+                  {colors.map((color) => (
+                    <button type="button" class="shop-swatch" data-swatch={color} style={`background:${color};`} aria-label={`Use ${color}`} aria-pressed="false" />
+                  ))}
+                </div>
+              ))
+            }
+
+            <label class="shop-slider">Colour <input type="range" id="picker-hue" min="0" max="360" /></label>
+            <label class="shop-slider">Vividness <input type="range" id="picker-vivid" min="0" max="100" /></label>
+            <label class="shop-slider">Light <input type="range" id="picker-light" min="0" max="100" /></label>
+
+            <div class="shop-picker-foot">
+              <input class="shop-hex" id="picker-hex" type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Hex colour code" />
+              <button type="button" class="shop-btn" id="picker-original">As drawn</button>
+              <button type="button" class="shop-btn" id="picker-done">Done</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </article>
+</BaseLayout>
+
+<script>
+  import { GIF_FRAME_MS, capturePicture, captureFrames, encodeGif } from "src/helpers/chibi-gif";
+
+  type Variant = { src: string; x: number; y: number; w: number; h: number };
+  type Part = { name: string; variants: Variant[] };
+  // What a variant becomes once loaded: what takes colour, what stays as drawn, and its own
+  // small canvas to tint on
+  type Prepared = {
+    tintable: HTMLCanvasElement;
+    tinted: CanvasRenderingContext2D;
+    fixed: HTMLCanvasElement;
+    main: number[];
+    x: number;
+    y: number;
+  };
+
+  const newCanvas = (w: number, h: number) => Object.assign(document.createElement("canvas"), { width: w, height: h });
+  const toHex = (rgb: number[]) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+
+  // Hue 0-360, saturation and lightness 0-100
+  function hslToHex(h: number, s: number, l: number) {
+    const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+    const channel = (n: number) => {
+      const k = (n + h / 30) % 12;
+      return 255 * (l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)));
+    };
+    return toHex([channel(0), channel(8), channel(4)]);
+  }
+
+  function hexToHsl(hex: string) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    const l = (max + min) / 2;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    const h = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, s * 100, l * 100];
+  }
+
+  let pickerListeners = new AbortController(); // document-level listeners, dropped on each page change
+
+  const SAVE_KEY = "chibi-quil";
+  const moves = matchMedia("(prefers-reduced-motion: no-preference)").matches;
+
+  // A one-off bounce on top of whatever the element is already doing, idle animation included
+  const pop = (el: Element, from: string | string[], options: KeyframeAnimationOptions = {}) => {
+    if (moves) el.animate({ transform: [from, "none"].flat() }, { duration: 320, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", composite: "add", ...options });
+  };
+
+  // The part's main colour is treated as white, so multiplying any colour over it gives that
+  // colour with the shading kept, even on a part that wasn't drawn in white. Pixels much brighter
+  // than the main colour (a hoodie's white drawstrings) are details: they stay as drawn.
+  async function prepare(variant: Variant, scale: number): Promise<Prepared> {
+    const img = new Image();
+    img.src = variant.src;
+    await img.decode();
+    const w = Math.max(1, Math.round(variant.w * scale));
+    const h = Math.max(1, Math.round(variant.h * scale));
+    const source = newCanvas(w, h).getContext("2d", { willReadFrequently: true })!;
+    source.drawImage(img, 0, 0, w, h);
+    const pixels = source.getImageData(0, 0, w, h);
+    const px = pixels.data;
+
+    const buckets = new Map<number, { sum: number[]; n: number }>();
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 200) continue;
+      const key = ((px[i] >> 4) << 8) | ((px[i + 1] >> 4) << 4) | (px[i + 2] >> 4);
+      const bucket = buckets.get(key) ?? { sum: [0, 0, 0], n: 0 };
+      bucket.sum = bucket.sum.map((v, c) => v + px[i + c]);
+      bucket.n++;
+      buckets.set(key, bucket);
+    }
+    const biggest = [...buckets.values()].sort((a, b) => b.n - a.n)[0];
+    const main = biggest ? biggest.sum.map((v) => v / biggest.n) : [255, 255, 255];
+    const detailFrom = Math.max(...main) * 1.5 + 20;
+
+    const fixedPixels = new ImageData(new Uint8ClampedArray(px), w, h);
+    for (let i = 0; i < px.length; i += 4) {
+      if (Math.max(px[i], px[i + 1], px[i + 2]) > detailFrom) {
+        px[i + 3] = 0; // a detail: not tinted
+      } else {
+        fixedPixels.data[i + 3] = 0;
+        for (let c = 0; c < 3; c++) px[i + c] = Math.min(255, (px[i + c] / Math.max(main[c], 1)) * 255);
+      }
+    }
+    // Fresh canvases: the one above is set up for reading pixels, which makes drawing from it slow
+    const tintable = newCanvas(w, h);
+    tintable.getContext("2d")!.putImageData(pixels, 0, 0);
+    const fixed = newCanvas(w, h);
+    fixed.getContext("2d")!.putImageData(fixedPixels, 0, 0);
+    return { tintable, tinted: newCanvas(w, h).getContext("2d")!, fixed, main, x: variant.x * scale, y: variant.y * scale };
+  }
+
+  document.addEventListener("astro:page-load", async () => {
+    pickerListeners.abort();
+    pickerListeners = new AbortController();
+    const { signal } = pickerListeners;
+
+    const root = document.getElementById("chibi-maker");
+    const layers = [...(root?.querySelectorAll<HTMLCanvasElement>("canvas[data-part]") ?? [])];
+    const canvas = layers[0];
+    if (!root || !canvas) return; // Not on this page
+
+    // Quil's on the bench here, so the corner one takes the page off
+    document.getElementById("mascot")?.classList.add("is-away");
+
+    const data = JSON.parse(root.dataset.maker ?? "{}") as {
+      canvas: number;
+      parts: Part[];
+      optional: string[];
+      startsOff: string[];
+      colors: { id: string; parts: string[]; start?: string }[];
+    };
+    const scale = canvas.width / data.canvas;
+    const colorInputs = [...root.querySelectorAll<HTMLInputElement>("input[data-color]")];
+    const background = root.querySelector<HTMLInputElement>("#chibi-background")!;
+    const card = root.querySelector<HTMLElement>(".shop-card")!;
+    const chips = [...root.querySelectorAll<HTMLButtonElement>("[data-open]")];
+    const inputFor = (id: string) => (id === "background" ? background : colorInputs.find((input) => input.dataset.color === id)!);
+
+    const prepared = new Map<string, Prepared>();
+    const load = (variant: Variant) => {
+      const done = prepared.get(variant.src);
+      return done ? Promise.resolve(done) : prepare(variant, scale).then((p) => (prepared.set(variant.src, p), p));
+    };
+
+    // choice = which variant each part wears; -1 is "taken off"
+    const choice = new Map(data.parts.map((part) => [part.name, 0]));
+    const drawn = new Map<string, string>(); // what each layer shows now, so unchanged ones are left alone
+
+    // The Advanced position sliders, per part
+    const adjustSliders = [...root.querySelectorAll<HTMLInputElement>("[data-adjust]")];
+    const adjustmentOf = (name: string) => {
+      const sliders = adjustSliders.filter((slider) => slider.dataset.part === name);
+      const value = (id: string, fallback: number) => Number(sliders.find((s) => s.dataset.adjust === id)?.value ?? fallback);
+      return { x: value("x", 0) * scale, y: value("y", 0) * scale, size: value("size", 100) / 100, tilt: value("tilt", 0) };
+    };
+
+    function render() {
+      // The background lives on the card, so the idle bob only moves the character
+      card.style.background = background.value;
+      chips.forEach((chip) => {
+        chip.querySelector<HTMLElement>(".shop-chip")!.style.background = inputFor(chip.dataset.open ?? "").value;
+      });
+      card.style.setProperty("--outline-color", inputFor("outline").value);
+      for (const part of data.parts) {
+        const layer = layers.find((l) => l.dataset.part === part.name);
+        const ctx = layer?.getContext("2d");
+        if (!ctx) continue;
+        const variant = part.variants[choice.get(part.name) ?? 0];
+        const piece = variant && prepared.get(variant.src);
+        const color = data.colors.find((c) => c.parts.includes(part.name));
+        // A part with no colour chip keeps the colour it was drawn in
+        const tint = piece && ((color && colorInputs.find((input) => input.dataset.color === color.id)?.value) ?? toHex(piece.main));
+
+        const adjust = adjustmentOf(part.name);
+        const look = piece ? `${variant.src} ${tint} ${Object.values(adjust).join(" ")}` : "";
+        if (drawn.get(part.name) === look) continue;
+        drawn.set(part.name, look);
+
+        ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+        if (!piece || !tint) continue;
+
+        const { tinted, tintable } = piece;
+        const { width, height } = tintable;
+        tinted.globalCompositeOperation = "source-over";
+        tinted.clearRect(0, 0, width, height);
+        tinted.drawImage(tintable, 0, 0);
+        tinted.globalCompositeOperation = "multiply";
+        tinted.fillStyle = tint;
+        tinted.fillRect(0, 0, width, height);
+        tinted.globalCompositeOperation = "destination-in";
+        tinted.drawImage(tintable, 0, 0);
+        ctx.save();
+        ctx.translate(piece.x + width / 2 + adjust.x, piece.y + height / 2 + adjust.y);
+        ctx.rotate((adjust.tilt * Math.PI) / 180);
+        ctx.scale(adjust.size, adjust.size);
+        ctx.drawImage(tinted.canvas, -width / 2, -height / 2);
+        ctx.drawImage(piece.fixed, -width / 2, -height / 2);
+        ctx.restore();
+      }
+    }
+
+    const popLayers = (names: string[]) => {
+      layers.filter((layer) => names.includes(layer.dataset.part ?? "")).forEach((layer) => pop(layer, "scale(1.05)"));
+    };
+
+    // The card has its colour straight away; the character follows once its parts have loaded
+    card.style.background = background.value;
+
+    // Starts looking as drawn: each colour begins on its parts' main colour
+    const firstOf = (name: string) => data.parts.find((p) => p.name === name)?.variants[0];
+    const startColors = new Map<string, string>();
+    await Promise.all(data.parts.flatMap((part) => part.variants.map(load))).catch(() => {});
+    for (const color of data.colors) {
+      const variant = color.parts.map(firstOf).find(Boolean);
+      const piece = variant && prepared.get(variant.src);
+      if (piece) startColors.set(color.id, color.start ?? toHex(piece.main));
+    }
+
+    const showChoices = () => {
+      root.querySelectorAll<HTMLElement>("[data-choice]").forEach((el) => {
+        const at = choice.get(el.dataset.choice ?? "") ?? 0;
+        el.textContent = at < 0 ? "none" : String(at + 1);
+      });
+      showRelevantOptions();
+    };
+
+    // Options for a part that's off have nothing to do, so they step aside
+    const isOn = (name: string) => data.parts.some((part) => part.name === name) && (choice.get(name) ?? 0) >= 0;
+    function showRelevantOptions() {
+      for (const color of data.colors) {
+        const chip = chips.find((c) => c.dataset.open === color.id);
+        if (!chip) continue;
+        chip.hidden = !color.parts.some(isOn);
+        if (chip.hidden && openChip === chip) closePicker();
+      }
+      const outlineChip = chips.find((c) => c.dataset.open === "outline");
+      if (outlineChip) {
+        outlineChip.hidden = selectValue("outline") === "0";
+        if (outlineChip.hidden && openChip === outlineChip) closePicker();
+      }
+      root!.querySelectorAll<HTMLElement>("[data-needs]").forEach((option) => {
+        option.hidden = !(option.dataset.needs ?? "").split(",").some(isOn);
+      });
+    }
+    startColors.set("background", background.value);
+    startColors.set("outline", "#ffffff");
+
+    // The export dropdowns. Custom rather than the browser's, so the open list matches the page.
+    const selects = [...root.querySelectorAll<HTMLElement>("[data-select]")];
+    const selectFor = (id: string) => selects.find((select) => select.dataset.select === id)!;
+    const selectValue = (id: string) => selectFor(id).dataset.value ?? "";
+
+    const closeSelect = (select: HTMLElement, refocus = false) => {
+      const button = select.querySelector<HTMLButtonElement>(".shop-select-button")!;
+      select.querySelector<HTMLElement>(".shop-select-list")!.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      if (refocus) button.focus();
+    };
+
+    const setSelect = (select: HTMLElement, value: string) => {
+      select.dataset.value = value;
+      select.querySelectorAll<HTMLElement>("[role=option]").forEach((option) => {
+        const on = option.dataset.value === value;
+        option.setAttribute("aria-selected", String(on));
+        if (on) select.querySelector(".shop-select-value")!.textContent = option.textContent!.trim();
+      });
+      if (select.dataset.select === "outline") {
+        card.style.setProperty("--outline-units", value);
+        card.classList.toggle("has-outline", value !== "0");
+        showRelevantOptions();
+      }
+    };
+
+    selects.forEach((select) => {
+      const button = select.querySelector<HTMLButtonElement>(".shop-select-button")!;
+      const list = select.querySelector<HTMLElement>(".shop-select-list")!;
+      const options = [...select.querySelectorAll<HTMLElement>("[role=option]")];
+      const mark = (option?: HTMLElement) => options.forEach((o) => o.classList.toggle("is-active", o === option));
+      const active = () => options.find((o) => o.classList.contains("is-active")) ?? options.find((o) => o.dataset.value === select.dataset.value)!;
+
+      const open = () => {
+        selects.forEach((other) => other !== select && closeSelect(other));
+        list.hidden = false;
+        button.setAttribute("aria-expanded", "true");
+        mark(options.find((o) => o.dataset.value === select.dataset.value));
+        list.focus();
+      };
+
+      button.addEventListener("click", () => (list.hidden ? open() : closeSelect(select)));
+      button.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          open();
+        }
+      });
+      options.forEach((option) => {
+        option.addEventListener("click", () => {
+          setSelect(select, option.dataset.value ?? "");
+          closeSelect(select, true);
+        });
+        option.addEventListener("pointerenter", () => mark(option));
+      });
+      list.addEventListener("keydown", (e) => {
+        const at = options.indexOf(active());
+        if (e.key === "ArrowDown") mark(options[Math.min(options.length - 1, at + 1)]);
+        else if (e.key === "ArrowUp") mark(options[Math.max(0, at - 1)]);
+        else if (e.key === "Home") mark(options[0]);
+        else if (e.key === "End") mark(options[options.length - 1]);
+        else if (e.key === "Enter" || e.key === " ") {
+          setSelect(select, active().dataset.value ?? "");
+          closeSelect(select, true);
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          closeSelect(select, true);
+        } else if (e.key === "Tab") closeSelect(select);
+        else return;
+        e.preventDefault();
+      });
+    });
+
+    document.addEventListener(
+      "pointerdown",
+      (e) => selects.forEach((select) => !select.contains(e.target as Node) && closeSelect(select)),
+      { signal },
+    );
+
+    // The Advanced sliders: speed is a multiplier on the idle's 2.6 seconds, the rest go straight in
+    const animationSliders = [...root.querySelectorAll<HTMLInputElement>("[data-animation]")];
+    const applyAnimation = () => {
+      animationSliders.forEach((slider) => {
+        const value = Number(slider.value);
+        if (slider.dataset.animation === "speed") card.style.setProperty("--idle", `${(2.6 / value).toFixed(2)}s`);
+        else card.style.setProperty(`--${slider.dataset.animation}`, String(value));
+      });
+    };
+    animationSliders.forEach((slider) => slider.addEventListener("input", applyAnimation));
+
+    const reset = () => {
+      colorInputs.forEach((input) => (input.value = startColors.get(input.dataset.color ?? "") ?? "#ffffff"));
+      background.value = startColors.get("background")!;
+      data.parts.forEach((part) => choice.set(part.name, data.startsOff.includes(part.name) ? -1 : 0));
+      root!.querySelector<HTMLInputElement>("#chibi-transparent")!.checked = false;
+      setSelect(selectFor("size"), "512");
+      setSelect(selectFor("outline"), "0");
+      animationSliders.forEach((slider) => (slider.value = slider.defaultValue));
+      adjustSliders.forEach((slider) => (slider.value = slider.defaultValue));
+      applyAnimation();
+      showChoices();
+      render();
+      syncPicker();
+    };
+
+    // The colour picker: one drawer on the note, working on whichever chip is open
+    const picker = root.querySelector<HTMLElement>("#chibi-picker")!;
+    const pickerTitle = root.querySelector<HTMLElement>("#picker-title")!;
+    const [hue, vivid, light] = ["hue", "vivid", "light"].map((id) => root.querySelector<HTMLInputElement>(`#picker-${id}`)!);
+    const hexBox = root.querySelector<HTMLInputElement>("#picker-hex")!;
+    const swatches = [...root.querySelectorAll<HTMLButtonElement>("[data-swatch]")];
+    let openChip: HTMLButtonElement | null = null;
+
+    // Fills the drawer in from the colour. Dragging a slider passes its own values instead, so
+    // that hue isn't lost when a colour goes fully grey, black or white on the way through.
+    function syncPicker(hsl?: number[]) {
+      if (!openChip) return;
+      const hex = inputFor(openChip.dataset.open ?? "").value;
+      const [h, s, l] = hsl ?? hexToHsl(hex);
+      hue.value = String(h);
+      vivid.value = String(s);
+      light.value = String(l);
+      picker.style.setProperty("--h", String(h));
+      picker.style.setProperty("--s", `${s}%`);
+      picker.style.setProperty("--l", `${l}%`);
+      if (document.activeElement !== hexBox) hexBox.value = hex;
+      swatches.forEach((swatch) => swatch.setAttribute("aria-pressed", String(swatch.dataset.swatch === hex)));
+    }
+
+    // Sliders can fire many times a frame: only the last value of each frame gets drawn
+    let renderQueued = false;
+    const renderSoon = () => {
+      if (renderQueued) return;
+      renderQueued = true;
+      requestAnimationFrame(() => {
+        renderQueued = false;
+        render();
+      });
+    };
+
+    const setColor = (hex: string, hsl?: number[]) => {
+      if (!openChip) return;
+      inputFor(openChip.dataset.open ?? "").value = hex;
+      renderSoon();
+      syncPicker(hsl);
+    };
+
+    const closePicker = (refocus = false) => {
+      if (!openChip) return;
+      openChip.setAttribute("aria-expanded", "false");
+      if (refocus) openChip.focus();
+      openChip = null;
+      picker.hidden = true;
+    };
+
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        if (openChip === chip) return closePicker();
+        openChip?.setAttribute("aria-expanded", "false");
+        openChip = chip;
+        chip.setAttribute("aria-expanded", "true");
+        pickerTitle.textContent = `${chip.dataset.label} colour`;
+        const set = chip.dataset.open === "skin" ? "skin" : "paint";
+        root.querySelectorAll<HTMLElement>("[data-swatches]").forEach((group) => (group.hidden = group.dataset.swatches !== set));
+        picker.hidden = false;
+        syncPicker();
+      });
+    });
+
+    swatches.forEach((swatch) => {
+      swatch.addEventListener("click", () => {
+        setColor(swatch.dataset.swatch ?? "");
+        const id = openChip?.dataset.open;
+        if (id === "background") pop(card, "scale(0.97)");
+        else popLayers(data.colors.find((color) => color.id === id)?.parts ?? []);
+      });
+    });
+
+    [hue, vivid, light].forEach((slider) => {
+      slider.addEventListener("input", () => {
+        const hsl = [hue, vivid, light].map((s) => Number(s.value));
+        setColor(hslToHex(hsl[0], hsl[1], hsl[2]), hsl);
+      });
+    });
+
+    hexBox.addEventListener("input", () => {
+      const typed = hexBox.value.trim().replace(/^#?/, "#").toLowerCase();
+      if (/^#[0-9a-f]{6}$/.test(typed)) setColor(typed);
+    });
+    hexBox.addEventListener("blur", () => syncPicker()); // half-typed codes go back to the real colour
+
+    adjustSliders.forEach((slider) => slider.addEventListener("input", renderSoon));
+
+    root.querySelector("#picker-original")?.addEventListener("click", () => {
+      if (openChip) setColor(startColors.get(openChip.dataset.open ?? "") ?? "#ffffff");
+    });
+    root.querySelector("#picker-done")?.addEventListener("click", () => closePicker(true));
+
+    document.addEventListener("keydown", (e) => e.key === "Escape" && closePicker(true), { signal });
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        // The tools keep it open, so Surprise me and the arrows can be used alongside it
+        if (!(e.target as HTMLElement).closest(".shop-note, .shop-actions")) closePicker();
+      },
+      { signal },
+    );
+
+    reset();
+
+    root.querySelectorAll<HTMLInputElement>("input[type=hidden]").forEach((input) => input.addEventListener("input", render));
+
+    root.querySelectorAll<HTMLButtonElement>("[data-step]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const name = button.dataset.step ?? "";
+        const part = data.parts.find((p) => p.name === name);
+        if (!part) return;
+        const first = data.optional.includes(name) ? -1 : 0;
+        const size = part.variants.length - first;
+        const at = (choice.get(name) ?? 0) - first;
+        choice.set(name, ((at + Number(button.dataset.by) + size) % size) + first);
+        showChoices();
+        render();
+        pop(button, `translateX(${Number(button.dataset.by) * 4}px)`);
+        pop(root.querySelector(`[data-choice="${name}"]`)!, "scale(0.5)");
+        popLayers([name]);
+      });
+    });
+
+    root.querySelector("#chibi-reset")?.addEventListener("click", () => {
+      reset();
+      pop(card, "scale(0.94)");
+    });
+
+    const randomColor = () => hslToHex(Math.random() * 360, 45 + Math.random() * 45, 35 + Math.random() * 40);
+    root.querySelector("#chibi-random")?.addEventListener("click", () => {
+      colorInputs.forEach((input) => (input.value = randomColor()));
+      background.value = randomColor();
+      data.parts.forEach((part) => {
+        const first = data.optional.includes(part.name) ? -1 : 0;
+        choice.set(part.name, first + Math.floor(Math.random() * (part.variants.length - first)));
+      });
+      showChoices();
+      render();
+      syncPicker();
+      pop(card, ["rotate(0deg)", "rotate(4deg) scale(1.03)", "rotate(-3deg)", "rotate(1deg)"], { duration: 420, easing: "ease-out" });
+      popLayers(data.parts.map((part) => part.name));
+    });
+
+    const saveFile = (blob: Blob, name: string) => {
+      const url = URL.createObjectURL(blob);
+      Object.assign(document.createElement("a"), { href: url, download: name }).click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const exportClear = root.querySelector<HTMLInputElement>("#chibi-transparent")!;
+    const pictureOptions = (keepBackground = true) => {
+      const units = Number(selectValue("outline"));
+      return {
+        background: exportClear.checked || !keepBackground ? null : background.value,
+        size: Number(selectValue("size")),
+        outline: units > 0 ? { units, color: inputFor("outline").value } : null,
+      };
+    };
+
+    const gifButton = root.querySelector<HTMLButtonElement>("#chibi-gif");
+    gifButton?.addEventListener("click", async () => {
+      const label = gifButton.textContent;
+      gifButton.disabled = true;
+      gifButton.textContent = "Printing…";
+      try {
+        render(); // in case a colour change is still waiting for its frame
+        await new Promise((resolve) => setTimeout(resolve)); // lets the button's new label show first
+        const options = pictureOptions();
+        const captured = captureFrames(card, options, GIF_FRAME_MS);
+        const bytes = await encodeGif(captured, { size: options.size, transparent: !options.background });
+        saveFile(new Blob([bytes], { type: "image/gif" }), "my-chibi-quil.gif");
+      } catch {
+        gifButton.textContent = "Couldn't print, try again?";
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      } finally {
+        gifButton.textContent = label;
+        gifButton.disabled = false;
+      }
+    });
+
+    root.querySelector("#chibi-download")?.addEventListener("click", () => {
+      render(); // in case a colour change is still waiting for its frame
+      capturePicture(card, pictureOptions()).toBlob((blob) => blob && saveFile(blob, "my-chibi-quil.png"), "image/png");
+      pop(card, "scale(1.04)");
+    });
+
+    // Remembers the character between visits. All on this device; part choices are by position, so
+    // new art should be numbered after what's there or saved characters shift to the next one along.
+    const sliders = [...animationSliders, ...adjustSliders];
+    const sliderKey = (slider: HTMLInputElement) => slider.dataset.animation ?? `${slider.dataset.part} ${slider.dataset.adjust}`;
+    const paints = [...colorInputs, background];
+    const paintKey = (input: HTMLInputElement) => input.dataset.color ?? "background";
+
+    const save = () => {
+      try {
+        localStorage.setItem(
+          SAVE_KEY,
+          JSON.stringify({
+            choice: Object.fromEntries(choice),
+            colors: Object.fromEntries(paints.map((input) => [paintKey(input), input.value])),
+            sliders: Object.fromEntries(sliders.map((slider) => [sliderKey(slider), slider.value])),
+            selects: Object.fromEntries(selects.map((select) => [select.dataset.select, select.dataset.value])),
+            transparent: exportClear.checked,
+          }),
+        );
+      } catch {} // private windows and full storage: it just won't be remembered
+    };
+
+    // Anything odd in there (hand-edited, or art that's since been removed) keeps its default
+    const restore = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null");
+        if (!saved) return;
+        data.parts.forEach((part) => {
+          const at = saved.choice?.[part.name];
+          if (Number.isInteger(at) && at >= (data.optional.includes(part.name) ? -1 : 0) && at < part.variants.length) choice.set(part.name, at);
+        });
+        paints.forEach((input) => {
+          const hex = saved.colors?.[paintKey(input)];
+          if (/^#[0-9a-f]{6}$/.test(hex)) input.value = hex;
+        });
+        sliders.forEach((slider) => {
+          const value = saved.sliders?.[sliderKey(slider)];
+          if (value !== "" && Number.isFinite(Number(value))) slider.value = value;
+        });
+        selects.forEach((select) => {
+          const value = saved.selects?.[select.dataset.select ?? ""];
+          if ([...select.querySelectorAll<HTMLElement>("[role=option]")].some((option) => option.dataset.value === value)) setSelect(select, value);
+        });
+        exportClear.checked = saved.transparent === true;
+      } catch {}
+      applyAnimation();
+      showChoices();
+      render();
+    };
+
+    restore();
+
+    // Every change is a click, a keypress or a slider, and each of those reaches here. Waits for a
+    // pause, so dragging a slider doesn't write on every step.
+    let saveTimer = 0;
+    (["click", "input", "keydown"] as const).forEach((type) => {
+      root.addEventListener(type, () => {
+        clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(save, 200);
+      });
+    });
+
+    // The character assembles itself, back to front
+    if (moves) {
+      layers.forEach((layer, i) => {
+        const delay = i * 45;
+        layer.animate({ opacity: [0, 1] }, { duration: 140, delay, fill: "backwards" });
+        pop(layer, "translateY(-7%) scale(1.08)", { duration: 420, delay, fill: "backwards" });
+      });
+    }
+  });
+</script>
+
+<style>
+  /* Fills the screen exactly: the character in the middle, tools either side, no page scrolling */
+  .shop {
+    --head: 3.5rem;
+    --actions: 7.9rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 1640px;
+    height: 100dvh;
+    min-height: 560px;
+    margin: 0 auto;
+    padding: 5.25rem 1.5rem 1.5rem;
+  }
+
+  .shop-head {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 1.25rem;
+    height: var(--head);
+  }
+
+  .shop-back {
+    display: inline-block;
+    padding: 0.35rem 0.85rem 0.2rem;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transform: rotate(-2deg);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .shop-back::before {
+    content: "‹ ";
+  }
+
+  .shop-back:hover,
+  .shop-back:focus-visible {
+    transform: rotate(0deg) scale(1.06);
+  }
+
+  .shop-title {
+    width: fit-content;
+    padding: 0.5rem 1rem 0.35rem;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 1.7rem;
+    font-weight: 400;
+    line-height: 1;
+    transform: rotate(-1.5deg);
+  }
+
+  .shop-bench {
+    display: grid;
+    flex: 1;
+    grid-template-areas: "parts stage colors";
+    grid-template-columns: minmax(250px, 320px) minmax(0, 1fr) minmax(250px, 320px);
+    gap: 1.75rem;
+    min-height: 0;
+  }
+
+  .shop-stage {
+    display: flex;
+    grid-area: stage;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.1rem;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .shop-note--parts {
+    grid-area: parts;
+  }
+
+  .shop-note--colors {
+    grid-area: colors;
+  }
+
+  .shop-card {
+    --idle: 2.6s;
+
+    container-type: inline-size;
+    display: grid;
+    /* As big as fits: the width available, or the height left after the header and buttons */
+    width: min(100%, calc(100dvh - 5.25rem - 1.5rem - var(--head) - var(--actions) - 3.1rem));
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 8px solid var(--text-color);
+    border-radius: 2rem;
+    background: var(--text-color);
+    box-shadow: 8px 8px 0 var(--edge-color);
+    transform: rotate(-1.5deg);
+    transition: none; /* no theme fade: the background follows its colour picker instantly */
+  }
+
+  .shop-card canvas {
+    position: relative; /* without this, animated layers paint over still ones, whatever their order */
+    display: block;
+    grid-area: 1 / 1;
+    width: 100%;
+    height: auto;
+  }
+
+  .chibi-group,
+  .chibi-figure {
+    display: grid;
+    grid-area: 1 / 1;
+  }
+
+  /* The outline wraps the whole character, not each part. Only on when asked for: it costs a lot
+     to redraw while everything's moving. 0.02cqw is one unit of the 5000 canvas. */
+  .has-outline .chibi-figure {
+    --w: calc(var(--outline-units, 0) * 0.02cqw);
+
+    filter: drop-shadow(var(--w) 0 0 var(--outline-color)) drop-shadow(calc(var(--w) * -1) 0 0 var(--outline-color))
+      drop-shadow(0 var(--w) 0 var(--outline-color)) drop-shadow(0 calc(var(--w) * -1) 0 var(--outline-color));
+  }
+
+  /* Idle: the head bobs with everything on it riding along, and each part then follows through
+     a beat late, by its own amount. The body stays planted and breathes. */
+  @media (prefers-reduced-motion: no-preference) {
+    .chibi-group {
+      animation: chibi-head-bob var(--idle) ease-in-out infinite;
+    }
+
+    /* Starts part-way through the cycle, so a part is late without standing still first.
+       Each part below only names its animation: the shorthand would reset this delay. */
+    canvas[data-part] {
+      animation-duration: var(--idle);
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      animation-delay: calc(var(--lag, 0s) - var(--idle));
+    }
+
+    canvas[data-part="body"],
+    canvas[data-part="neck"] {
+      transform-origin: 50% 97%; /* the bottom of the hoodie stays put */
+      animation-name: chibi-body-breathe;
+    }
+
+    canvas[data-part="hair-front"] {
+      --lag: 0.2s;
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-part="hair-back"] {
+      --lag: 0.35s;
+      --drift: 1%;
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-part="ears"] {
+      --lag: 0.3s;
+      --drift: 0.7%;
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-part="earrings"] {
+      --lag: 0.45s;
+      --drift: 1%;
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-part="face-accessories"] {
+      --lag: 0.25s;
+      --drift: 0.8%;
+      --sway: var(--accessory-sway, 1); /* its own slider, not the hair's */
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-part="horns"] {
+      --lag: 0.12s;
+      transform-origin: 50% 40%; /* tilts around the middle of the head */
+      animation-name: chibi-tilt;
+    }
+
+    canvas[data-part="halo"] {
+      --lag: 0.4s;
+      --drift: 1.6%;
+      animation-name: chibi-follow;
+    }
+  }
+
+  @keyframes chibi-head-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(calc(var(--bob, 1.2) * -1%)); }
+  }
+
+  @keyframes chibi-body-breathe {
+    0%, 100% { transform: scale(calc(1 + 0.012 * var(--breathe, 1)), calc(1 - 0.012 * var(--breathe, 1))); }
+    50% { transform: scale(calc(1 - 0.004 * var(--breathe, 1)), calc(1 + 0.008 * var(--breathe, 1))); }
+  }
+
+  @keyframes chibi-follow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(calc(var(--drift, 0.6%) * var(--sway, 1) * -1)); }
+  }
+
+  @keyframes chibi-tilt {
+    0%, 100% { transform: rotate(calc(var(--tilt, 0.5) * -1deg)); }
+    50% { transform: rotate(calc(var(--tilt, 0.5) * 1deg)); }
+  }
+
+  .shop-note {
+    position: relative;
+    min-height: 0;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 6px 6px 0 var(--edge-color);
+  }
+
+  .shop-note--parts {
+    transform: rotate(-0.5deg);
+  }
+
+  .shop-note--colors {
+    transform: rotate(0.5deg);
+  }
+
+  /* On its own layer so the panel's tape can overhang the top */
+  .shop-scroll {
+    height: 100%;
+    padding: 1.5rem 1.25rem 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .shop-note::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 72px;
+    height: 20px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--accent-color) 75%, transparent);
+    transform: translateX(-50%) rotate(-3deg);
+  }
+
+  .shop-heading {
+    margin-bottom: 1.2rem;
+    font-family: var(--font-accent);
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .shop-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr));
+    gap: 1rem 0.8rem;
+  }
+
+  .shop-color {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  /* A dollop of paint: a little lumpy, and it wobbles when you poke it */
+  .shop-chip {
+    display: block;
+    width: 3.2rem;
+    height: 3.2rem;
+    border: 4px solid var(--primary-color);
+    border-radius: 46% 54% 50% 50% / 52% 46% 54% 48%;
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--primary-color) 35%, transparent);
+    transition: transform 0.25s cubic-bezier(0.34, 1.8, 0.64, 1);
+  }
+
+  .shop-color:hover .shop-chip,
+  .shop-color:focus-visible .shop-chip {
+    transform: rotate(-8deg) scale(1.08);
+  }
+
+  .shop-color[aria-expanded="true"] .shop-chip {
+    transform: rotate(6deg) scale(1.18);
+  }
+
+  /* The picker: a drawer that slides out of the note */
+  .shop-picker {
+    margin-top: 1.2rem;
+    padding: 0.9rem 1rem 1rem;
+    border: 3px dashed color-mix(in srgb, var(--primary-color) 45%, transparent);
+    border-radius: 10px;
+    animation: shop-picker-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .shop-picker[hidden],
+  .shop-swatches[hidden] {
+    display: none;
+  }
+
+  @keyframes shop-picker-pop {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.96) rotate(-1deg);
+    }
+  }
+
+  .shop-picker-title {
+    margin-bottom: 0.7rem;
+    font-family: var(--font-accent);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+
+  .shop-swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(1.9rem, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .shop-swatch {
+    aspect-ratio: 1;
+    padding: 0;
+    border: 3px solid var(--primary-color);
+    border-radius: 45% 55% 52% 48% / 55% 45% 55% 45%;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.8, 0.64, 1);
+  }
+
+  .shop-swatch:nth-child(even) {
+    border-radius: 55% 45% 46% 54% / 46% 54% 48% 52%;
+  }
+
+  .shop-swatch:hover,
+  .shop-swatch:focus-visible {
+    transform: rotate(10deg) scale(1.2);
+  }
+
+  .shop-swatch[aria-pressed="true"] {
+    box-shadow: 0 0 0 3px var(--text-color), 0 0 0 6px var(--accent-color);
+    transform: scale(1.1);
+  }
+
+  .shop-slider {
+    display: grid;
+    grid-template-columns: 4.6rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .shop-slider input {
+    width: 100%;
+    height: 1rem;
+    margin: 0;
+    border: 2px solid var(--primary-color);
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  #picker-hue {
+    background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  }
+
+  #picker-vivid {
+    background: linear-gradient(to right, hsl(var(--h) 0% var(--l)), hsl(var(--h) 100% var(--l)));
+  }
+
+  #picker-light {
+    background: linear-gradient(to right, #000, hsl(var(--h) var(--s) 50%), #fff);
+  }
+
+  .shop-slider input::-webkit-slider-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid var(--primary-color);
+    border-radius: 45% 55% 52% 48% / 55% 45% 55% 45%;
+    background: var(--text-color);
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--primary-color) 40%, transparent);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .shop-slider input::-moz-range-thumb {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 3px solid var(--primary-color);
+    border-radius: 45% 55% 52% 48% / 55% 45% 55% 45%;
+    background: var(--text-color);
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--primary-color) 40%, transparent);
+  }
+
+  .shop-picker-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+  }
+
+  .shop-hex {
+    width: 6.2rem;
+    padding: 0.3rem 0.5rem 0.2rem;
+    border: 3px solid var(--primary-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .shop-picker-foot .shop-btn {
+    padding: 0.3rem 0.65rem 0.2rem;
+    font-size: 0.9rem;
+  }
+
+  .shop-parts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1.5rem;
+  }
+
+  .shop-part {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .shop-part-name {
+    flex: 1;
+    font-family: var(--font-accent);
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+  }
+
+  .shop-choice {
+    min-width: 3.2rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .shop-step {
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: var(--text-color);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .shop-step:hover,
+  .shop-step:focus-visible {
+    transform: scale(1.15);
+  }
+
+  .shop-advanced {
+    margin-top: 1.5rem;
+  }
+
+  .shop-advanced summary {
+    width: fit-content;
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+  }
+
+  .shop-advanced-title {
+    margin: 1rem 0 0.2rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+
+  .shop-color[hidden],
+  .shop-slider[hidden],
+  .shop-advanced [hidden] {
+    display: none;
+  }
+
+  .shop-advanced input {
+    background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+  }
+
+  .shop-actions {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.7rem;
+  }
+
+  .shop-actions .shop-btn {
+    background: var(--text-color);
+  }
+
+  .shop-export {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1.1rem;
+  }
+
+  .shop-select {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-color);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .shop-select-button {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.55rem 0.1rem;
+    border: none;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 2px 2px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.8, 0.64, 1);
+  }
+
+  .shop-select-button::after {
+    content: "";
+    width: 0;
+    height: 0;
+    margin-top: -2px;
+    border-top: 5px solid currentColor;
+    border-inline: 4px solid transparent;
+  }
+
+  .shop-select-button:hover,
+  .shop-select-button[aria-expanded="true"] {
+    transform: rotate(-2deg) scale(1.05);
+  }
+
+  .shop-select-button::after {
+    transition: transform 0.25s cubic-bezier(0.34, 1.8, 0.64, 1);
+  }
+
+  .shop-select-button[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+  }
+
+  /* Opens upwards: the row sits at the bottom of the screen */
+  .shop-select-list {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.4rem);
+    z-index: 20;
+    min-width: 6rem;
+    margin: 0;
+    padding: 0.3rem;
+    border-radius: 6px;
+    background: var(--text-color);
+    color: var(--primary-color);
+    box-shadow: 4px 4px 0 var(--edge-color);
+    list-style: none;
+    outline: none;
+  }
+
+  .shop-select-list[hidden] {
+    display: none;
+  }
+
+  .shop-select-option {
+    padding: 0.25rem 0.55rem 0.15rem;
+    border-radius: 4px;
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .shop-select-option[aria-selected="true"] {
+    background: color-mix(in srgb, var(--accent-color) 45%, transparent);
+  }
+
+  .shop-select-option.is-active {
+    background: var(--accent-color);
+  }
+
+  .shop-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem 0.5rem;
+    color: var(--text-color);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  /* The real checkbox stays for keyboards and screen readers, under a paper box */
+  .shop-toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .shop-toggle-box {
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 3px solid var(--text-color);
+    border-radius: 45% 55% 52% 48% / 55% 45% 55% 45%;
+    transition: transform 0.2s cubic-bezier(0.34, 1.8, 0.64, 1), background-color 0.15s ease;
+  }
+
+  .shop-toggle:hover .shop-toggle-box {
+    transform: rotate(-8deg) scale(1.12);
+  }
+
+  .shop-toggle input:checked + .shop-toggle-box {
+    background: var(--accent-color);
+    transform: rotate(6deg) scale(1.12);
+  }
+
+  .shop-toggle input:focus-visible + .shop-toggle-box {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* Keeps its space while hidden, so ticking the box doesn't shift the character */
+  .shop-toggle-note {
+    visibility: hidden;
+    flex-basis: 100%;
+    margin: -0.3rem 0 0;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: center;
+    opacity: 0.7;
+  }
+
+  .shop-export:has(#chibi-transparent:checked) ~ .shop-toggle-note {
+    visibility: visible;
+  }
+
+  .shop-actions .shop-btn--main {
+    background: var(--accent-color);
+  }
+
+  .shop-btn {
+    padding: 0.5rem 0.9rem 0.35rem;
+    border: 3px solid var(--primary-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary-color);
+    font-family: var(--font-accent);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .shop-btn:hover,
+  .shop-btn:focus-visible {
+    transform: rotate(-1.5deg) scale(1.06);
+  }
+
+  .shop-btn--main {
+    border-color: var(--accent-color);
+    background: var(--accent-color);
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--primary-color) 35%, transparent);
+  }
+
+  .shop-select-button:focus-visible,
+  .shop-back:focus-visible,
+  .shop-btn:focus-visible,
+  .shop-step:focus-visible,
+  .shop-color:focus-visible,
+  .shop-swatch:focus-visible,
+  .shop-slider input:focus-visible,
+  .shop-hex:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* Everything gets slapped onto the desk when the page opens, and answers back when pressed.
+     Only ever from above: anything pushed past the bottom or the side would flash a scrollbar. */
+  @media (prefers-reduced-motion: no-preference) {
+    .shop-back,
+    .shop-title {
+      animation: shop-slap 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    }
+
+    .shop-title {
+      animation-delay: 0.08s;
+    }
+
+    .shop-card {
+      animation: shop-card-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
+    }
+
+    .shop-note {
+      animation: shop-drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s backwards;
+    }
+
+    .shop-note--colors {
+      animation-delay: 0.28s;
+    }
+
+    .shop-actions {
+      animation: shop-rise 0.35s ease-out 0.4s backwards;
+    }
+
+    /* These also play whenever a part comes back on, so they can't wait long */
+    .shop-part,
+    .shop-color {
+      animation: shop-chip-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    }
+
+    .shop-part:nth-child(2),
+    .shop-color:nth-child(2) { animation-delay: 0.04s; }
+    .shop-part:nth-child(3),
+    .shop-color:nth-child(3) { animation-delay: 0.08s; }
+    .shop-part:nth-child(4),
+    .shop-color:nth-child(4) { animation-delay: 0.12s; }
+    .shop-part:nth-child(n + 5),
+    .shop-color:nth-child(n + 5) { animation-delay: 0.16s; }
+
+    .shop-advanced[open] > :not(summary) {
+      animation: shop-picker-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* The list opens upwards, so it grows out of its button, and folds back when it closes */
+    .shop-select-list {
+      transform-origin: 100% 100%;
+      animation: shop-select-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: opacity 0.12s ease, transform 0.12s ease, display 0.12s allow-discrete;
+    }
+
+    .shop-select-list[hidden] {
+      opacity: 0;
+      transform: translateY(6px) scale(0.9);
+      pointer-events: none;
+    }
+
+    .shop-select-option {
+      animation: shop-chip-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    }
+
+    .shop-select-option:nth-child(2) { animation-delay: 0.03s; }
+    .shop-select-option:nth-child(3) { animation-delay: 0.06s; }
+    .shop-select-option:nth-child(4) { animation-delay: 0.09s; }
+
+    .shop-btn:active,
+    .shop-select-button:active,
+    .shop-back:active {
+      transform: scale(0.93);
+      transition-duration: 0.06s;
+    }
+
+    .shop-step:active {
+      transform: scale(0.85);
+      transition-duration: 0.06s;
+    }
+
+    .shop-color:active .shop-chip,
+    .shop-swatch:active {
+      transform: scale(0.85);
+      transition-duration: 0.06s;
+    }
+  }
+
+  @keyframes shop-slap {
+    from {
+      opacity: 0;
+      transform: translateY(-22px) rotate(-5deg) scale(1.06);
+    }
+  }
+
+  /* The panels are tall, so even a small tilt swings their corners a long way */
+  @keyframes shop-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-22px) rotate(-1deg);
+    }
+  }
+
+  @keyframes shop-card-in {
+    from {
+      opacity: 0;
+      transform: rotate(-7deg) scale(0.82);
+    }
+  }
+
+  @keyframes shop-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  @keyframes shop-chip-in {
+    from {
+      opacity: 0;
+      transform: scale(0.7);
+    }
+  }
+
+  @keyframes shop-select-pop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.8) rotate(2deg);
+    }
+  }
+
+  /* Less room between the panels: the buttons shrink a little to stay on one row */
+  @media (max-width: 1400px) {
+    .shop {
+      --actions: 6.2rem;
+    }
+
+    .shop-actions {
+      gap: 0.45rem;
+    }
+
+    .shop-actions .shop-btn {
+      padding: 0.35rem 0.55rem 0.25rem;
+      font-size: 0.85rem;
+    }
+
+    .shop-export {
+      gap: 0.4rem 0.7rem;
+    }
+
+    .shop-select,
+    .shop-toggle {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* No room either side: the character stays pinned at the top while the tools scroll under it */
+  @media (max-width: 1180px) {
+    .shop {
+      height: auto;
+      min-height: 0;
+      padding: 5.25rem 1.25rem 2rem;
+    }
+
+    .shop-bench {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .shop-stage {
+      position: sticky;
+      top: 4.4rem;
+      z-index: 5;
+      gap: 0.7rem;
+      padding-block: 0.5rem;
+      background: var(--primary-color);
+    }
+
+    .shop-card {
+      width: min(100%, 36dvh);
+      border-width: 5px;
+      border-radius: 1.2rem;
+    }
+
+    .shop-actions .shop-btn {
+      padding: 0.3rem 0.65rem 0.2rem;
+      font-size: 0.85rem;
+    }
+
+    .shop-note--parts,
+    .shop-note--colors {
+      transform: none;
+    }
+
+    .shop-scroll {
+      height: auto;
+      overflow: visible;
+    }
+
+    /* Anything scrolled to, by focus or otherwise, stops below the pinned character */
+    .shop-note :is(button, input, summary) {
+      scroll-margin-top: calc(4.4rem + 36dvh + 11rem);
+      scroll-margin-bottom: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Quil holds still here, so the animation sliders and the GIF have nothing to show */
+    #chibi-gif,
+    .shop-advanced-title:first-of-type,
+    .shop-advanced > .shop-slider {
+      display: none;
+    }
+
+    .shop-picker {
+      animation: none;
+    }
+
+    .shop-back,
+    .shop-chip,
+    .shop-swatch,
+    .shop-toggle-box,
+    .shop-select-button,
+    .shop-select-button::after,
+    .shop-step,
+    .shop-btn {
+      transition: none;
+    }
+  }
+</style>

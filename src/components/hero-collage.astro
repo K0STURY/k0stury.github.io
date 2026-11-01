@@ -62,9 +62,12 @@ const layout = [
   <div class="desk-item desk-item--tag" style="top:27%; left:6%; --delay:80ms;">
     <div class="desk-parallax" style="--depth:8px;">
       <p class="hero-tag">character art &amp; doodles that bite back</p>
-      <a href={discordLink} class="hero-badge" target="_blank" rel="noopener noreferrer">
-        Say hi on Discord
-      </a>
+      <div class="hero-links">
+        <a href="/workshop" class="hero-badge hero-badge--solid" data-astro-prefetch>Join the workshop</a>
+        <a href={discordLink} class="hero-badge" target="_blank" rel="noopener noreferrer">
+          Say hi on Discord
+        </a>
+      </div>
     </div>
   </div>
 
@@ -442,6 +445,15 @@ const layout = [
     margin-bottom: 0.75rem;
   }
 
+  /* Stacked: the stickers are placed before the display font loads, so a row that could wrap
+     once it does would take up more room than they left for it */
+  .hero-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
   .hero-badge {
     display: inline-flex;
     align-items: center;
@@ -461,6 +473,16 @@ const layout = [
     background: var(--accent-color);
     color: var(--primary-color);
     animation: gelatine 0.375s ease-in-out;
+  }
+
+  .hero-badge--solid {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 3px 3px 0 var(--edge-color);
+  }
+
+  .hero-badge--solid:hover {
+    transform: rotate(-2deg) scale(1.05);
   }
 
   /* Pinned sketches. The frame itself must not clip, or it cuts the pin in half;
@@ -616,6 +638,12 @@ const layout = [
 
     .hero-tag {
       max-width: 100%;
+    }
+
+    .hero-links {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     /* Sketches flow into a wrapped grid instead of the absolute scatter */

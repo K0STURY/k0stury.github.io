@@ -10,6 +10,8 @@ import rehypeCaptions from "./src/plugins/rehype-captions.mjs";
 // https://astro.build/config
 export default defineConfig({
   site: "https://k0stur.dev",
+  // Its invisible hover area sat over the workshop's controls at the bottom of the screen
+  devToolbar: { enabled: false },
   integrations: [tailwind(), svelte(), icon()],
   image: {
     // Stock sharp, plus an on-disk cache so the dev server encodes each image only once

@@ -196,6 +196,7 @@ const scatter = [
   .gallery-scene {
     position: relative;
     padding-bottom: 1rem;
+    overflow-x: clip; /* a tile's hidden corner quirk can hang past the screen edge */
   }
 
   .gallery-heading {

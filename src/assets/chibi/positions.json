@@ -1,0 +1,18 @@
+{
+  "hair-back/Back_1.png": { "x": 6, "y": -814.5 },
+  "hair-back/Back_2.png": { "x": 6, "y": -570 },
+  "body/Body_1.png": { "x": 6.5, "y": 1120 },
+  "neck/Neck_1.png": { "x": -1.5, "y": 530 },
+  "ears/Ear_1.png": { "x": -1, "y": 39 },
+  "ears/Ear_2.png": { "x": -1, "y": 39 },
+  "head/Head_1.png": { "x": 1, "y": -193 },
+  "hair-front/Front_1.png": { "x": -1, "y": -147 },
+  "hair-front/Front_2.png": { "x": -1, "y": -422 },
+  "horns/Horns_1.png": { "x": -1.5, "y": -1033 },
+  "horns/Horns_2.png": { "x": 0, "y": -1310 },
+  "iris/Iris_1.png": { "x": -0.5, "y": 55 },
+  "iris/Iris_2.png": { "x": -0.5, "y": 55 },
+  "iris/Iris_3.png": { "x": -0.5, "y": 55 },
+  "eyes/Eyes_1.png": { "x": -12, "y": -29 },
+  "face-accessories/Glasses.png": { "x": 0, "y": 30 }
+}
