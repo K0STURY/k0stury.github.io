@@ -95,12 +95,23 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
           <!-- One canvas per part, so each can move. The groups ride along with the head: what's
                behind the body, then the body itself, then what's in front. -->
           <div class="chibi-figure">
-          <div class="chibi-group">
-            {behindBody.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
+          <!-- The same again for the outline, behind everything: one per part, moving with it. They
+               always run, even hidden, so that switching the outline on finds them in step. -->
+          <div class="chibi-outlines">
+            <div class="chibi-group">
+              {behindBody.map((part) => <canvas data-outline={part.name} data-move={part.name} width="1000" height="1000" />)}
+            </div>
+            {planted.map((part) => <canvas data-outline={part.name} data-move={part.name} width="1000" height="1000" />)}
+            <div class="chibi-group">
+              {inFront.map((part) => <canvas data-outline={part.name} data-move={part.name} width="1000" height="1000" />)}
+            </div>
           </div>
-          {planted.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
           <div class="chibi-group">
-            {inFront.map((part) => <canvas data-part={part.name} width="1400" height="1400" />)}
+            {behindBody.map((part) => <canvas data-part={part.name} data-move={part.name} width="1400" height="1400" />)}
+          </div>
+          {planted.map((part) => <canvas data-part={part.name} data-move={part.name} width="1400" height="1400" />)}
+          <div class="chibi-group">
+            {inFront.map((part) => <canvas data-part={part.name} data-move={part.name} width="1400" height="1400" />)}
           </div>
           </div>
         </div>
@@ -248,7 +259,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
 </BaseLayout>
 
 <script>
-  import { GIF_FRAME_MS, capturePicture, captureFrames, encodeGif } from "src/helpers/chibi-gif";
+  import { GIF_FRAME_MS, capturePicture, captureFrames, encodeGif, outliner } from "src/helpers/chibi-gif";
 
   type Variant = { src: string; x: number; y: number; w: number; h: number };
   type Part = { name: string; variants: Variant[] };
@@ -386,13 +397,50 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       return { x: value("x", 0) * scale, y: value("y", 0) * scale, size: value("size", 100) / 100, tilt: value("tilt", 0) };
     };
 
+    // The outline, the same shape as the exports': each part's own, so it moves with the part, and
+    // stacked behind them all so that together they wrap the character. Working out a shape is the
+    // slow bit, so that only happens when the part changes; a new colour just repaints it.
+    const outlineLayers = [...root.querySelectorAll<HTMLCanvasElement>("canvas[data-outline]")];
+    const OUTLINE_SIZE = outlineLayers[0]?.width ?? 0;
+    const silhouette = newCanvas(OUTLINE_SIZE, OUTLINE_SIZE).getContext("2d", { willReadFrequently: true })!;
+    let grow: ReturnType<typeof outliner> | null = null; // made on first use: it holds a lot of memory
+    const partShapes = new Map<string, string>(); // what each part looks like, leaving out its colour
+    const outlined = new Map<string, string>();
+    const outlineColors = new Map<string, string>();
+
+    function drawOutlines() {
+      const units = Number(selectValue("outline"));
+      if (!units) return;
+      const color = inputFor("outline").value;
+      grow ??= outliner(OUTLINE_SIZE);
+      for (const layer of outlineLayers) {
+        const name = layer.dataset.outline ?? "";
+        const ctx = layer.getContext("2d")!;
+        const shape = `${partShapes.get(name)} ${units}`;
+        if (outlined.get(name) !== shape) {
+          outlined.set(name, shape);
+          outlineColors.set(name, color);
+          ctx.clearRect(0, 0, OUTLINE_SIZE, OUTLINE_SIZE);
+          if (!partShapes.get(name)) continue;
+          silhouette.clearRect(0, 0, OUTLINE_SIZE, OUTLINE_SIZE);
+          silhouette.drawImage(layers.find((l) => l.dataset.part === name)!, 0, 0, OUTLINE_SIZE, OUTLINE_SIZE);
+          grow(ctx, silhouette, (units * OUTLINE_SIZE) / data.canvas, color);
+        } else if (outlineColors.get(name) !== color) {
+          outlineColors.set(name, color);
+          ctx.globalCompositeOperation = "source-in";
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, OUTLINE_SIZE, OUTLINE_SIZE);
+          ctx.globalCompositeOperation = "source-over";
+        }
+      }
+    }
+
     function render() {
       // The background lives on the card, so the idle bob only moves the character
       card.style.background = background.value;
       chips.forEach((chip) => {
         chip.querySelector<HTMLElement>(".shop-chip")!.style.background = inputFor(chip.dataset.open ?? "").value;
       });
-      card.style.setProperty("--outline-color", inputFor("outline").value);
       for (const part of data.parts) {
         const layer = layers.find((l) => l.dataset.part === part.name);
         const ctx = layer?.getContext("2d");
@@ -404,6 +452,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
         const tint = piece && ((color && colorInputs.find((input) => input.dataset.color === color.id)?.value) ?? toHex(piece.main));
 
         const adjust = adjustmentOf(part.name);
+        partShapes.set(part.name, piece ? `${variant.src} ${Object.values(adjust).join(" ")}` : "");
         const look = piece ? `${variant.src} ${tint} ${Object.values(adjust).join(" ")}` : "";
         if (drawn.get(part.name) === look) continue;
         drawn.set(part.name, look);
@@ -429,10 +478,11 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
         ctx.drawImage(piece.fixed, -width / 2, -height / 2);
         ctx.restore();
       }
+      drawOutlines();
     }
 
     const popLayers = (names: string[]) => {
-      layers.filter((layer) => names.includes(layer.dataset.part ?? "")).forEach((layer) => pop(layer, "scale(1.05)"));
+      root.querySelectorAll<HTMLElement>("[data-move]").forEach((layer) => names.includes(layer.dataset.move ?? "") && pop(layer, "scale(1.05)"));
     };
 
     // The card has its colour straight away; the character follows once its parts have loaded
@@ -497,7 +547,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
         if (on) select.querySelector(".shop-select-value")!.textContent = option.textContent!.trim();
       });
       if (select.dataset.select === "outline") {
-        card.style.setProperty("--outline-units", value);
+        renderSoon();
         card.classList.toggle("has-outline", value !== "0");
         showRelevantOptions();
       }
@@ -833,10 +883,12 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
 
     // The character assembles itself, back to front
     if (moves) {
-      layers.forEach((layer, i) => {
-        const delay = i * 45;
-        layer.animate({ opacity: [0, 1] }, { duration: 140, delay, fill: "backwards" });
-        pop(layer, "translateY(-7%) scale(1.08)", { duration: 420, delay, fill: "backwards" });
+      [layers, outlineLayers].forEach((stack) => {
+        stack.forEach((layer, i) => {
+          const delay = i * 45;
+          layer.animate({ opacity: [0, 1] }, { duration: 140, delay, fill: "backwards" });
+          pop(layer, "translateY(-7%) scale(1.08)", { duration: 420, delay, fill: "backwards" });
+        });
       });
     }
   });
@@ -958,18 +1010,18 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
   }
 
   .chibi-group,
-  .chibi-figure {
+  .chibi-figure,
+  .chibi-outlines {
     display: grid;
     grid-area: 1 / 1;
   }
 
-  /* The outline wraps the whole character, not each part. Only on when asked for: it costs a lot
-     to redraw while everything's moving. 0.02cqw is one unit of the 5000 canvas. */
-  .has-outline .chibi-figure {
-    --w: calc(var(--outline-units, 0) * 0.02cqw);
+  .chibi-outlines {
+    visibility: hidden;
+  }
 
-    filter: drop-shadow(var(--w) 0 0 var(--outline-color)) drop-shadow(calc(var(--w) * -1) 0 0 var(--outline-color))
-      drop-shadow(0 var(--w) 0 var(--outline-color)) drop-shadow(0 calc(var(--w) * -1) 0 var(--outline-color));
+  .has-outline .chibi-outlines {
+    visibility: visible;
   }
 
   /* Idle: the head bobs with everything on it riding along, and each part then follows through
@@ -981,56 +1033,56 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
 
     /* Starts part-way through the cycle, so a part is late without standing still first.
        Each part below only names its animation: the shorthand would reset this delay. */
-    canvas[data-part] {
+    canvas[data-move] {
       animation-duration: var(--idle);
       animation-timing-function: ease-in-out;
       animation-iteration-count: infinite;
       animation-delay: calc(var(--lag, 0s) - var(--idle));
     }
 
-    canvas[data-part="body"],
-    canvas[data-part="neck"] {
+    canvas[data-move="body"],
+    canvas[data-move="neck"] {
       transform-origin: 50% 97%; /* the bottom of the hoodie stays put */
       animation-name: chibi-body-breathe;
     }
 
-    canvas[data-part="hair-front"] {
+    canvas[data-move="hair-front"] {
       --lag: 0.2s;
       animation-name: chibi-follow;
     }
 
-    canvas[data-part="hair-back"] {
+    canvas[data-move="hair-back"] {
       --lag: 0.35s;
       --drift: 1%;
       animation-name: chibi-follow;
     }
 
-    canvas[data-part="ears"] {
+    canvas[data-move="ears"] {
       --lag: 0.3s;
       --drift: 0.7%;
       animation-name: chibi-follow;
     }
 
-    canvas[data-part="earrings"] {
+    canvas[data-move="earrings"] {
       --lag: 0.45s;
       --drift: 1%;
       animation-name: chibi-follow;
     }
 
-    canvas[data-part="face-accessories"] {
+    canvas[data-move="face-accessories"] {
       --lag: 0.25s;
       --drift: 0.8%;
       --sway: var(--accessory-sway, 1); /* its own slider, not the hair's */
       animation-name: chibi-follow;
     }
 
-    canvas[data-part="horns"] {
+    canvas[data-move="horns"] {
       --lag: 0.12s;
       transform-origin: 50% 40%; /* tilts around the middle of the head */
       animation-name: chibi-tilt;
     }
 
-    canvas[data-part="halo"] {
+    canvas[data-move="halo"] {
       --lag: 0.4s;
       --drift: 1.6%;
       animation-name: chibi-follow;

@@ -23,30 +23,100 @@ export type PictureOptions = {
 
 const MAX_FRAMES = 120; // a very slow speed setting shouldn't make an enormous file
 const CANVAS_UNITS = 5000;
+// GIF pixels are fully solid or fully clear, so this is where a soft edge gets cut
+const SOLID_FROM = 128;
 
 const newContext = (size: number) => Object.assign(document.createElement("canvas"), { width: size, height: size }).getContext("2d", { willReadFrequently: true })!;
 
-// Grows the figure's silhouette by `width` px and paints it in the outline colour. It works in a
-// horizontal pass then a vertical one, which gives the same square reach as the preview's filter,
-// in far fewer draws than stamping in every direction.
-function drawOutline(target: CanvasRenderingContext2D, figure: HTMLCanvasElement, width: number, color: string, scratch: CanvasRenderingContext2D[]) {
-  const [shape, wide] = scratch;
-  const size = figure.width;
-  const stepBy = Math.max(1, width / 4);
-  const offsets: number[] = [];
-  for (let d = -width; d < width; d += stepBy) offsets.push(d);
-  offsets.push(width);
+// A round outline: each pixel's straight-line distance to the nearest solid part of the figure, so
+// thin tips like the ears get an even edge. Copies of the figure stamped around it can't do that:
+// past a tip's own width they come apart into separate spikes. This is Felzenszwalb's distance
+// transform. It only works on the area around the figure, which keeps it quick enough for every
+// frame of a GIF, and for the live preview.
+export function outliner(size: number) {
+  const FAR = 1e12;
+  const distances = new Float64Array(size * size);
+  const line = new Float64Array(size);
+  const parabolas = new Int32Array(size);
+  const starts = new Float64Array(size + 1);
+  const paper = newContext(size);
+  const picture = paper.createImageData(size, size);
 
-  shape.globalCompositeOperation = "source-over";
-  shape.clearRect(0, 0, size, size);
-  shape.drawImage(figure, 0, 0);
-  shape.globalCompositeOperation = "source-in";
-  shape.fillStyle = color;
-  shape.fillRect(0, 0, size, size);
+  // One row or column, in place: `step` is how far apart its pixels sit in `distances`
+  const sweep = (from: number, step: number, count: number) => {
+    let seen = false;
+    for (let i = 0; i < count; i++) {
+      line[i] = distances[from + i * step];
+      seen ||= line[i] < FAR;
+    }
+    if (!seen) return;
+    let last = 0;
+    parabolas[0] = 0;
+    starts[0] = -Infinity;
+    starts[1] = Infinity;
+    for (let q = 1; q < count; q++) {
+      let s = 0;
+      for (;;) {
+        const v = parabolas[last];
+        s = (line[q] + q * q - line[v] - v * v) / (2 * (q - v));
+        if (s > starts[last]) break;
+        last--;
+      }
+      last++;
+      parabolas[last] = q;
+      starts[last] = s;
+      starts[last + 1] = Infinity;
+    }
+    last = 0;
+    for (let q = 0; q < count; q++) {
+      while (starts[last + 1] < q) last++;
+      const v = parabolas[last];
+      distances[from + q * step] = (q - v) * (q - v) + line[v];
+    }
+  };
 
-  wide.clearRect(0, 0, size, size);
-  for (const dx of offsets) wide.drawImage(shape.canvas, dx, 0);
-  for (const dy of offsets) target.drawImage(wide.canvas, 0, dy);
+  return (target: CanvasRenderingContext2D, figure: CanvasRenderingContext2D, width: number, color: string) => {
+    const solid = figure.getImageData(0, 0, size, size).data;
+    let [left, top, right, bottom] = [size, size, -1, -1];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        if (solid[(y * size + x) * 4 + 3] < SOLID_FROM) continue;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+    if (right < 0) return; // nothing to go round
+
+    const reach = Math.ceil(width) + 2;
+    const x0 = Math.max(0, left - reach);
+    const y0 = Math.max(0, top - reach);
+    const w = Math.min(size, right + reach + 1) - x0;
+    const h = Math.min(size, bottom + reach + 1) - y0;
+
+    for (let y = y0; y < y0 + h; y++) {
+      for (let p = y * size + x0; p < y * size + x0 + w; p++) distances[p] = solid[p * 4 + 3] >= SOLID_FROM ? 0 : FAR;
+    }
+    for (let x = x0; x < x0 + w; x++) sweep(y0 * size + x, size, h);
+    for (let y = y0; y < y0 + h; y++) sweep(y * size + x0, 1, w);
+
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+    const px = picture.data;
+    for (let y = y0; y < y0 + h; y++) {
+      for (let p = y * size + x0; p < y * size + x0 + w; p++) {
+        const c = p * 4;
+        px[c] = r;
+        px[c + 1] = g;
+        px[c + 2] = b;
+        // Fades over the last pixel, so the outer edge is smooth
+        px[c + 3] = 255 * Math.max(0, Math.min(1, width + 0.5 - Math.sqrt(distances[p])));
+      }
+    }
+    paper.clearRect(0, 0, size, size);
+    paper.putImageData(picture, 0, 0, x0, y0, w, h);
+    target.drawImage(paper.canvas, 0, 0);
+  };
 }
 
 /** A drawing surface for the card's layers, where they sit right now */
@@ -56,7 +126,7 @@ function pictureDrawer(card: HTMLElement, { background, size, outline }: Picture
   const scale = size / cssSize;
   const output = newContext(size);
   const figure = newContext(size);
-  const scratch = [newContext(size), newContext(size)];
+  const drawOutline = outline ? outliner(size) : null;
   const outlineWidth = outline ? (outline.units * size) / CANVAS_UNITS : 0;
 
   // A transform as the browser applies it: around the element's transform-origin
@@ -81,7 +151,7 @@ function pictureDrawer(card: HTMLElement, { background, size, outline }: Picture
       output.fillStyle = background;
       output.fillRect(0, 0, size, size);
     }
-    if (outline && outlineWidth > 0) drawOutline(output, figure.canvas, outlineWidth, outline.color, scratch);
+    if (outline && drawOutline && outlineWidth > 0) drawOutline(output, figure, outlineWidth, outline.color);
     output.drawImage(figure.canvas, 0, 0);
     return output;
   };
@@ -127,8 +197,6 @@ export function captureFrames(card: HTMLElement, options: PictureOptions, frameM
 
 // How far a colour channel can drift (out of 255) and still count as the same colour
 const SAME_COLOUR = 6;
-// GIF pixels are fully solid or fully clear, so this is where a soft edge gets cut
-const SOLID_FROM = 128;
 
 /** Encodes captured frames. gifenc is only downloaded the first time someone asks for a GIF. */
 export async function encodeGif({ frames, frameMs }: CapturedFrames, options: GifOptions) {
