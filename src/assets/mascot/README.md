@@ -21,6 +21,8 @@ the desk-note quotes (src/data/quotes.json) when clicked.
 - **pop_up/**: plays once when you hover it while it's asleep, as it rises; then it
   goes back to sleeping until clicked.
 - **click/**: plays once when it's clicked: it wakes up.
+- **like/**: when a piece gets liked, it pops up over the big view, plays these once and
+  goes back down.
 - **idle/**: awake; loops while you keep hovering after a click. A second after the
   pointer leaves it falls back asleep. Also the about-section avatar's loop.
 - Name them like the art, index first: `1_idle.png`, `2_idle.png`, ... `1_click.png`, ...
@@ -31,3 +33,6 @@ the desk-note quotes (src/data/quotes.json) when clicked.
   `[75, 75, 200, 75]` holds frame 3 longer. Frames it doesn't cover (or no file) use
   150ms (75ms for click).
 - Missing zzz or idle frames: the other one is used for both.
+
+Every folder of frames here also gets its own button on the mascot's page (/mascot). Give it
+a nicer name in `LABELS` in src/pages/mascot.astro; the bio is there too.

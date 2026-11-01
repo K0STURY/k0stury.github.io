@@ -2,7 +2,7 @@
 // The desk mascot: pops up from the bottom edge. It sleeps (zzz) until clicked; hovered while
 // asleep it stirs (pop_up, once) and sleeps on. A click wakes it up (click), it stays
 // awake (idle) while hovered, and dozes off again a second after the pointer leaves. Frames live
-// in src/assets/mascot/zzz, /pop_up, /idle and /click (see the README there).
+// in src/assets/mascot/zzz, /pop_up, /idle, /click and /like (see the README there).
 // A missing zzz or idle uses the other; neither = the first loose image, still; nothing = no mascot.
 import quotes from "@data/quotes.json";
 import { getMascotFrames } from "src/helpers/mascot";
@@ -12,12 +12,13 @@ const idle = await getMascotFrames("idle");
 const idleFrames = idle.length || sleepFrames.length ? idle : await getMascotFrames("still");
 const clickFrames = await getMascotFrames("click");
 const popUpFrames = await getMascotFrames("pop_up");
+const likeFrames = await getMascotFrames("like");
 const lines = quotes.map((q) => q.join(" "));
 ---
 
 {
   (sleepFrames.length > 0 || idleFrames.length > 0) && (
-    <button class="mascot" id="mascot" aria-label="Say hi to the mascot" data-lines={JSON.stringify(lines)}>
+    <button class="mascot" id="mascot" aria-label="Say hi to Chibi Quil" data-lines={JSON.stringify(lines)}>
       <span class="mascot-bubble" id="mascot-bubble" aria-live="polite" />
       <span class="mascot-art">
         {sleepFrames.map((f, i) => (
@@ -39,6 +40,9 @@ const lines = quotes.map((q) => q.join(" "));
         {popUpFrames.map((f) => (
           <img src={f.src} alt="" data-anim="pop_up" data-ms={f.ms} hidden draggable="false" />
         ))}
+        {likeFrames.map((f) => (
+          <img src={f.src} alt="" data-anim="like" data-ms={f.ms} hidden draggable="false" />
+        ))}
       </span>
     </button>
   )
@@ -59,7 +63,10 @@ const lines = quotes.map((q) => q.join(" "));
     /* Mostly below the screen edge, just the head peeking; pops all the way up on hover */
     transform: translateY(58%) rotate(-3deg);
     transform-origin: bottom center;
-    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* z-index waits: after a cheer it stays above the big view until it has sunk out of sight */
+    transition:
+      transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+      z-index 0s linear 0.4s;
   }
 
   .mascot:hover,
@@ -73,6 +80,14 @@ const lines = quotes.map((q) => q.join(" "));
   .mascot.is-away {
     transform: translateY(105%) rotate(-3deg);
     transition-duration: 0.18s;
+  }
+
+  /* A piece just got liked: pops up over the big view to cheer (after the rules above, so this wins) */
+  .mascot.is-cheering {
+    z-index: 101;
+    transition-delay: 0s;
+    pointer-events: none;
+    transform: translateY(0) rotate(0deg);
   }
 
   .mascot:focus-visible {
@@ -168,7 +183,7 @@ const lines = quotes.map((q) => q.join(" "));
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Frames: asleep it loops sleep, awake it loops
-    // idle; click and pop_up are queued to play once
+    // idle; click, pop_up and like are queued to play once
     const frames = (anim: string) => [...mascot.querySelectorAll<HTMLImageElement>(`[data-anim="${anim}"]`)];
     // Hidden frames are downloaded but not decoded until first shown, which flashes a blank
     // frame on the first hover or click: decode them all up front
@@ -179,6 +194,7 @@ const lines = quotes.map((q) => q.join(" "));
     if (!idle.length) idle = sleep;
     const clickFrames = frames("click");
     const popUp = frames("pop_up");
+    const likeAnim = frames("like");
     let awake = false;
     let shown = sleep[0];
     let queue: HTMLImageElement[] = [];
@@ -242,13 +258,16 @@ const lines = quotes.map((q) => q.join(" "));
     mascot.addEventListener("click", onClick);
     // Pointer leaves: the bubble fades right away (the timer still covers taps on phones), and
     // a second later, once it has sunk back down, it falls asleep again. Coming back cancels that.
-    mascot.addEventListener("mouseleave", () => {
-      bubble.classList.remove("is-on");
+    const dozeOff = () => {
       clearTimeout(napTimer);
       napTimer = setTimeout(() => {
         awake = false;
         loopAt = -1;
       }, 1000);
+    };
+    mascot.addEventListener("mouseleave", () => {
+      bubble.classList.remove("is-on");
+      dozeOff();
     });
     // Pointer arrives: stay awake if it was; asleep, it stirs as it pops up (pop_up, once),
     // then sleeps on until clicked
@@ -257,7 +276,43 @@ const lines = quotes.map((q) => q.join(" "));
       if (!awake && popUp.length) play(popUp);
     });
 
+    // A piece got liked in the big view: rise, play the like frames once, sink back, doze off
+    const RISE_MS = 350; // the .mascot transition
+    let cheerTimer: ReturnType<typeof setTimeout>;
+    // The like's last stage (big): a jump for joy
+    const onLiked = (e: Event) => {
+      if (still) return;
+      const { big } = (e as CustomEvent).detail;
+      awake = true;
+      clearTimeout(napTimer);
+      mascot.classList.add("is-cheering");
+      clearTimeout(cheerTimer);
+      cheerTimer = setTimeout(() => {
+        play(likeAnim);
+        if (big) {
+          mascot.querySelector(".mascot-art")?.animate(
+            [
+              { translate: "0 0" },
+              { translate: "0 -70px", offset: 0.4, easing: "ease-in" },
+              { translate: "0 0", offset: 0.68, easing: "ease-out" },
+              { translate: "0 -24px", offset: 0.84, easing: "ease-in" },
+              { translate: "0 0" },
+            ],
+            { duration: 760, easing: "ease-out" },
+          );
+        }
+        const playTime = likeAnim.reduce((sum, frame) => sum + Number(frame.dataset.ms), 0);
+        cheerTimer = setTimeout(() => {
+          mascot.classList.remove("is-cheering");
+          dozeOff();
+        }, big ? Math.max(playTime, 760) : playTime);
+      }, RISE_MS);
+    };
+    document.addEventListener("likes:cheer", onLiked);
+
     cleanup = () => {
+      document.removeEventListener("likes:cheer", onLiked);
+      clearTimeout(cheerTimer);
       removeEventListener("scroll", onScroll);
       clearTimeout(duckTimer);
       clearTimeout(bubbleTimer);

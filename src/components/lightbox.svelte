@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
+  import { HEART_PATH, addLike, fetchLikes, readLiked, removeLike, saveLiked } from "src/helpers/likes";
+  import { getPalette } from "src/helpers/palette";
 
   export let images: Array<{
     id: number;
@@ -446,6 +448,296 @@
     copiedTimer = setTimeout(() => (copied = false), 1600);
   }
 
+  // Paint chips: the current piece's main colours, read from its thumbnail. Click to copy.
+  let palette: string[] = [];
+  let paletteSrc = "";
+  let copiedColor = "";
+  let copiedColorTimer: ReturnType<typeof setTimeout>;
+  const palettes = new Map<string, string[]>();
+
+  async function loadPalette(src: string) {
+    paletteSrc = src;
+    const colors = palettes.get(src) ?? (await getPalette(src).catch(() => []));
+    palettes.set(src, colors);
+    if (paletteSrc === src) palette = colors; // unless they've moved on to another piece
+  }
+
+  $: if (isOpen && currentImage) loadPalette(currentImage.src);
+
+  async function copyColor(color: string) {
+    try {
+      await navigator.clipboard.writeText(color);
+    } catch {
+      return;
+    }
+    copiedColor = color;
+    clearTimeout(copiedColorTimer);
+    copiedColorTimer = setTimeout(() => (copiedColor = ""), 1200);
+  }
+
+  // Likes: the counts load on the first open. Until then, or if they can't load, no heart shows.
+  let likeCounts: Map<number, number> | null = null;
+  let liked = new Set<number>();
+  let likesRequested = false;
+  let likeButtonEl: HTMLElement | undefined;
+
+  async function loadLikes() {
+    likesRequested = true;
+    liked = readLiked();
+    try {
+      likeCounts = await fetchLikes();
+    } catch {
+      likeCounts = null;
+    }
+  }
+
+  $: if (isOpen && !likesRequested) loadLikes();
+
+  // Challenge-only pieces have no permanent id to hang a like on
+  $: canLike = !!likeCounts && !!currentImage && !currentImage.page;
+  $: isLiked = !!currentImage && liked.has(currentImage.id);
+  $: likeCount = (currentImage && likeCounts?.get(currentImage.id)) ?? 0;
+
+  // The like has three stages. Pressing while a stage is still playing moves on to the next;
+  // pressing once it has played out takes the like back. Whatever the stage, it's one like.
+  const LAST_STAGE = 3;
+  const STAGE_MS = 1150;
+  const FINAL_STAGE_MS = 1900;
+  const LIKE_RED = "#e5233f";
+  const STAGE_COLORS = ["var(--accent-color)", `color-mix(in srgb, var(--accent-color) 50%, ${LIKE_RED})`, LIKE_RED];
+  const STAGE_SIZES = [0.2, 0.3, 0.42]; // of the art's short side
+  const centered = "translate(-50%, -50%)";
+
+  let combo = { id: -1, stage: 0, until: -Infinity };
+  let isLoved = false; // the button matches the stamp during the last stage
+  let lovedTimer: ReturnType<typeof setTimeout>;
+  let cornerHeart: { el: HTMLElement; size: number; tilt: number } | null = null;
+
+  const inCombo = () => combo.id === currentImage?.id && performance.now() < combo.until && !prefersReducedMotion();
+
+  // The effects are built here rather than in the markup because every piece is thrown its own
+  // way and removes itself
+  function addEffect(parent: HTMLElement, x: number, y: number, css: string, html = "") {
+    const el = document.createElement("span");
+    el.setAttribute("aria-hidden", "true");
+    el.style.cssText = `position:fixed;left:${x}px;top:${y}px;pointer-events:none;${css}`;
+    el.innerHTML = html;
+    parent.appendChild(el);
+    return el;
+  }
+
+  const heartSvg = (fill: string) =>
+    `<svg viewBox="0 0 24 24" width="100%" height="100%" style="fill:${fill}"><path d="${HEART_PATH}"></path></svg>`;
+
+  // The heart on the art's corner: slams on at the first stage, then grows from where it is
+  function growCornerHeart(stage: number, box: DOMRect, duration: number) {
+    const size = Math.max(70, Math.min(box.width, box.height) * STAGE_SIZES[stage - 1]);
+    const tilt = stage === 1 || !cornerHeart ? (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 8) : cornerHeart.tilt;
+    const previous = stage > 1 ? cornerHeart : null;
+    cornerHeart?.el.remove();
+
+    const el = addEffect(
+      dialogEl,
+      box.right - size * 0.42,
+      box.top + size * 0.42,
+      `z-index:4;width:${size}px;height:${size}px;filter:drop-shadow(5px 5px 0 var(--edge-color));`,
+      heartSvg(STAGE_COLORS[stage - 1]),
+    );
+    const held = `${centered} scale(1) rotate(${tilt}deg)`;
+    const arrival = previous
+      ? [
+          { transform: `${centered} scale(${previous.size / size}) rotate(${tilt}deg)`, easing: "cubic-bezier(0.2, 0.9, 0.3, 1)" },
+          { transform: `${centered} scale(1.15) rotate(${tilt}deg)`, offset: 0.1, easing: "ease-out" },
+        ]
+      : [
+          { transform: `${centered} scale(3) rotate(${tilt * 3}deg)`, opacity: 0, easing: "cubic-bezier(0.55, 0, 0.9, 0.4)" },
+          { transform: `${centered} scale(0.82, 0.72) rotate(${tilt}deg)`, opacity: 1, offset: 0.15, easing: "cubic-bezier(0.34, 1.8, 0.64, 1)" },
+        ];
+    el.animate(
+      [
+        ...arrival,
+        { transform: held, opacity: 1, offset: 0.3 },
+        { transform: held, opacity: 1, offset: 0.75, easing: "ease-in" },
+        { transform: `${centered} translateY(-${size * 0.6}px) scale(1.1) rotate(${tilt * 3}deg)`, opacity: 0 },
+      ],
+      { duration },
+    ).onfinish = () => el.remove();
+    cornerHeart = { el, size, tilt };
+  }
+
+  // Hearts and a ring go off from behind the art. Behind it in the stage: the print's layer is above.
+  function burstBehindArt(stage: number, box: DOMRect) {
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const longSide = Math.max(box.width, box.height);
+
+    const ring = addEffect(
+      stageEl,
+      x,
+      y,
+      `z-index:0;width:${longSide}px;height:${longSide}px;border-radius:50%;border:10px solid ${STAGE_COLORS[stage - 1]};`,
+    );
+    ring.animate(
+      [
+        { transform: `${centered} scale(0.8)`, opacity: 1 },
+        { transform: `${centered} scale(${1.2 + stage * 0.2})`, opacity: 0, borderWidth: "1px" },
+      ],
+      { duration: 560, easing: "cubic-bezier(0.1, 0.7, 0.3, 1)" },
+    ).onfinish = () => ring.remove();
+
+    const colors = [LIKE_RED, "var(--accent-color)", "var(--paper)"];
+    for (let i = 0; i < [18, 30, 60][stage - 1]; i++) {
+      const size = 14 + Math.random() * 26;
+      const heart = addEffect(
+        stageEl,
+        x,
+        y,
+        `z-index:0;width:${size}px;height:${size}px;filter:drop-shadow(2px 2px 0 var(--edge-color));`,
+        heartSvg(colors[i % colors.length]),
+      );
+      const angle = Math.random() * Math.PI * 2;
+      const reach = longSide * 0.6 + Math.random() * (120 + stage * 80);
+      const dx = Math.cos(angle) * reach;
+      const dy = Math.sin(angle) * reach;
+      const fall = 130 + Math.random() * 240;
+      const spin = (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 360);
+      heart.animate(
+        [
+          { transform: `${centered} scale(0.4)`, easing: "cubic-bezier(0.1, 0.9, 0.25, 1)" },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(1.1) rotate(${spin / 3}deg)`, opacity: 1, offset: 0.4, easing: "ease-in" },
+          { transform: `translate(calc(-50% + ${dx * 1.15}px), calc(-50% + ${dy + fall}px)) scale(0.75) rotate(${spin}deg)`, opacity: 0 },
+        ],
+        { duration: 900 + Math.random() * 600 },
+      ).onfinish = () => heart.remove();
+    }
+  }
+
+  function stampLovedIt(box: DOMRect) {
+    const stamp = addEffect(
+      dialogEl,
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+      `z-index:5;padding:0.5em 0.8em 0.3em;border-radius:8px;background:${LIKE_RED};color:var(--paper);box-shadow:8px 8px 0 var(--edge-color);font-family:var(--font-accent);font-size:${Math.max(32, box.width * 0.13)}px;line-height:1;letter-spacing:0.02em;white-space:nowrap;`,
+      "LOVED IT!",
+    );
+    stamp.animate(
+      [
+        { transform: `${centered} scale(5) rotate(-24deg)`, opacity: 0, easing: "cubic-bezier(0.55, 0, 0.9, 0.4)" },
+        { transform: `${centered} scale(0.85, 0.75) rotate(-8deg)`, opacity: 1, offset: 0.1, easing: "cubic-bezier(0.34, 1.8, 0.64, 1)" },
+        { transform: `${centered} scale(1) rotate(-8deg)`, opacity: 1, offset: 0.2 },
+        { transform: `${centered} scale(1) rotate(-8deg)`, opacity: 1, offset: 0.82, easing: "ease-in" },
+        { transform: `${centered} translateY(-90px) scale(1.2) rotate(4deg)`, opacity: 0 },
+      ],
+      { duration: FINAL_STAGE_MS },
+    ).onfinish = () => stamp.remove();
+  }
+
+  function playStage(stage: number) {
+    const isFinal = stage === LAST_STAGE;
+    const duration = isFinal ? FINAL_STAGE_MS : STAGE_MS;
+    combo.stage = stage;
+    combo.until = performance.now() + duration;
+    navigator.vibrate?.(15 + stage * 15);
+    if (prefersReducedMotion()) return;
+
+    const box = moverEl.querySelector(".print-art")!.getBoundingClientRect();
+    growCornerHeart(stage, box, duration);
+    burstBehindArt(stage, box);
+    likeButtonEl?.animate(
+      [
+        { transform: "rotate(2deg) scale(1)" },
+        { transform: `rotate(-10deg) scale(${1.25 + stage * 0.15})`, offset: 0.35 },
+        { transform: "rotate(2deg) scale(1)" },
+      ],
+      { duration: 460, easing: "ease-out" },
+    );
+
+    if (isFinal) {
+      isLoved = true;
+      clearTimeout(lovedTimer);
+      lovedTimer = setTimeout(() => (isLoved = false), FINAL_STAGE_MS);
+      stampLovedIt(box);
+      // The print shakes as the stamp lands
+      moverEl.animate(
+        [-16, 14, -11, 9, -6, 4, 0].map((px, i) => ({ transform: `translateX(${px}px) rotate(${(px / 8).toFixed(2)}deg)`, offset: (i + 1) / 7 })),
+        { duration: 520, delay: 190, easing: "ease-out" },
+      );
+    } else {
+      // The print takes the hit
+      moverEl.animate(
+        [
+          { transform: "none" },
+          { transform: `translateY(${6 + stage * 4}px) scale(${1 - stage * 0.018})`, offset: 0.25 },
+          { transform: "translateY(-4px) scale(1.01)", offset: 0.6 },
+          { transform: "none" },
+        ],
+        { duration: 480, easing: "ease-out" },
+      );
+    }
+    document.dispatchEvent(new CustomEvent("likes:cheer", { detail: { big: isFinal } })); // the desk mascot
+  }
+
+  // A press during a stage: on to the next one (the last just plays out)
+  function nextStage() {
+    if (combo.stage < LAST_STAGE) playStage(combo.stage + 1);
+  }
+
+  function toggleLike() {
+    if (!isLiked) likePiece();
+    else if (inCombo()) nextStage();
+    else unlikePiece();
+  }
+
+  // One save at a time, so a quick like-then-unlike can't reach the database out of order
+  let likeSaving = false;
+
+  async function unlikePiece() {
+    if (likeSaving || !likeCounts || !currentImage) return;
+    const id = currentImage.id;
+    const before = likeCounts.get(id) ?? 0;
+
+    likeSaving = true;
+    likeCounts = likeCounts.set(id, Math.max(before - 1, 0));
+    liked.delete(id);
+    liked = liked;
+    try {
+      const total = await removeLike(id);
+      likeCounts = likeCounts.set(id, total);
+      saveLiked(liked);
+      document.dispatchEvent(new CustomEvent("likes:changed", { detail: { id, total } }));
+    } catch {
+      liked = liked.add(id);
+      likeCounts = likeCounts.set(id, before);
+    } finally {
+      likeSaving = false;
+    }
+  }
+
+  async function likePiece() {
+    if (likeSaving || !canLike || !likeCounts || !currentImage || liked.has(currentImage.id)) return;
+    const id = currentImage.id;
+    combo.id = id;
+    playStage(1);
+    const before = likeCounts.get(id) ?? 0;
+
+    // Show it right away; undo below if it doesn't save
+    likeSaving = true;
+    likeCounts = likeCounts.set(id, before + 1);
+    liked = liked.add(id);
+    try {
+      const total = await addLike(id);
+      likeCounts = likeCounts.set(id, total);
+      saveLiked(liked);
+      document.dispatchEvent(new CustomEvent("likes:changed", { detail: { id, total } })); // updates the gallery tile
+    } catch {
+      liked.delete(id);
+      liked = liked;
+      likeCounts = likeCounts.set(id, before);
+    } finally {
+      likeSaving = false;
+    }
+  }
+
   function lockPage(locked: boolean) {
     document.body.style.overflow = locked ? "hidden" : "";
     if (locked) window.lenis?.stop();
@@ -454,12 +746,15 @@
     document.getElementById("floating-top")?.classList.toggle("lightbox-hidden", locked);
   }
 
-  async function open(index: number, filter?: string, sourceEl?: HTMLElement) {
+  async function open(index: number, filter?: string, sourceEl?: HTMLElement, order?: number[]) {
     if (isOpen) return;
     source = sourceEl ? { el: sourceEl, orig: index } : null;
 
-    // Build filtered subset based on current gallery tag
-    if (filter && filter !== "all") {
+    // Build filtered subset: the order given (Most loved), or the current gallery tag
+    if (order) {
+      filteredMap = order;
+      filteredImages = order.map((i) => images[i]);
+    } else if (filter && filter !== "all") {
       filteredMap = [];
       filteredImages = images.filter((img, i) => {
         if (img.tags.includes(filter)) {
@@ -639,7 +934,7 @@
 
   function onPointerDown(e: PointerEvent) {
     if (e.button !== 0 || closing || comparing) return;
-    if ((e.target as HTMLElement).closest(".hang-tag")) return; // the tag is a control, not a handle
+    if ((e.target as HTMLElement).closest(".hang-tag, .palette")) return; // these are controls, not handles
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, active: false };
   }
 
@@ -659,11 +954,25 @@
     moverEl.style.transform = `translateX(${dx}px) rotate(${dx * 0.03}deg)`;
   }
 
+  // Double-tap the print to like it, then keep tapping for the next stages
+  let lastTap = { time: -Infinity, x: 0, y: 0 };
+
+  function onTap(e: PointerEvent) {
+    // While a stage plays, every tap on the print moves it on
+    if (isLiked && inCombo()) return nextStage();
+    const isDouble = e.timeStamp - lastTap.time < 300 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40;
+    lastTap = { time: isDouble ? -Infinity : e.timeStamp, x: e.clientX, y: e.clientY };
+    if (isDouble) likePiece();
+  }
+
   function onPointerUp(e: PointerEvent) {
     if (!drag || e.pointerId !== drag.id) return;
     const { dx, active } = drag;
     drag = null;
-    if (!active) return;
+    if (!active) {
+      if (e.type === "pointerup" && e.pointerType === "touch") onTap(e);
+      return;
+    }
 
     moverEl.style.transform = "";
     const threshold = Math.min(110, stageW * 0.22);
@@ -730,7 +1039,7 @@
       // The gallery sends its tile's index; elsewhere (the hero) sends the piece's id
       const index = detail.id != null ? origById.get(detail.id) : detail.index;
       if (index == null) return;
-      open(index, detail.filter, detail.source);
+      open(index, detail.filter, detail.source, detail.order);
     };
     document.addEventListener("lightbox:open", handleLightboxOpen);
 
@@ -790,6 +1099,23 @@
             <polyline points="17 8 21 12 17 16"></polyline>
           </svg>
           <span class="lb-label-text">Then &amp; now</span>
+        </button>
+      {/if}
+
+      {#if canLike}
+        <button
+          class="lb-label lb-like"
+          bind:this={likeButtonEl}
+          class:is-on={isLiked}
+          class:is-loved={isLoved}
+          aria-pressed={isLiked}
+          aria-label={`Like this piece, ${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
+          on:click={toggleLike}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d={HEART_PATH}></path>
+          </svg>
+          <span>{likeCount}</span>
         </button>
       {/if}
 
@@ -919,6 +1245,23 @@
               {/key}
             {/if}
           </div>
+
+          {#if palette.length && !comparing}
+            <div class="palette" role="group" aria-label="Colours in this piece">
+              {#each palette as color, i (color)}
+                <button
+                  class="chip"
+                  style="--chip:{color}; --chip-tilt:{i % 2 ? 5 : -5}deg;"
+                  aria-label={`Copy colour ${color}`}
+                  on:click={() => copyColor(color)}
+                >
+                  <span class="chip-hex" class:is-on={copiedColor === color} aria-live="polite">
+                    {copiedColor === color ? "copied!" : color}
+                  </span>
+                </button>
+              {/each}
+            </div>
+          {/if}
 
           <div class="hang-tag" class:is-open={tagOpen}>
             {#if hasDetails}
@@ -1091,7 +1434,8 @@
       background-color 0.2s ease;
   }
 
-  .lb-compare {
+  .lb-compare,
+  .lb-like {
     transform: rotate(2deg);
   }
 
@@ -1103,6 +1447,11 @@
   .lb-label:hover {
     background: var(--accent-color);
     transform: rotate(0deg) scale(1.05);
+  }
+
+  .lb-label.lb-like.is-loved {
+    background: #e5233f;
+    color: var(--paper);
   }
 
   .lb-label.is-on {
@@ -1406,6 +1755,84 @@
 
   .hang-tag.is-open {
     transform: rotate(0deg);
+  }
+
+  /* Paint chips, stuck over the print's bottom-left edge */
+  .palette {
+    position: absolute;
+    left: 0.7rem;
+    bottom: calc(-0.9rem - var(--frame));
+    z-index: 3;
+    display: flex;
+    gap: 5px;
+    opacity: var(--chrome);
+    transition: opacity 0.25s ease;
+  }
+
+  .chip {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 3px solid var(--paper);
+    border-radius: 5px;
+    background: var(--chip);
+    box-shadow: 2px 2px 0 var(--edge-color);
+    cursor: pointer;
+    transform: rotate(var(--chip-tilt));
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .chip:hover,
+  .chip:focus-visible {
+    z-index: 1;
+    transform: rotate(0deg) translateY(-4px) scale(1.15);
+  }
+
+  .chip:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 2px;
+  }
+
+  .chip-hex {
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    padding: 0.15rem 0.45rem 0.05rem;
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 2px 2px 0 var(--edge-color);
+    font-family: var(--font-accent);
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%);
+    transition: opacity 0.15s ease;
+  }
+
+  .chip:hover .chip-hex,
+  .chip:focus-visible .chip-hex,
+  .chip-hex.is-on {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    /* Top-left on phones: a long title's tag takes up the whole bottom edge */
+    .palette {
+      top: calc(-0.8rem - var(--frame));
+      bottom: auto;
+      left: 0.3rem;
+      gap: 3px;
+    }
+
+    .chip {
+      width: 21px;
+      height: 21px;
+      border-width: 2px;
+    }
   }
 
   .tag-head {
