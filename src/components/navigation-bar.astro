@@ -188,6 +188,12 @@ const onBlog = Astro.url.pathname.startsWith("/blog");
     display: inline-block;
   }
 
+  /* The scramble keeps replacing these letters: a press that starts on one that's gone by the
+     release isn't a click, so presses have to land on the link itself */
+  #nav-title :global(*) {
+    pointer-events: none;
+  }
+
   #nav-title.glitching {
     animation: glitch-jitter 0.1s steps(2) infinite;
   }

@@ -28,25 +28,28 @@ const SOLID_FROM = 128;
 
 const newContext = (size: number) => Object.assign(document.createElement("canvas"), { width: size, height: size }).getContext("2d", { willReadFrequently: true })!;
 
-// A round outline: each pixel's straight-line distance to the nearest solid part of the figure, so
-// thin tips like the ears get an even edge. Copies of the figure stamped around it can't do that:
-// past a tip's own width they come apart into separate spikes. This is Felzenszwalb's distance
-// transform. It only works on the area around the figure, which keeps it quick enough for every
-// frame of a GIF, and for the live preview.
+// A smooth outline. Rather than tracing every notch, it rolls a ball around the outside of the shape:
+// where the ball can't fit between two bits that stick out, like fur tufts, the outline bridges
+// across in one curve. The result is then grown by the outline's width. Both steps come from
+// distance fields (Felzenszwalb's distance transform), worked out only around the shape itself.
+const BRIDGE_UNITS = 150; // the ball's radius on the 5000 canvas: bigger bridges wider gaps
+
 export function outliner(size: number) {
   const FAR = 1e12;
-  const distances = new Float64Array(size * size);
+  const bridge = (BRIDGE_UNITS * size) / CANVAS_UNITS;
+  const fromShape = new Float64Array(size * size);
+  const fromOpen = new Float64Array(size * size);
   const line = new Float64Array(size);
   const parabolas = new Int32Array(size);
   const starts = new Float64Array(size + 1);
   const paper = newContext(size);
   const picture = paper.createImageData(size, size);
 
-  // One row or column, in place: `step` is how far apart its pixels sit in `distances`
-  const sweep = (from: number, step: number, count: number) => {
+  // One row or column of a field, in place: `step` is how far apart its pixels sit
+  const sweep = (field: Float64Array, from: number, step: number, count: number) => {
     let seen = false;
     for (let i = 0; i < count; i++) {
-      line[i] = distances[from + i * step];
+      line[i] = field[from + i * step];
       seen ||= line[i] < FAR;
     }
     if (!seen) return;
@@ -71,7 +74,7 @@ export function outliner(size: number) {
     for (let q = 0; q < count; q++) {
       while (starts[last + 1] < q) last++;
       const v = parabolas[last];
-      distances[from + q * step] = (q - v) * (q - v) + line[v];
+      field[from + q * step] = (q - v) * (q - v) + line[v];
     }
   };
 
@@ -89,17 +92,23 @@ export function outliner(size: number) {
     }
     if (right < 0) return; // nothing to go round
 
-    const reach = Math.ceil(width) + 2;
+    const reach = Math.ceil(bridge * 2 + width) + 2; // room for the ball outside the shape
     const x0 = Math.max(0, left - reach);
     const y0 = Math.max(0, top - reach);
     const w = Math.min(size, right + reach + 1) - x0;
     const h = Math.min(size, bottom + reach + 1) - y0;
+    const fill = (field: Float64Array, value: (p: number) => number) => {
+      for (let y = y0; y < y0 + h; y++) {
+        for (let p = y * size + x0; p < y * size + x0 + w; p++) field[p] = value(p);
+      }
+      for (let x = x0; x < x0 + w; x++) sweep(field, y0 * size + x, size, h);
+      for (let y = y0; y < y0 + h; y++) sweep(field, y * size + x0, 1, w);
+    };
 
-    for (let y = y0; y < y0 + h; y++) {
-      for (let p = y * size + x0; p < y * size + x0 + w; p++) distances[p] = solid[p * 4 + 3] >= SOLID_FROM ? 0 : FAR;
-    }
-    for (let x = x0; x < x0 + w; x++) sweep(y0 * size + x, size, h);
-    for (let y = y0; y < y0 + h; y++) sweep(y * size + x0, 1, w);
+    // Where the ball's centre can go is anywhere at least its radius from the shape...
+    fill(fromShape, (p) => (solid[p * 4 + 3] >= SOLID_FROM ? 0 : FAR));
+    const ballFits = bridge * bridge;
+    fill(fromOpen, (p) => (fromShape[p] >= ballFits ? 0 : FAR));
 
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
     const px = picture.data;
@@ -109,8 +118,10 @@ export function outliner(size: number) {
         px[c] = r;
         px[c + 1] = g;
         px[c + 2] = b;
-        // Fades over the last pixel, so the outer edge is smooth
-        px[c + 3] = 255 * Math.max(0, Math.min(1, width + 0.5 - Math.sqrt(distances[p])));
+        // ...so the smooth edge is one radius from those centres, and the outline's width past that.
+        // Fades over the last pixel, so the outer edge is smooth.
+        const pastEdge = Math.max(0, bridge - Math.sqrt(fromOpen[p]));
+        px[c + 3] = 255 * Math.max(0, Math.min(1, width + 0.5 - pastEdge));
       }
     }
     paper.clearRect(0, 0, size, size);
@@ -126,8 +137,6 @@ function pictureDrawer(card: HTMLElement, { background, size, outline }: Picture
   const scale = size / cssSize;
   const output = newContext(size);
   const figure = newContext(size);
-  const drawOutline = outline ? outliner(size) : null;
-  const outlineWidth = outline ? (outline.units * size) / CANVAS_UNITS : 0;
 
   // A transform as the browser applies it: around the element's transform-origin
   const transformOf = (el: Element) => {
@@ -136,22 +145,44 @@ function pictureDrawer(card: HTMLElement, { background, size, outline }: Picture
     return new DOMMatrix().translate(ox, oy).multiply(new DOMMatrix(style.transform)).translate(-ox, -oy);
   };
 
+  // One outline a part, like the preview: worked out once here, then each moves with its part
+  const outlineWidth = outline ? (outline.units * size) / CANVAS_UNITS : 0;
+  const outlines: HTMLCanvasElement[] = [];
+  if (outline && outlineWidth > 0) {
+    const grow = outliner(size);
+    for (const layer of layers) {
+      const silhouette = newContext(size);
+      silhouette.drawImage(layer, 0, 0, size, size);
+      const shape = newContext(size);
+      grow(shape, silhouette, outlineWidth, outline.color);
+      outlines.push(shape.canvas);
+    }
+  }
+
   return (atRest = false) => {
+    const matrices = layers.map((layer) => {
+      const matrix = new DOMMatrix().scale(scale);
+      return atRest ? matrix : matrix.multiply(transformOf(layer.parentElement!)).multiply(transformOf(layer));
+    });
+
     figure.setTransform(1, 0, 0, 1, 0, 0);
     figure.clearRect(0, 0, size, size);
-    for (const layer of layers) {
-      const parent = layer.parentElement!;
-      const matrix = new DOMMatrix().scale(scale);
-      figure.setTransform(atRest ? matrix : matrix.multiply(transformOf(parent)).multiply(transformOf(layer)));
+    layers.forEach((layer, i) => {
+      figure.setTransform(matrices[i]);
       figure.drawImage(layer, 0, 0, cssSize, cssSize);
-    }
+    });
 
+    output.setTransform(1, 0, 0, 1, 0, 0);
     output.clearRect(0, 0, size, size);
     if (background) {
       output.fillStyle = background;
       output.fillRect(0, 0, size, size);
     }
-    if (outline && drawOutline && outlineWidth > 0) drawOutline(output, figure, outlineWidth, outline.color);
+    outlines.forEach((shape, i) => {
+      output.setTransform(matrices[i]);
+      output.drawImage(shape, 0, 0, cssSize, cssSize);
+    });
+    output.setTransform(1, 0, 0, 1, 0, 0);
     output.drawImage(figure.canvas, 0, 0);
     return output;
   };

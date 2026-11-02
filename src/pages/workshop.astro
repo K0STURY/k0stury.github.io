@@ -7,8 +7,8 @@ import { CANVAS, getChibiParts } from "src/helpers/chibi";
 const parts = await getChibiParts();
 
 // Parts you can take off, and what recolours what
-const OPTIONAL = ["horns", "earrings", "halo", "iris", "face-accessories"];
-const STARTS_OFF = ["iris", "face-accessories"]; // as drawn: eyes closed, nothing on the face
+const OPTIONAL = ["ears", "eyes", "horns", "animal-ears", "earrings", "halo", "iris", "face-accessories"];
+const STARTS_OFF = ["iris", "face-accessories", "animal-ears"]; // as drawn: eyes closed, nothing on the face, horns not ears
 
 // The Advanced section's sliders, each driving one CSS variable on the card. The tops of Head bob
 // and Hair sway are what the art allows: any higher and the background shows beside the chin.
@@ -20,15 +20,16 @@ const ANIMATION = [
   { id: "tilt", label: "Horn tilt", min: 0, max: 3, step: 0.1, value: 0.5, needs: ["horns"] },
   { id: "breathe", label: "Breathing", min: 0, max: 2.5, step: 0.1, value: 1 },
 ];
-// start: for art drawn white to take colour, what it wears until someone picks one
-const COLORS: { id: string; label: string; parts: string[]; start?: string }[] = [
+// The base colours: what a new character wears, and what Start over and As drawn go back to
+const BACKGROUND = "#31c5d1";
+const COLORS = [
   { id: "lashes", label: "Lashes", parts: ["eyes"], start: "#1a1820" },
-  { id: "eyes", label: "Iris", parts: ["iris"] },
-  { id: "skin", label: "Skin", parts: ["ears", "head", "neck"] },
-  { id: "hair", label: "Hair", parts: ["hair-back", "hair-front"], start: "#1a1820" },
-  { id: "outfit", label: "Outfit", parts: ["body"] },
-  { id: "horns", label: "Horns", parts: ["horns"] },
-  { id: "accessories", label: "Accessories", parts: ["face-accessories"] },
+  { id: "eyes", label: "Iris", parts: ["iris"], start: "#ffffff" },
+  { id: "skin", label: "Skin", parts: ["ears", "head", "neck"], start: "#ffffff" },
+  { id: "hair", label: "Hair", parts: ["hair-back", "hair-front", "animal-ears"], start: "#1a1820" },
+  { id: "outfit", label: "Outfit", parts: ["body"], start: "#851242" },
+  { id: "horns", label: "Horns", parts: ["horns"], start: "#ffffff" },
+  { id: "accessories", label: "Accessories", parts: ["face-accessories"], start: "#ffffff" },
 ].filter((color) => color.parts.some((part) => parts.some((p) => p.name === part)));
 
 // The neck and body stay planted; what's behind and in front of them rides along with the head
@@ -72,7 +73,7 @@ const DROPDOWNS = [
 ];
 
 const swappable = parts.filter((part) => part.variants.length > 1 || OPTIONAL.includes(part.name));
-const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF, colors: COLORS };
+const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF, colors: COLORS, background: BACKGROUND };
 ---
 
 <BaseLayout
@@ -118,9 +119,10 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
 
         <div class="shop-actions">
           <button type="button" class="shop-btn" id="chibi-random">Surprise me</button>
+          <button type="button" class="shop-btn" id="chibi-undo" disabled>Undo</button>
           <button type="button" class="shop-btn" id="chibi-reset">Start over</button>
-          <button type="button" class="shop-btn shop-btn--main" id="chibi-download">Take it home</button>
-          <button type="button" class="shop-btn shop-btn--main" id="chibi-gif">Animated GIF</button>
+          <button type="button" class="shop-btn shop-btn--main" id="chibi-download">Save PNG</button>
+          <button type="button" class="shop-btn shop-btn--main" id="chibi-gif">Save GIF</button>
           <div class="shop-export">
             {
               DROPDOWNS.map((dropdown) => (
@@ -158,15 +160,17 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
             swappable.length > 0 && (
               <div class="shop-parts">
                 {swappable.map((part) => (
-                  <div class="shop-part">
-                    <span class="shop-part-name">{part.name.replaceAll("-", " ")}</span>
-                    <button type="button" class="shop-step" data-step={part.name} data-by="-1" aria-label={`Previous ${part.name}`}>
-                      ‹
-                    </button>
-                    <output class="shop-choice" data-choice={part.name}>1</output>
-                    <button type="button" class="shop-step" data-step={part.name} data-by="1" aria-label={`Next ${part.name}`}>
-                      ›
-                    </button>
+                  <div class="shop-part" role="group" aria-label={part.name.replaceAll("-", " ")}>
+                    <span class="shop-part-name" aria-hidden="true">{part.name.replaceAll("-", " ")}</span>
+                    <div class="shop-stepper">
+                      <button type="button" class="shop-step" data-step={part.name} data-by="-1" aria-label={`Previous ${part.name.replaceAll("-", " ")}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 5 8 12 15 19" /></svg>
+                      </button>
+                      <output class="shop-choice" data-choice={part.name} data-off={STARTS_OFF.includes(part.name) ? "" : undefined}>{STARTS_OFF.includes(part.name) ? "none" : `1 / ${part.variants.length}`}</output>
+                      <button type="button" class="shop-step" data-step={part.name} data-by="1" aria-label={`Next ${part.name.replaceAll("-", " ")}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19" /></svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -220,7 +224,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
             <button type="button" class="shop-color" data-open="background" data-label="Background" aria-expanded="false" aria-controls="chibi-picker">
               <span class="shop-chip" aria-hidden="true" />
               Background
-              <input type="hidden" id="chibi-background" value="#31c5d1" />
+              <input type="hidden" id="chibi-background" value={BACKGROUND} />
             </button>
             <button type="button" class="shop-color" data-open="outline" data-label="Outline" aria-expanded="false" aria-controls="chibi-picker" hidden>
               <span class="shop-chip" aria-hidden="true" />
@@ -370,7 +374,8 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       parts: Part[];
       optional: string[];
       startsOff: string[];
-      colors: { id: string; parts: string[]; start?: string }[];
+      colors: { id: string; parts: string[]; start: string }[];
+      background: string;
     };
     const scale = canvas.width / data.canvas;
     const colorInputs = [...root.querySelectorAll<HTMLInputElement>("input[data-color]")];
@@ -485,23 +490,21 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       root.querySelectorAll<HTMLElement>("[data-move]").forEach((layer) => names.includes(layer.dataset.move ?? "") && pop(layer, "scale(1.05)"));
     };
 
-    // The card has its colour straight away; the character follows once its parts have loaded
-    card.style.background = background.value;
+    // Browsers can refill form fields on a reload, so nothing here trusts what's in them at the start.
+    // The card has its colour straight away; the character follows once its parts have loaded.
+    background.value = data.background;
+    card.style.background = data.background;
 
-    // Starts looking as drawn: each colour begins on its parts' main colour
-    const firstOf = (name: string) => data.parts.find((p) => p.name === name)?.variants[0];
-    const startColors = new Map<string, string>();
+    const startColors = new Map(data.colors.map((color) => [color.id, color.start]));
     await Promise.all(data.parts.flatMap((part) => part.variants.map(load))).catch(() => {});
-    for (const color of data.colors) {
-      const variant = color.parts.map(firstOf).find(Boolean);
-      const piece = variant && prepared.get(variant.src);
-      if (piece) startColors.set(color.id, color.start ?? toHex(piece.main));
-    }
 
     const showChoices = () => {
       root.querySelectorAll<HTMLElement>("[data-choice]").forEach((el) => {
-        const at = choice.get(el.dataset.choice ?? "") ?? 0;
-        el.textContent = at < 0 ? "none" : String(at + 1);
+        const name = el.dataset.choice ?? "";
+        const at = choice.get(name) ?? 0;
+        const count = data.parts.find((part) => part.name === name)?.variants.length;
+        el.textContent = at < 0 ? "none" : `${at + 1} / ${count}`;
+        el.toggleAttribute("data-off", at < 0);
       });
       showRelevantOptions();
     };
@@ -524,7 +527,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
         option.hidden = !(option.dataset.needs ?? "").split(",").some(isOn);
       });
     }
-    startColors.set("background", background.value);
+    startColors.set("background", data.background);
     startColors.set("outline", "#ffffff");
 
     // The export dropdowns. Custom rather than the browser's, so the open list matches the page.
@@ -730,7 +733,7 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       "pointerdown",
       (e) => {
         // The tools keep it open, so Surprise me and the arrows can be used alongside it
-        if (!(e.target as HTMLElement).closest(".shop-note, .shop-actions")) closePicker();
+        if (!(e.target as HTMLElement).closest(".shop-note, .shop-actions, .shop-card")) closePicker();
       },
       { signal },
     );
@@ -744,14 +747,15 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
         const name = button.dataset.step ?? "";
         const part = data.parts.find((p) => p.name === name);
         if (!part) return;
+        const by = Number(button.dataset.by);
         const first = data.optional.includes(name) ? -1 : 0;
         const size = part.variants.length - first;
         const at = (choice.get(name) ?? 0) - first;
-        choice.set(name, ((at + Number(button.dataset.by) + size) % size) + first);
+        choice.set(name, ((at + by + size) % size) + first);
         showChoices();
         render();
-        pop(button, `translateX(${Number(button.dataset.by) * 4}px)`);
-        pop(root.querySelector(`[data-choice="${name}"]`)!, "scale(0.5)");
+        pop(button, `translateX(${by * 5}px) scale(0.85)`);
+        pop(root.querySelector(`[data-choice="${name}"]`)!, `translateX(${by * 10}px) scale(0.7)`);
         popLayers([name]);
       });
     });
@@ -761,12 +765,39 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       pop(card, "scale(0.94)");
     });
 
-    const randomColor = () => hslToHex(Math.random() * 360, 45 + Math.random() * 45, 35 + Math.random() * 40);
+    // Colours that go together: hair and outfit a set distance apart on the colour wheel, and the
+    // background firmly lighter or darker than the character, so that nothing disappears into it
+    const skinTones = [...root.querySelectorAll<HTMLElement>('[data-swatches="skin"] [data-swatch]')].map((swatch) => swatch.dataset.swatch ?? "");
+    const between = (low: number, high: number) => low + Math.random() * (high - low);
+    const pickFrom = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
+    const onWheel = (hue: number, saturation: number, lightness: number) => hslToHex(((hue % 360) + 360) % 360, saturation, lightness);
+
+    function surpriseColors(): Record<string, string> {
+      const hue = between(0, 360);
+      const apart = pickFrom([150, 180, 210, 30, -30, 120, -120]);
+      const lightBackground = Math.random() < 0.5;
+      const backgroundLight = lightBackground ? between(72, 84) : between(14, 26);
+      const skin = pickFrom(skinTones.filter((tone) => Math.abs(hexToHsl(tone)[2] - backgroundLight) >= 18));
+      return {
+        background: onWheel(hue + apart * 0.5, between(35, 65), backgroundLight),
+        skin,
+        hair: onWheel(hue, between(45, 85), lightBackground ? between(18, 45) : between(55, 80)),
+        outfit: onWheel(hue + apart, between(50, 85), lightBackground ? between(25, 50) : between(50, 70)),
+        horns: onWheel(hue - apart, between(25, 60), lightBackground ? between(15, 30) : between(78, 92)),
+        lashes: hexToHsl(skin)[2] < 45 ? "#f4f0e8" : "#1a1820",
+        eyes: onWheel(hue - apart, between(70, 90), between(40, 60)),
+        accessories: onWheel(hue - apart, between(50, 80), lightBackground ? between(20, 40) : between(65, 85)),
+        outline: lightBackground ? "#1a1820" : "#f4f0e8",
+      };
+    }
+
     root.querySelector("#chibi-random")?.addEventListener("click", () => {
-      colorInputs.forEach((input) => (input.value = randomColor()));
-      background.value = randomColor();
+      const colors = surpriseColors();
+      colorInputs.forEach((input) => (input.value = colors[input.dataset.color ?? ""] ?? input.value));
+      background.value = colors.background;
       data.parts.forEach((part) => {
-        const first = data.optional.includes(part.name) ? -1 : 0;
+        // Ears and eyes can be taken off by hand, but a surprise shouldn't come out faceless
+        const first = data.optional.includes(part.name) && part.name !== "ears" && part.name !== "eyes" ? -1 : 0;
         choice.set(part.name, first + Math.floor(Math.random() * (part.variants.length - first)));
       });
       showChoices();
@@ -826,60 +857,117 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
     const paints = [...colorInputs, background];
     const paintKey = (input: HTMLInputElement) => input.dataset.color ?? "background";
 
-    const save = () => {
+    const describe = () =>
+      JSON.stringify({
+        choice: Object.fromEntries(choice),
+        colors: Object.fromEntries(paints.map((input) => [paintKey(input), input.value])),
+        sliders: Object.fromEntries(sliders.map((slider) => [sliderKey(slider), slider.value])),
+        selects: Object.fromEntries(selects.map((select) => [select.dataset.select, select.dataset.value])),
+        transparent: exportClear.checked,
+      });
+
+    const persist = (state: string) => {
       try {
-        localStorage.setItem(
-          SAVE_KEY,
-          JSON.stringify({
-            choice: Object.fromEntries(choice),
-            colors: Object.fromEntries(paints.map((input) => [paintKey(input), input.value])),
-            sliders: Object.fromEntries(sliders.map((slider) => [sliderKey(slider), slider.value])),
-            selects: Object.fromEntries(selects.map((select) => [select.dataset.select, select.dataset.value])),
-            transparent: exportClear.checked,
-          }),
-        );
+        localStorage.setItem(SAVE_KEY, state);
       } catch {} // private windows and full storage: it just won't be remembered
     };
 
-    // Anything odd in there (hand-edited, or art that's since been removed) keeps its default
-    const restore = () => {
-      try {
-        const saved = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null");
-        if (!saved) return;
-        data.parts.forEach((part) => {
-          const at = saved.choice?.[part.name];
-          if (Number.isInteger(at) && at >= (data.optional.includes(part.name) ? -1 : 0) && at < part.variants.length) choice.set(part.name, at);
-        });
-        paints.forEach((input) => {
-          const hex = saved.colors?.[paintKey(input)];
-          if (/^#[0-9a-f]{6}$/.test(hex)) input.value = hex;
-        });
-        sliders.forEach((slider) => {
-          const value = saved.sliders?.[sliderKey(slider)];
-          if (value !== "" && Number.isFinite(Number(value))) slider.value = value;
-        });
-        selects.forEach((select) => {
-          const value = saved.selects?.[select.dataset.select ?? ""];
-          if ([...select.querySelectorAll<HTMLElement>("[role=option]")].some((option) => option.dataset.value === value)) setSelect(select, value);
-        });
-        exportClear.checked = saved.transparent === true;
-      } catch {}
+    // Anything odd in there (hand-edited, or art that's since been removed) keeps what it has
+    const wear = (saved: any) => {
+      data.parts.forEach((part) => {
+        const at = saved.choice?.[part.name];
+        if (Number.isInteger(at) && at >= (data.optional.includes(part.name) ? -1 : 0) && at < part.variants.length) choice.set(part.name, at);
+      });
+      paints.forEach((input) => {
+        const hex = saved.colors?.[paintKey(input)];
+        if (/^#[0-9a-f]{6}$/.test(hex)) input.value = hex;
+      });
+      sliders.forEach((slider) => {
+        const value = saved.sliders?.[sliderKey(slider)];
+        if (value !== "" && Number.isFinite(Number(value))) slider.value = value;
+      });
+      selects.forEach((select) => {
+        const value = saved.selects?.[select.dataset.select ?? ""];
+        if ([...select.querySelectorAll<HTMLElement>("[role=option]")].some((option) => option.dataset.value === value)) setSelect(select, value);
+      });
+      exportClear.checked = saved.transparent === true;
       applyAnimation();
       showChoices();
       render();
+      syncPicker();
     };
 
-    restore();
+    try {
+      const saved = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null");
+      if (saved) wear(saved);
+    } catch {}
+
+    // Undo steps back through what the character has been. Lasts until the page is left or reloaded.
+    const MAX_UNDO = 50;
+    const undoButton = root.querySelector<HTMLButtonElement>("#chibi-undo")!;
+    const past = [describe()];
+    let saveTimer = 0;
+
+    // Notes the character down if it's changed. Clicks that change nothing (opening a dropdown) don't count.
+    const noteChange = () => {
+      clearTimeout(saveTimer);
+      const state = describe();
+      if (state === past[past.length - 1]) return;
+      past.push(state);
+      if (past.length > MAX_UNDO) past.shift();
+      undoButton.disabled = false;
+      persist(state);
+    };
+
+    const undo = () => {
+      noteChange(); // anything from the last moment counts as a step too
+      if (past.length < 2) return;
+      past.pop();
+      wear(JSON.parse(past[past.length - 1]));
+      undoButton.disabled = past.length < 2;
+      persist(past[past.length - 1]);
+      pop(card, "scale(0.97)");
+    };
+
+    undoButton.addEventListener("click", undo);
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== "z" || e.target === hexBox) return;
+        e.preventDefault();
+        undo();
+      },
+      { signal },
+    );
 
     // Every change is a click, a keypress or a slider, and each of those reaches here. Waits for a
-    // pause, so dragging a slider doesn't write on every step.
-    let saveTimer = 0;
+    // pause, so that dragging a slider comes to one step rather than hundreds.
     (["click", "input", "keydown"] as const).forEach((type) => {
       root.addEventListener(type, () => {
         clearTimeout(saveTimer);
-        saveTimer = window.setTimeout(save, 200);
+        saveTimer = window.setTimeout(noteChange, 200);
       });
     });
+
+    // Poking the character: mouse and touch only, it's just for fun, so keyboards aren't missing anything
+    const figure = card.querySelector<HTMLElement>(".chibi-figure")!;
+    const REACTIONS = [
+      ["scale(1.12, 0.84)", "scale(0.94, 1.09)", "scale(1.03, 0.98)"], // squash
+      ["scale(1.08, 0.9)", "translateY(-7%) scale(0.95, 1.08)", "translateY(0) scale(1.08, 0.92)", "scale(0.98, 1.02)"], // hop
+      ["rotate(-6deg)", "rotate(5deg)", "rotate(-3deg)", "rotate(2deg)"], // wriggle
+    ];
+
+    if (moves) {
+      card.addEventListener("click", () => {
+        pop(figure, pickFrom(REACTIONS), { duration: 560, easing: "ease-out" });
+        // What's loose carries on a moment later
+        layers.forEach((layer) => {
+          if (["hair-front", "hair-back", "ears", "earrings", "horns", "halo", "face-accessories"].includes(layer.dataset.part ?? "")) {
+            pop(layer, ["none", "translateY(1.6%)", "translateY(-1.1%)"], { duration: 500, delay: 70, easing: "ease-out" });
+          }
+        });
+      });
+    }
 
     // The character assembles itself, back to front
     if (moves) {
@@ -1001,6 +1089,16 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
     transition: none; /* no theme fade: the background follows its colour picker instantly */
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    .shop-card {
+      cursor: pointer;
+    }
+  }
+
+  .chibi-figure {
+    transform-origin: 50% 97%;
+  }
+
   .shop-card canvas {
     position: relative; /* without this, animated layers paint over still ones, whatever their order */
     display: block;
@@ -1060,6 +1158,12 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
     canvas[data-move="ears"] {
       --lag: 0.3s;
       --drift: 0.7%;
+      animation-name: chibi-follow;
+    }
+
+    canvas[data-move="animal-ears"] {
+      --lag: 0.15s;
+      --drift: 0.8%;
       animation-name: chibi-follow;
     }
 
@@ -1341,39 +1445,88 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
   .shop-part {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
 
   .shop-part-name {
     flex: 1;
+    min-width: 0;
     font-family: var(--font-accent);
     font-size: 1rem;
+    line-height: 1.1;
     letter-spacing: 0.02em;
     text-transform: capitalize;
   }
 
-  .shop-choice {
-    min-width: 3.2rem;
-    font-weight: 700;
-    text-align: center;
+  .shop-stepper {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.4rem;
   }
 
+  /* The value: a small sticker slapped between the arrows, with a part that's off left as a dashed outline */
+  .shop-choice {
+    width: 3.4rem;
+    padding: 0.3rem 0 0.15rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    background: var(--accent-color);
+    box-shadow: 2px 2px 0 var(--primary-color);
+    font-family: var(--font-accent);
+    font-size: 0.9rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    transform: rotate(-2deg);
+  }
+
+  .shop-part:nth-child(even) .shop-choice {
+    transform: rotate(2deg);
+  }
+
+  .shop-choice[data-off] {
+    border-style: dashed;
+    background: transparent;
+    box-shadow: none;
+    opacity: 0.6;
+  }
+
+  /* The arrows: dollops of paint like the colour chips, each leaning its own way */
   .shop-step {
-    width: 2rem;
-    height: 2rem;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
     border: none;
-    border-radius: 50%;
+    border-radius: 46% 54% 50% 50% / 52% 46% 54% 48%;
     background: var(--primary-color);
     color: var(--text-color);
-    font-size: 1.2rem;
-    line-height: 1;
+    box-shadow: 2px 3px 0 color-mix(in srgb, var(--primary-color) 35%, transparent);
     cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: rotate(-6deg);
+    transition:
+      transform 0.2s cubic-bezier(0.34, 1.8, 0.64, 1),
+      background-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .shop-step[data-by="1"] {
+    border-radius: 54% 46% 48% 52% / 46% 54% 48% 52%;
+    transform: rotate(6deg);
   }
 
   .shop-step:hover,
   .shop-step:focus-visible {
-    transform: scale(1.15);
+    background: var(--accent-color);
+    color: var(--primary-color);
+    transform: translateX(-2px) rotate(-12deg) scale(1.15);
+  }
+
+  .shop-step[data-by="1"]:hover,
+  .shop-step[data-by="1"]:focus-visible {
+    transform: translateX(2px) rotate(12deg) scale(1.15);
   }
 
   .shop-advanced {
@@ -1591,6 +1744,12 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
     transform: rotate(-1.5deg) scale(1.06);
   }
 
+  .shop-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+  }
+
   .shop-btn--main {
     border-color: var(--accent-color);
     background: var(--accent-color);
@@ -1684,8 +1843,9 @@ const data = { canvas: CANVAS, parts, optional: OPTIONAL, startsOff: STARTS_OFF,
       transition-duration: 0.06s;
     }
 
-    .shop-step:active {
-      transform: scale(0.85);
+    .shop-step:active,
+    .shop-step[data-by="1"]:active {
+      transform: scale(0.82);
       transition-duration: 0.06s;
     }
 

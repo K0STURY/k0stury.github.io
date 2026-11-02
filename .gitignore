@@ -1,5 +1,7 @@
 # build output
 dist/
+# exports waiting for npm run sync:chibi
+chibi-inbox/
 # generated types
 .astro/
 

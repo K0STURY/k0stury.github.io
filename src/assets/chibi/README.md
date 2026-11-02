@@ -2,14 +2,20 @@
 
 Each folder is one part. Each PNG in it is a choice for that part, on `/workshop`.
 
-## Adding a new variant
+## Adding or updating parts
 
-1. Export it as `Name_number.png`, like `Horns_3.png`. The number sets its place in the
-   arrows, and `_1` is the default look. Use a transparent background.
-2. Drop it in the part's folder.
-3. Run `npm run sync:chibi`. It adds the file to `positions.json`, starting where the
-   folder's first file sits.
-4. Check it on `/workshop`, and nudge its `x` and `y` in `positions.json` if needed.
+1. Export everything to `chibi-inbox/` in the project's root, as `Name_number.png`, like
+   `Horns_3.png`. The number sets its place in the arrows, and `_1` is the default look. Use a
+   transparent background.
+2. Run `npm run sync:chibi`. It moves each file to its part's folder and adds new ones to
+   `positions.json`, starting where the folder's first file sits. Exporting a file that's
+   already there replaces it and keeps its position.
+3. Check it on `/workshop`, and nudge its `x` and `y` in `positions.json` if needed. The script
+   warns when a replacement changed size, as that can move it.
+
+A file goes where its name already lives: `Back_3` joins `Back_1` in `hair-back/`. A part named
+in `order.json` needs no earlier file: `Mouth_1` goes to `mouth/`. Any other name stays in the
+inbox with a warning. Move that first one into its folder by hand, and the name is known from then on.
 
 ## Positions
 
@@ -26,6 +32,12 @@ To copy a position out of Affinity, take the layer's centre and subtract 2500 fr
 `x` and `y`. Quil has moved a little from the Affinity layout (head parts down 80, body up
 120, to close the neck gap), so a cropped part needs that added: +80 to `y` for head parts,
 -120 for body parts.
+
+## Animal ears
+
+`animal-ears/` is for ears that sit on top of the head, like `Animal_1.png`. They're in front of
+the hair, start switched off and take the Hair colour. Ears on the side of the head go in `ears/`
+and take the Skin colour.
 
 ## Face accessories
 

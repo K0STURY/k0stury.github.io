@@ -773,6 +773,7 @@
     activeIndex = filteredIndex >= 0 ? filteredIndex : 0;
 
     tagOpen = false;
+    jumping = false;
     closing = false;
     ready = false;
     shown = false;
@@ -871,10 +872,51 @@
   // --- Moving between pieces ---
   let navToken = 0; // bumped on every move, so an older move knows it was overtaken
   let navBusy = false;
+  let navTarget = 0; // where a move under way is heading: quick clicks count on from there
 
   function step(dir: number, fromX = 0) {
     const n = filteredImages.length;
-    goTo((activeIndex + dir + n) % n, dir, fromX);
+    goTo(((navBusy ? navTarget : activeIndex) + dir + n) % n, dir, fromX);
+  }
+
+  // --- Typing a piece's number into the counter ---
+  let jumping = false;
+  let jumpValue = "";
+
+  const focusAndSelect = (node: HTMLInputElement) => {
+    node.focus({ preventScroll: true });
+    node.select();
+  };
+
+  function startJump() {
+    jumpValue = String(activeIndex + 1);
+    jumping = true;
+  }
+
+  async function endJump() {
+    jumping = false;
+    await tick();
+    dialogEl?.focus({ preventScroll: true }); // back to the viewer, so the arrow keys carry on
+  }
+
+  function commitJump() {
+    const typed = Number(jumpValue);
+    if (jumpValue) {
+      // A number past either end means that end
+      const idx = Math.min(Math.max(typed, 1), filteredImages.length) - 1;
+      goTo(idx, idx > activeIndex ? 1 : -1);
+    }
+    endJump();
+  }
+
+  // Stops here, so typing can't move the piece, and Esc leaves the box rather than the viewer
+  function onJumpKeydown(e: KeyboardEvent) {
+    if (e.key === "Tab") return;
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      e.preventDefault(); // or this same press goes on to click the counter, once focus is back on it
+      commitJump();
+    } else if (e.key === "Escape") endJump();
   }
 
   // The current print slides off one side and the next one is dealt in from the other.
@@ -883,6 +925,7 @@
     if (closing || filteredImages.length < 2 || idx === activeIndex) return;
 
     const token = ++navToken;
+    navTarget = idx;
     const reduce = prefersReducedMotion();
     // Already mid-move (held arrow key, fast clicks): skip the exit so it never lags behind
     const skipExit = navBusy || reduce;
@@ -934,7 +977,7 @@
 
   function onPointerDown(e: PointerEvent) {
     if (e.button !== 0 || closing || comparing) return;
-    if ((e.target as HTMLElement).closest(".hang-tag, .palette")) return; // these are controls, not handles
+    if ((e.target as HTMLElement).closest(".hang-tag, .palette, .print-actions")) return; // these are controls, not handles
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, active: false };
   }
 
@@ -989,10 +1032,6 @@
 
   function onStripWheel(e: WheelEvent) {
     stripEl.scrollLeft += e.deltaY + e.deltaX;
-  }
-
-  function onStageClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) close();
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -1086,39 +1125,6 @@
     <div class="lb-dim" aria-hidden="true"></div>
 
     <div class="lb-actions">
-      {#if partner}
-        <button
-          class="lb-label lb-compare"
-          class:is-on={comparing && !leaving}
-          aria-pressed={comparing && !leaving}
-          on:click={toggleCompare}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="12" y1="3" x2="12" y2="21"></line>
-            <polyline points="7 8 3 12 7 16"></polyline>
-            <polyline points="17 8 21 12 17 16"></polyline>
-          </svg>
-          <span class="lb-label-text">Then &amp; now</span>
-        </button>
-      {/if}
-
-      {#if canLike}
-        <button
-          class="lb-label lb-like"
-          bind:this={likeButtonEl}
-          class:is-on={isLiked}
-          class:is-loved={isLoved}
-          aria-pressed={isLiked}
-          aria-label={`Like this piece, ${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
-          on:click={toggleLike}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d={HEART_PATH}></path>
-          </svg>
-          <span>{likeCount}</span>
-        </button>
-      {/if}
-
       <button class="lb-label lb-share" class:is-on={copied} on:click={sharePiece}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           {#if copied}
@@ -1139,18 +1145,41 @@
       </button>
     </div>
 
-    <p class="lb-counter" aria-live="polite">
-      {activeIndex + 1}<span class="lb-counter-total">/ {filteredImages.length}</span>
+    <p class="lb-counter" class:is-jumping={jumping} aria-live="polite">
+      {#if jumping}
+        <input
+          class="lb-counter-input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          aria-label={`Piece number, 1 to ${filteredImages.length}`}
+          maxlength={String(filteredImages.length).length}
+          style="width:{String(filteredImages.length).length + 0.6}ch;"
+          value={jumpValue}
+          use:focusAndSelect
+          on:input={(e) => (e.currentTarget.value = jumpValue = e.currentTarget.value.replace(/\D/g, ""))}
+          on:keydown={onJumpKeydown}
+          on:blur={() => (jumping = false)}
+        />
+      {:else if filteredImages.length > 1}
+        <button class="lb-counter-now" on:click={startJump} aria-label={`Piece ${activeIndex + 1}. Jump to another piece`}>
+          {activeIndex + 1}
+        </button>
+      {:else}
+        {activeIndex + 1}
+      {/if}<span class="lb-counter-total">/ {filteredImages.length}</span>
     </p>
 
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="lb-stage" bind:this={stageEl} use:watchStage on:click={onStageClick}>
+    <div class="lb-stage" bind:this={stageEl} use:watchStage>
+      <!-- Each arrow's button is its whole half of the stage, under the print, so that a click
+           anywhere beside the art still moves on instead of missing -->
       {#if filteredImages.length > 1}
         <button class="lb-arrow lb-arrow--prev" on:click={() => step(-1)} aria-label="Previous piece">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="15 5 8 12 15 19"></polyline>
-          </svg>
+          <span class="lb-arrow-face">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 5 8 12 15 19"></polyline>
+            </svg>
+          </span>
         </button>
       {/if}
 
@@ -1158,6 +1187,7 @@
       <div
         class="lb-mover"
         class:is-shown={shown}
+        class:is-moving={navBusy}
         bind:this={moverEl}
         on:pointerdown={onPointerDown}
         on:pointermove={onPointerMove}
@@ -1246,6 +1276,43 @@
             {/if}
           </div>
 
+          {#if partner || canLike}
+            <div class="print-actions">
+              {#if partner}
+                <button
+                  class="lb-label lb-compare"
+                  class:is-on={comparing && !leaving}
+                  aria-pressed={comparing && !leaving}
+                  on:click={toggleCompare}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="3" x2="12" y2="21"></line>
+                    <polyline points="7 8 3 12 7 16"></polyline>
+                    <polyline points="17 8 21 12 17 16"></polyline>
+                  </svg>
+                  <span class="lb-label-text">Then &amp; now</span>
+                </button>
+              {/if}
+
+              {#if canLike}
+                <button
+                  class="lb-label lb-like"
+                  bind:this={likeButtonEl}
+                  class:is-on={isLiked}
+                  class:is-loved={isLoved}
+                  aria-pressed={isLiked}
+                  aria-label={`Like this piece, ${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
+                  on:click={toggleLike}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d={HEART_PATH}></path>
+                  </svg>
+                  <span>{likeCount}</span>
+                </button>
+              {/if}
+            </div>
+          {/if}
+
           {#if palette.length && !comparing}
             <div class="palette" role="group" aria-label="Colours in this piece">
               {#each palette as color, i (color)}
@@ -1314,9 +1381,11 @@
 
       {#if filteredImages.length > 1}
         <button class="lb-arrow lb-arrow--next" on:click={() => step(1)} aria-label="Next piece">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 5 16 12 9 19"></polyline>
-          </svg>
+          <span class="lb-arrow-face">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 5 16 12 9 19"></polyline>
+            </svg>
+          </span>
         </button>
       {/if}
     </div>
@@ -1411,7 +1480,7 @@
     transform: rotate(90deg) scale(1.08);
   }
 
-  /* Then & now, Share: paper labels stuck next to the close button */
+  /* Paper labels: Share next to the close button, Then & now and Like on the print's corner */
   .lb-label {
     display: flex;
     align-items: center;
@@ -1573,7 +1642,7 @@
 
   .compare-tab {
     position: absolute;
-    bottom: 0.6rem;
+    bottom: 1.6rem; /* above the buttons and the tag on the print's bottom corners */
     padding: 0.2rem 0.6rem 0.1rem;
     border-radius: 3px;
     background: var(--paper);
@@ -1649,12 +1718,57 @@
     font-variant-numeric: tabular-nums;
     opacity: var(--chrome);
     transform: rotate(-3deg);
-    transition: opacity 0.25s ease;
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .lb-counter:hover {
+    transform: rotate(0deg) scale(1.05);
+  }
+
+  /* Being typed in: the whole sticker lights up, rather than a box inside it */
+  .lb-counter.is-jumping {
+    background: var(--accent-color);
+    transform: rotate(0deg) scale(1.1);
+    animation: gelatine 0.375s ease-in-out;
+  }
+
+  /* The whole sticker is the target, not just the digits */
+  .lb-counter-now {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: text;
+  }
+
+  .lb-counter-now::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .lb-counter-input {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    caret-color: var(--ink);
+    font: inherit;
+    text-align: center;
+  }
+
+  .lb-counter-input::selection {
+    background: var(--ink);
+    color: var(--accent-color);
   }
 
   .lb-counter-total {
     margin-left: 0.35em;
     opacity: 0.55;
+    pointer-events: none; /* its opacity lifts it above the button's target */
   }
 
   /* Stage: its padding is the breathing room around the print (arrows, tape, tag overhang) */
@@ -1683,6 +1797,11 @@
 
   .lb-mover:not(.is-shown) {
     visibility: hidden;
+  }
+
+  /* A print sliding past under the pointer mustn't catch a click meant for the side behind it */
+  .lb-mover.is-moving {
+    pointer-events: none;
   }
 
   /* The print: a paper-framed piece, taped up a little crooked */
@@ -1757,13 +1876,26 @@
     transform: rotate(0deg);
   }
 
-  /* Paint chips, stuck over the print's bottom-left edge */
-  .palette {
+  /* Then & now and Like, stuck over the print's bottom-left corner across from the tag */
+  .print-actions {
     position: absolute;
     left: 0.7rem;
-    bottom: calc(-0.9rem - var(--frame));
+    bottom: calc(-1.3rem - var(--frame));
     z-index: 3;
     display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: default;
+  }
+
+  /* Paint chips, down the print's right edge */
+  .palette {
+    position: absolute;
+    top: 0.9rem;
+    right: calc(-0.9rem - var(--frame));
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
     gap: 5px;
     opacity: var(--chrome);
     transition: opacity 0.25s ease;
@@ -1786,7 +1918,7 @@
   .chip:hover,
   .chip:focus-visible {
     z-index: 1;
-    transform: rotate(0deg) translateY(-4px) scale(1.15);
+    transform: rotate(0deg) translateX(4px) scale(1.15);
   }
 
   .chip:focus-visible {
@@ -1796,8 +1928,8 @@
 
   .chip-hex {
     position: absolute;
-    bottom: calc(100% + 7px);
-    left: 50%;
+    top: 50%;
+    left: calc(100% + 7px);
     padding: 0.15rem 0.45rem 0.05rem;
     border-radius: 3px;
     background: var(--paper);
@@ -1809,7 +1941,7 @@
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transform: translateX(-50%);
+    transform: translateY(-50%);
     transition: opacity 0.15s ease;
   }
 
@@ -1820,11 +1952,8 @@
   }
 
   @media (max-width: 768px) {
-    /* Top-left on phones: a long title's tag takes up the whole bottom edge */
     .palette {
-      top: calc(-0.8rem - var(--frame));
-      bottom: auto;
-      left: 0.3rem;
+      right: calc(-0.55rem - var(--frame));
       gap: 3px;
     }
 
@@ -1832,6 +1961,17 @@
       width: 21px;
       height: 21px;
       border-width: 2px;
+    }
+
+    /* No room past the screen's edge: the code shows over the art instead */
+    .chip-hex {
+      right: calc(100% + 7px);
+      left: auto;
+    }
+
+    .print-actions {
+      left: 0.3rem;
+      gap: 0.4rem;
     }
   }
 
@@ -1962,46 +2102,57 @@
     text-transform: uppercase;
   }
 
-  /* Arrows: chunky paper buttons either side of the print */
+  /* Arrows: each button fills its half of the stage, with a chunky paper face at the screen's edge */
   .lb-arrow {
     position: absolute;
-    top: 50%;
-    z-index: 2;
+    top: 0;
+    bottom: 0;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    width: 50%;
+    padding: 0 1.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  .lb-arrow--prev {
+    --lean: -5deg;
+    left: 0;
+    justify-content: flex-start;
+  }
+
+  .lb-arrow--next {
+    --lean: 5deg;
+    right: 0;
+    justify-content: flex-end;
+  }
+
+  .lb-arrow-face {
     display: grid;
     place-items: center;
     width: 54px;
     height: 54px;
-    border: none;
     border-radius: 50%;
     background: var(--paper);
     color: var(--ink);
     box-shadow: 4px 4px 0 var(--edge-color);
-    cursor: pointer;
     opacity: var(--chrome);
-    transform: translateY(-50%) rotate(var(--lean));
+    transform: rotate(var(--lean));
     transition:
       opacity 0.25s ease,
       transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
       background-color 0.2s ease;
   }
 
-  .lb-arrow--prev {
-    --lean: -5deg;
-    left: 1.5rem;
-  }
-
-  .lb-arrow--next {
-    --lean: 5deg;
-    right: 1.5rem;
-  }
-
-  .lb-arrow:hover {
+  .lb-arrow:hover .lb-arrow-face {
     background: var(--accent-color);
-    transform: translateY(-50%) rotate(0deg) scale(1.12);
+    transform: rotate(0deg) scale(1.12);
   }
 
-  .lb-arrow:active {
-    transform: translateY(-50%) rotate(0deg) scale(0.94);
+  .lb-arrow:active .lb-arrow-face {
+    transform: rotate(0deg) scale(0.94);
   }
 
   /* Thumbnail strip: the current piece is always the one in the middle */
@@ -2077,6 +2228,27 @@
   }
 
   .lb :focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* The sticker shows these itself: lit up while typing, and ringed when tabbed to */
+  .lb .lb-counter-input:focus-visible,
+  .lb .lb-counter-now:focus-visible {
+    outline: none;
+  }
+
+  .lb-counter:has(.lb-counter-now:focus-visible) {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 3px;
+  }
+
+  /* The button is half the stage: the ring goes round the part you can see */
+  .lb-arrow:focus-visible {
+    outline: none;
+  }
+
+  .lb-arrow:focus-visible .lb-arrow-face {
     outline: 3px solid var(--accent-color);
     outline-offset: 3px;
   }
@@ -2181,7 +2353,7 @@
     .lb-close,
     .lb-label,
     .lb-counter,
-    .lb-arrow,
+    .lb-arrow-face,
     .lb-strip,
     .hang-tag,
     .thumb,
@@ -2195,7 +2367,8 @@
 
     .compare-knob,
     .compare-knob svg,
-    .compare-tab {
+    .compare-tab,
+    .lb-counter.is-jumping {
       animation: none;
       transition: none;
     }
