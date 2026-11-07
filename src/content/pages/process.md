@@ -104,6 +104,6 @@ Open one of these and hit **Then & now** to slide between it and the original. I
 
 I pull from a lot of places: anime, manga, webtoons, and other artists. A few whose work I love:
 
-- **X:** [@Daikei_625](https://x.com/Daikei_625), [@MRN0093](https://x.com/MRN0093), [@dijor98](https://x.com/dijor98), [@GomeyTheAndroid](https://x.com/GomeyTheAndroid)
+- **X:** [@Daikei_625](https://x.com/Daikei_625), [@MRN0093](https://x.com/MRN0093), [@dijor98](https://x.com/dijor98), [@GomeyTheAndroid](https://x.com/GomeyTheAndroid), [@Rhenisobsolete](https://x.com/Rhenisobsolete)
 - **ArtStation:** [leicai](https://www.artstation.com/leicai), [sevenseven](https://www.artstation.com/sevenseven), [jieke007](https://www.artstation.com/jieke007)
 - **Instagram:** [@guywhodoesart](https://www.instagram.com/guywhodoesart)
